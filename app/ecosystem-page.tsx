@@ -1,0 +1,90 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import { ArrowUpRight, ExternalLink, Search } from 'lucide-react';
+import { ecosystemProjects } from '@/lib/ecosystem-projects';
+
+type Props = { language: 'en' | 'zh' };
+
+const categories = [
+  { en: 'All projects', zh: '全部项目', value: 'all' },
+  { en: 'DeFi', zh: 'DeFi', value: 'DeFi' },
+  { en: 'Prediction markets', zh: '预测市场', value: 'Prediction Markets' },
+];
+
+const amount = (value: number | null, zh: boolean) => value == null
+  ? (zh ? '未收录' : 'Not indexed')
+  : new Intl.NumberFormat(zh ? 'zh-CN' : 'en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 2 }).format(value);
+
+export default function EcosystemPage({ language }: Props) {
+  const zh = language === 'zh';
+  const t = (en: string, cn: string) => zh ? cn : en;
+  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState('all');
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(ecosystemProjects[0]?.slug ?? null);
+
+  const filteredProjects = useMemo(() => ecosystemProjects.filter((project) => {
+    const matchesCategory = category === 'all' || project.categories.includes(category);
+    const term = query.trim().toLowerCase();
+    const searchableText = `${project.name} ${project.handle} ${project.categories.join(' ')} ${project.tagline} ${project.description.en} ${project.description.zh} ${project.products.map((product) => `${product.en} ${product.zh}`).join(' ')}`;
+    const matchesSearch = !term || searchableText.toLowerCase().includes(term);
+    return matchesCategory && matchesSearch;
+  }), [category, query]);
+  const selectedProject = filteredProjects.find((project) => project.slug === selectedSlug) ?? filteredProjects[0];
+
+  return <div className="content ecosystem-content">
+    <div className="page-heading ecosystem-heading">
+      <div>
+        <div className="eyebrow"><span className="eyebrow-line"/>{t('ARC PROJECT DIRECTORY', 'ARC 项目目录')}<span className="eyebrow-line"/></div>
+        <h1>{t('Ecosystem', '生态')} <span>{t('Projects', '项目')}</span></h1>
+        <p className="subtitle">{t('Discover teams building across the Arc ecosystem.', '发现正在 Arc 生态中构建的项目。')}</p>
+      </div>
+      <div className="ecosystem-reviewed"><span className="ecosystem-reviewed-dot"/>{t('CURATED PROJECT INFO', '人工整理项目信息')}</div>
+    </div>
+
+    <section className="ecosystem-toolbar" aria-label={t('Project search and filters', '项目搜索与筛选')}>
+      <label className="ecosystem-search"><Search size={15}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('Search projects or categories', '搜索项目或类别')} aria-label={t('Search projects', '搜索项目')}/></label>
+      <div className="ecosystem-filters" aria-label={t('Filter by category', '按类别筛选')}>
+        {categories.map((item) => <button key={item.value} type="button" className={category === item.value ? 'active' : ''} onClick={() => setCategory(item.value)}>{t(item.en, item.zh)}</button>)}
+      </div>
+    </section>
+
+    <div className="ecosystem-results-bar"><span>{t('CURATED DIRECTORY', '精选项目目录')}</span><b>{zh ? `${String(filteredProjects.length).padStart(2, '0')} 个项目` : `${filteredProjects.length} ${filteredProjects.length === 1 ? 'project' : 'projects'}`}</b><i/><span>{t('Metrics update from connected data sources', '指标来自已接入的数据源')}</span></div>
+
+    {selectedProject ? <div className="ecosystem-layout">
+      <section className="ecosystem-project-list" aria-label={t('Project results', '项目列表')}>
+        {filteredProjects.map((project) => <button type="button" key={project.slug} onClick={() => setSelectedSlug(project.slug)} className={`ecosystem-project-card ${selectedProject.slug === project.slug ? 'selected' : ''}`} aria-pressed={selectedProject.slug === project.slug}>
+          <span className="ecosystem-project-mark">{project.symbol}</span>
+          <span className="ecosystem-card-copy"><b>{project.name}</b><small>{project.handle} <i>·</i> {project.categories.map((item) => item === 'Prediction Markets' && zh ? '预测市场' : item).join(' / ')}</small></span>
+          <span className={`ecosystem-status ${project.status}`}>{project.status === 'beta' ? t('BETA', '测试版') : project.status === 'live' ? t('LIVE', '已上线') : t('UPCOMING', '即将上线')}</span>
+          <ArrowUpRight size={15}/>
+        </button>)}
+      </section>
+
+      <article className="ecosystem-detail-card">
+        <div className="ecosystem-detail-top">
+          <div className="ecosystem-detail-brand"><span className="ecosystem-project-mark large">{selectedProject.symbol}</span><div><div className="ecosystem-handle">{selectedProject.handle}</div><h2>{selectedProject.name}</h2></div></div>
+          <span className={`ecosystem-status ${selectedProject.status}`}>{selectedProject.status === 'beta' ? t('BETA', '测试版') : selectedProject.status === 'live' ? t('LIVE ON ARC', '已上线 ARC') : t('UPCOMING', '即将上线')}</span>
+        </div>
+        <p className="ecosystem-tagline">{selectedProject.tagline}</p>
+        <p className="ecosystem-description">{zh ? selectedProject.description.zh : selectedProject.description.en}</p>
+        <div className="ecosystem-category-tags">{selectedProject.categories.map((item) => <span key={item}>{item === 'Prediction Markets' && zh ? '预测市场' : item}</span>)}</div>
+
+        <div className="ecosystem-metrics">
+          {[
+            { label: 'TVL', value: selectedProject.tvl },
+            { label: t('FEES · 24H', '费用 · 24 小时'), value: selectedProject.fees24h },
+            { label: t('VOLUME · 24H', '交易量 · 24 小时'), value: selectedProject.volume24h },
+          ].map((metric) => <div className="ecosystem-metric" key={metric.label}><span>{metric.label}</span><b className={metric.value == null ? 'not-indexed' : ''}>{amount(metric.value, zh)}</b></div>)}
+        </div>
+
+        <div className="ecosystem-detail-section"><div className="ecosystem-detail-label">{t('PRODUCTS', '产品')}</div><div className="ecosystem-product-tags">{selectedProject.products.map((product) => <span key={product.en}>{zh ? product.zh : product.en}{product.status === 'upcoming' && <em>{t('SOON', '即将推出')}</em>}</span>)}</div></div>
+
+        <div className="ecosystem-detail-footer"><div className="ecosystem-source-note"><span>{t('PROFILE SOURCE', '资料来源')}</span><small>{t('Official project website · reviewed', '项目官网 · 已核实')} {selectedProject.verifiedOn}</small></div><div className="ecosystem-links"><a href={selectedProject.website} target="_blank" rel="noreferrer">{t('Website', '官网')} <ExternalLink size={12}/></a><a href={selectedProject.x} target="_blank" rel="noreferrer">X <ExternalLink size={12}/></a></div></div>
+      </article>
+    </div> : <div className="ecosystem-empty"><Search size={19}/><b>{t('No projects match your search.', '没有找到匹配的项目。')}</b><span>{t('Try a different name or category.', '试试其他项目名称或类别。')}</span></div>}
+
+    <div className="ecosystem-data-note"><span>ⓘ</span><p>{t('On-chain metrics appear when a project has a reliable data source. “Not indexed” means the metric has not been confirmed; it does not mean zero.', '项目接入可靠数据源后才会显示链上指标。“未收录”表示暂未确认数据，不代表数值为零。')}</p></div>
+    <footer><span>© 2026 ARC WATCH <i>·</i> {t('COMMUNITY BUILT', '社区共建')}</span><span>{t('PROJECT INFO: OFFICIAL SOURCES', '项目信息：官方来源')} <i>·</i> <a href="https://x.com/kairo_market" target="_blank" rel="noreferrer">X</a></span></footer>
+  </div>;
+}
