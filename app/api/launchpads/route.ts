@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { ARC_LAUNCH_START_TIMESTAMP } from '@/lib/arc';
 
 const launchpads = [
   { slug: 'argus-world', name: 'Argus', logo: 'A', color: '#9ce86b' },
@@ -38,7 +39,7 @@ export async function GET() {
           fees30d: data.total30d ?? null,
           feesAllTime: data.totalAllTime ?? null,
           change24h: data.change_1d ?? null,
-          history: data.totalDataChart ?? [],
+          history: (data.totalDataChart ?? []).filter(([timestamp]) => timestamp >= ARC_LAUNCH_START_TIMESTAMP),
           methodology: data.methodology?.Fees ?? null,
           sourceUrl: `https://defillama.com/protocol/${launchpad.slug}`,
         };

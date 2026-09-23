@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, Brush, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ArrowDownRight, ArrowUpRight, ExternalLink, Flame, Radio, RefreshCw, Trophy } from 'lucide-react';
+import { ARC_LAUNCH_START_TIMESTAMP } from '@/lib/arc';
 
 type Launchpad = {
   slug: string; name: string; logo: string; color: string; available: boolean;
@@ -49,10 +50,13 @@ export default function LaunchpadPage({ language, isDark }: Props) {
   const leader = [...available].sort((a, b) => (b.fees24h ?? 0) - (a.fees24h ?? 0))[0];
 
   const chartData = useMemo(() => {
-    const byDay = new Map<number, Record<string, number>>();
+    const byDay = new Map<number, Record<string, number>>([
+      [ARC_LAUNCH_START_TIMESTAMP, { timestamp: ARC_LAUNCH_START_TIMESTAMP }],
+    ]);
     for (const launchpad of launchpads) {
       for (const [timestamp, amount] of launchpad.history) {
         const day = Math.floor(timestamp / 86400) * 86400;
+        if (day < ARC_LAUNCH_START_TIMESTAMP) continue;
         byDay.set(day, { ...(byDay.get(day) ?? { timestamp: day }), [launchpad.slug]: amount });
       }
     }
