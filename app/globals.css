@@ -121,3 +121,7 @@ html[data-theme='light'] .ecosystem-reviewed{border-color:#dce5d2;background:#f6
 @media(max-width:660px){.ecosystem-content{padding-top:25px}.ecosystem-heading{align-items:flex-start;flex-direction:column;gap:12px}.ecosystem-reviewed{align-self:flex-start}.ecosystem-toolbar{align-items:stretch;flex-direction:column;gap:8px}.ecosystem-search{min-width:0}.ecosystem-filters{overflow-x:auto;padding-bottom:2px}.ecosystem-filters button{flex:none}.ecosystem-layout{grid-template-columns:1fr}.ecosystem-project-list{grid-template-columns:1fr}.ecosystem-detail-card{padding:14px}.ecosystem-detail-brand h2{font-size:20px}.ecosystem-metric{padding:9px 7px}.ecosystem-metric span{font-size:7px}.ecosystem-metric b{font-size:10px}.ecosystem-detail-footer{align-items:flex-start;flex-direction:column}.ecosystem-content footer{font-size:7px}.ecosystem-content footer>span:last-child{text-align:right}}
 @media(min-width:780px){.shell{zoom:1.1;width:90.909091%;min-height:90.909091vh}}
 @media(min-width:1800px){.shell{zoom:1.25;width:80%;min-height:80vh}}
+
+/* Keep long ARC token addresses readable and easy to copy. */
+.ecosystem-token-address{display:block;max-width:100%;padding:10px 11px;overflow-wrap:anywhere;border:1px solid #2b3038;border-radius:5px;background:#101317;color:#c7d1bc;font:10px/1.6 'DM Mono',monospace;user-select:text}
+html[data-theme='light'] .ecosystem-token-address{border-color:#dfe3da;background:#f8faf6;color:#46533d}

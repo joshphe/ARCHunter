@@ -11,6 +11,7 @@ export type EcosystemProject = {
   tvl: number | null;
   fees24h: number | null;
   volume24h: number | null;
+  tokenAddress?: string;
   website: string;
   x: string;
   source: string;
@@ -19,6 +20,33 @@ export type EcosystemProject = {
 
 // Curated project metadata lives here; add or update entries as they are reviewed.
 export const ecosystemProjects: EcosystemProject[] = [
+  {
+    slug: 'vort',
+    name: 'Vort',
+    symbol: 'V',
+    handle: '@VortLaunch',
+    tagline: 'Verifiable reward flow on Arc.',
+    description: {
+      en: 'Vort routes creator proceeds into holder rewards through settled epochs, with reward allocations and settlement records published on Arc.',
+      zh: 'Vort 将创作者收益按周期分配给持币者，并在 Arc 上公开奖励分配与结算记录。',
+    },
+    categories: ['Tokens'],
+    status: 'live',
+    products: [
+      { en: 'Holder rewards', zh: '持币者奖励' },
+      { en: 'Epoch settlements', zh: '周期结算' },
+      { en: 'Public reward ledger', zh: '公开奖励账本' },
+      { en: 'Buyback and burn', zh: '回购与销毁' },
+    ],
+    tvl: null,
+    fees24h: null,
+    volume24h: null,
+    tokenAddress: '0x4d57060f3825d3b995f35a30194f3e74e105f3ec',
+    website: 'https://vort.bot/',
+    x: 'https://x.com/VortLaunch',
+    source: 'https://vort.bot/',
+    verifiedOn: '2026-09-23',
+  },
   {
     slug: 'kairo',
     name: 'KAIRO',

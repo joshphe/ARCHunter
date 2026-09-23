@@ -10,11 +10,19 @@ const categories = [
   { en: 'All projects', zh: '全部项目', value: 'all' },
   { en: 'DeFi', zh: 'DeFi', value: 'DeFi' },
   { en: 'Prediction markets', zh: '预测市场', value: 'Prediction Markets' },
+  { en: 'Token projects', zh: '代币项目', value: 'Tokens' },
 ];
 
 const amount = (value: number | null, zh: boolean) => value == null
   ? (zh ? '未收录' : 'Not indexed')
   : new Intl.NumberFormat(zh ? 'zh-CN' : 'en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 2 }).format(value);
+
+const categoryLabel = (category: string, zh: boolean) => {
+  if (!zh) return category;
+  if (category === 'Prediction Markets') return '预测市场';
+  if (category === 'Tokens') return '代币项目';
+  return category;
+};
 
 export default function EcosystemPage({ language }: Props) {
   const zh = language === 'zh';
@@ -55,7 +63,7 @@ export default function EcosystemPage({ language }: Props) {
       <section className="ecosystem-project-list" aria-label={t('Project results', '项目列表')}>
         {filteredProjects.map((project) => <button type="button" key={project.slug} onClick={() => setSelectedSlug(project.slug)} className={`ecosystem-project-card ${selectedProject.slug === project.slug ? 'selected' : ''}`} aria-pressed={selectedProject.slug === project.slug}>
           <span className="ecosystem-project-mark">{project.symbol}</span>
-          <span className="ecosystem-card-copy"><b>{project.name}</b><small>{project.handle} <i>·</i> {project.categories.map((item) => item === 'Prediction Markets' && zh ? '预测市场' : item).join(' / ')}</small></span>
+          <span className="ecosystem-card-copy"><b>{project.name}</b><small>{project.handle} <i>·</i> {project.categories.map((item) => categoryLabel(item, zh)).join(' / ')}</small></span>
           <span className={`ecosystem-status ${project.status}`}>{project.status === 'beta' ? t('BETA', '测试版') : project.status === 'live' ? t('LIVE', '已上线') : t('UPCOMING', '即将上线')}</span>
           <ArrowUpRight size={15}/>
         </button>)}
@@ -68,7 +76,7 @@ export default function EcosystemPage({ language }: Props) {
         </div>
         <p className="ecosystem-tagline">{selectedProject.tagline}</p>
         <p className="ecosystem-description">{zh ? selectedProject.description.zh : selectedProject.description.en}</p>
-        <div className="ecosystem-category-tags">{selectedProject.categories.map((item) => <span key={item}>{item === 'Prediction Markets' && zh ? '预测市场' : item}</span>)}</div>
+        <div className="ecosystem-category-tags">{selectedProject.categories.map((item) => <span key={item}>{categoryLabel(item, zh)}</span>)}</div>
 
         <div className="ecosystem-metrics">
           {[
@@ -79,6 +87,8 @@ export default function EcosystemPage({ language }: Props) {
         </div>
 
         <div className="ecosystem-detail-section"><div className="ecosystem-detail-label">{t('PRODUCTS', '产品')}</div><div className="ecosystem-product-tags">{selectedProject.products.map((product) => <span key={product.en}>{zh ? product.zh : product.en}{product.status === 'upcoming' && <em>{t('SOON', '即将推出')}</em>}</span>)}</div></div>
+
+        {selectedProject.tokenAddress && <div className="ecosystem-detail-section"><div className="ecosystem-detail-label">{t('TOKEN CONTRACT · ARC', '代币合约 · ARC')}</div><code className="ecosystem-token-address">{selectedProject.tokenAddress}</code></div>}
 
         <div className="ecosystem-detail-footer"><div className="ecosystem-source-note"><span>{t('PROFILE SOURCE', '资料来源')}</span><small>{t('Official project website · reviewed', '项目官网 · 已核实')} {selectedProject.verifiedOn}</small></div><div className="ecosystem-links"><a href={selectedProject.website} target="_blank" rel="noreferrer">{t('Website', '官网')} <ExternalLink size={12}/></a><a href={selectedProject.x} target="_blank" rel="noreferrer">X <ExternalLink size={12}/></a></div></div>
       </article>
