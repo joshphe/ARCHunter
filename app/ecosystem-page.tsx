@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowUpRight, ExternalLink, Search } from 'lucide-react';
+import { ArrowUpRight, Check, ChevronLeft, ChevronRight, Copy, ExternalLink, Search, Send } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
 import ProjectAvatar from '@/app/project-avatar';
 
-type Props = { language: 'en' | 'zh' };
+type Props = { language: 'en' | 'zh'; selectedProjectSlug?: string | null };
+const PROJECTS_PER_PAGE = 10;
 
 const categories = [
   { en: 'All projects', zh: '全部项目', value: 'all' },
@@ -25,7 +26,7 @@ const categoryLabel = (category: string, zh: boolean) => {
   return category;
 };
 
-export default function EcosystemPage({ language }: Props) {
+export default function EcosystemPage({ language, selectedProjectSlug }: Props) {
   const zh = language === 'zh';
   const t = (en: string, cn: string) => zh ? cn : en;
   const [query, setQuery] = useState('');
@@ -33,7 +34,19 @@ export default function EcosystemPage({ language }: Props) {
   const [projects, setProjects] = useState<EcosystemProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(selectedProjectSlug ?? null);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  async function copyTokenAddress(address: string) {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopiedAddress(address);
+      window.setTimeout(() => setCopiedAddress((current) => current === address ? null : current), 1800);
+    } catch {
+      setCopiedAddress(null);
+    }
+  }
 
   useEffect(() => {
     let current = true;
@@ -45,7 +58,11 @@ export default function EcosystemPage({ language }: Props) {
       .then((items) => {
         if (!current) return;
         setProjects(items);
-        setSelectedSlug(items[0]?.slug ?? null);
+        setSelectedSlug((current) => current ?? items[0]?.slug ?? null);
+        if (selectedProjectSlug) {
+          const selectedIndex = items.findIndex((project) => project.slug === selectedProjectSlug);
+          if (selectedIndex >= 0) setPage(Math.floor(selectedIndex / PROJECTS_PER_PAGE) + 1);
+        }
         setLoadError(false);
       })
       .catch(() => { if (current) setLoadError(true); })
@@ -61,8 +78,22 @@ export default function EcosystemPage({ language }: Props) {
     return matchesCategory && matchesSearch;
   }), [category, projects, query]);
   const selectedProject = filteredProjects.find((project) => project.slug === selectedSlug) ?? filteredProjects[0];
+  const pageCount = Math.max(1, Math.ceil(filteredProjects.length / PROJECTS_PER_PAGE));
+  const visibleProjects = filteredProjects.slice((page - 1) * PROJECTS_PER_PAGE, page * PROJECTS_PER_PAGE);
+  const firstVisibleProject = filteredProjects.length ? (page - 1) * PROJECTS_PER_PAGE + 1 : 0;
+  const lastVisibleProject = Math.min(page * PROJECTS_PER_PAGE, filteredProjects.length);
 
   return <div className="content ecosystem-content">
+    <aside className="ecosystem-contact-banner">
+      <span className="ecosystem-contact-icon"><Send size={17}/></span>
+      <div className="ecosystem-contact-copy">
+        <span>{t('ARC ECOSYSTEM · PROJECT INVITATION', 'ARC 生态 · 项目征集')}</span>
+        <b>{t('Want a project you’re involved in featured here?', '想让你参与的项目也出现在这里？')}</b>
+        <small>{t('Get in touch on Telegram and tell us about it.', '欢迎通过 Telegram 联系我，介绍你的项目。')}</small>
+      </div>
+      <a href="https://t.me/Joshphe" target="_blank" rel="noreferrer"><span>{t('Contact', '联系我')}</span><b>@Joshphe</b><ExternalLink size={14}/></a>
+    </aside>
+
     <div className="page-heading ecosystem-heading">
       <div>
         <div className="eyebrow"><span className="eyebrow-line"/>{t('ARC PROJECT DIRECTORY', 'ARC 项目目录')}<span className="eyebrow-line"/></div>
@@ -73,9 +104,9 @@ export default function EcosystemPage({ language }: Props) {
     </div>
 
     <section className="ecosystem-toolbar" aria-label={t('Project search and filters', '项目搜索与筛选')}>
-      <label className="ecosystem-search"><Search size={15}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('Search projects or categories', '搜索项目或类别')} aria-label={t('Search projects', '搜索项目')}/></label>
+      <label className="ecosystem-search"><Search size={15}/><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder={t('Search projects or categories', '搜索项目或类别')} aria-label={t('Search projects', '搜索项目')}/></label>
       <div className="ecosystem-filters" aria-label={t('Filter by category', '按类别筛选')}>
-        {categories.map((item) => <button key={item.value} type="button" className={category === item.value ? 'active' : ''} onClick={() => setCategory(item.value)}>{t(item.en, item.zh)}</button>)}
+        {categories.map((item) => <button key={item.value} type="button" className={category === item.value ? 'active' : ''} onClick={() => { setCategory(item.value); setPage(1); }}>{t(item.en, item.zh)}</button>)}
       </div>
     </section>
 
@@ -83,12 +114,16 @@ export default function EcosystemPage({ language }: Props) {
 
     {selectedProject ? <div className="ecosystem-layout">
       <section className="ecosystem-project-list" aria-label={t('Project results', '项目列表')}>
-        {filteredProjects.map((project) => <button type="button" key={project.slug} onClick={() => setSelectedSlug(project.slug)} className={`ecosystem-project-card ${selectedProject.slug === project.slug ? 'selected' : ''}`} aria-pressed={selectedProject.slug === project.slug}>
+        {visibleProjects.map((project) => <button type="button" key={project.slug} onClick={() => setSelectedSlug(project.slug)} className={`ecosystem-project-card ${selectedProject.slug === project.slug ? 'selected' : ''}`} aria-pressed={selectedProject.slug === project.slug}>
           <ProjectAvatar key={project.handle} handle={project.handle} symbol={project.symbol}/>
           <span className="ecosystem-card-copy"><b>{project.name}</b><small>{project.handle} <i>·</i> {project.categories.map((item) => categoryLabel(item, zh)).join(' / ')}</small></span>
           <span className={`ecosystem-status ${project.status}`}>{project.status === 'beta' ? t('BETA', '测试版') : project.status === 'live' ? t('LIVE', '已上线') : t('UPCOMING', '即将上线')}</span>
           <ArrowUpRight size={15}/>
         </button>)}
+        {pageCount > 1 && <nav className="ecosystem-pagination" aria-label={t('Project pages', '项目分页')}>
+          <span>{t(`${firstVisibleProject}–${lastVisibleProject} of ${filteredProjects.length}`, `显示 ${firstVisibleProject}–${lastVisibleProject} 项，共 ${filteredProjects.length} 项`)}</span>
+          <div><button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1} aria-label={t('Previous page', '上一页')}><ChevronLeft size={14}/></button><b>{page} / {pageCount}</b><button type="button" onClick={() => setPage((current) => Math.min(pageCount, current + 1))} disabled={page === pageCount} aria-label={t('Next page', '下一页')}><ChevronRight size={14}/></button></div>
+        </nav>}
       </section>
 
       <article className="ecosystem-detail-card">
@@ -112,7 +147,7 @@ export default function EcosystemPage({ language }: Props) {
 
         {selectedProject.updates.length > 0 && <div className="ecosystem-detail-section"><div className="ecosystem-detail-label">{t('PROJECT UPDATES', '项目动态')}</div><div className="ecosystem-update-list">{selectedProject.updates.map((update) => <a key={update.sourceUrl} href={update.sourceUrl} target="_blank" rel="noreferrer"><small>{update.publishedAt ? new Date(update.publishedAt).toLocaleDateString(zh ? 'zh-CN' : 'en-US') : t('Date not set', '日期未注明')}</small><b>{zh ? update.titleZh || update.titleEn : update.titleEn}</b><span>{zh ? update.summaryZh || update.summaryEn : update.summaryEn}</span></a>)}</div></div>}
 
-        {selectedProject.tokenAddress && <div className="ecosystem-detail-section"><div className="ecosystem-detail-label">{t('TOKEN CONTRACT · ARC', '代币合约 · ARC')}</div><code className="ecosystem-token-address">{selectedProject.tokenAddress}</code></div>}
+        {selectedProject.tokenAddress && <div className="ecosystem-detail-section"><div className="ecosystem-detail-label">{t('TOKEN CONTRACT · ARC', '代币合约 · ARC')}</div><div className="ecosystem-token-row"><code className="ecosystem-token-address">{selectedProject.tokenAddress}</code><button type="button" className="ecosystem-token-action" onClick={() => void copyTokenAddress(selectedProject.tokenAddress!)} title={copiedAddress === selectedProject.tokenAddress ? t('Copied', '已复制') : t('Copy contract address', '复制合约地址')} aria-label={copiedAddress === selectedProject.tokenAddress ? t('Address copied', '合约地址已复制') : t('Copy contract address', '复制合约地址')}>{copiedAddress === selectedProject.tokenAddress ? <Check size={14}/> : <Copy size={14}/>}<span>{copiedAddress === selectedProject.tokenAddress ? t('Copied', '已复制') : t('Copy', '复制')}</span></button><a className="ecosystem-token-action ecosystem-token-okx" href={`https://web3.okx.com/zh-hans/token/arc/${encodeURIComponent(selectedProject.tokenAddress)}`} target="_blank" rel="noreferrer" aria-label={t('Open token chart on OKX', '在 OKX 打开代币图表')}>OKX {t('Chart', '图表')} <ExternalLink size={13}/></a></div></div>}
 
         <div className="ecosystem-detail-footer"><div className="ecosystem-links"><a href={selectedProject.website} target="_blank" rel="noreferrer">{t('Website', '官网')} <ExternalLink size={12}/></a><a href={selectedProject.x} target="_blank" rel="noreferrer">X <ExternalLink size={12}/></a></div></div>
       </article>
