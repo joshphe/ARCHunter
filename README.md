@@ -1,20 +1,30 @@
 # ARC Watch
 
-A dark, data-dense dashboard concept for tracking the ARC ecosystem: launchpad TVL, fees, project activity and ecosystem updates.
+Public dashboard for ARC protocol metrics and a curated project directory.
 
-## Getting started
+## Run locally
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open http://localhost:3000.
+Project directory data is read from Neon. Configure `DATABASE_URL`, `ADMIN_PASSWORD`, and `ADMIN_SESSION_SECRET` as server-only Vercel environment variables. Do not add their values to source files or client-side `NEXT_PUBLIC_` variables. For local development, run the app or migration with Vercel's environment runner so secrets do not need to be copied into the repository.
 
-## Data status
+After linking the repository to the Vercel project and configuring its environment variables, initialize the database with:
 
-The current screen uses illustrative sample data to establish the product experience. It is not a live on-chain feed. Before presenting metrics as live, connect verified sources for ARC launchpad events, TVL, protocol fees and ecosystem announcements. Keep source attribution and last-updated timestamps visible in the UI.
+```bash
+vercel env run -- npm run db:migrate
+```
+
+The migration creates the project directory and project updates tables and imports the existing Vort and KAIRO entries. It can be re-run safely.
+
+## Project management
+
+Open `/admin` and sign in with the administrator password configured for the deployment. Project records are stored in `ecosystem_projects`; project announcements and source links are stored in `ecosystem_project_updates`. The public directory only returns published records.
+
+The `arc-project-intake` Codex skill gathers and checks project details from official sources, then prepares project metadata and recent updates for the authenticated admin workflow.
 
 ## Deploy
 
-This Next.js app is ready for Vercel. Import the GitHub repository in Vercel and use the default Next.js build settings.
+Vercel deploys the connected GitHub branch using the default Next.js build settings. Environment-variable changes apply to new deployments.
