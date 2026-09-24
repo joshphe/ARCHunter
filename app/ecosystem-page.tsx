@@ -79,7 +79,7 @@ export default function EcosystemPage({ language }: Props) {
       </div>
     </section>
 
-    <div className="ecosystem-results-bar"><span>{t('CURATED DIRECTORY', '精选项目目录')}</span><b>{zh ? `${String(filteredProjects.length).padStart(2, '0')} 个项目` : `${filteredProjects.length} ${filteredProjects.length === 1 ? 'project' : 'projects'}`}</b><i/><span>{t('Metrics update from connected data sources', '指标来自已接入的数据源')}</span></div>
+    <div className="ecosystem-results-bar"><span>{t('CURATED DIRECTORY', '精选项目目录')}</span><b>{zh ? `${String(filteredProjects.length).padStart(2, '0')} 个项目` : `${filteredProjects.length} ${filteredProjects.length === 1 ? 'project' : 'projects'}`}</b><i/><span>{t('Curated project profiles', '人工整理项目信息')}</span></div>
 
     {selectedProject ? <div className="ecosystem-layout">
       <section className="ecosystem-project-list" aria-label={t('Project results', '项目列表')}>
@@ -114,11 +114,11 @@ export default function EcosystemPage({ language }: Props) {
 
         {selectedProject.tokenAddress && <div className="ecosystem-detail-section"><div className="ecosystem-detail-label">{t('TOKEN CONTRACT · ARC', '代币合约 · ARC')}</div><code className="ecosystem-token-address">{selectedProject.tokenAddress}</code></div>}
 
-        <div className="ecosystem-detail-footer"><div className="ecosystem-source-note"><span>{t('PROFILE SOURCE', '资料来源')}</span><small>{t('Official project website · reviewed', '项目官网 · 已核实')} {selectedProject.verifiedOn}</small></div><div className="ecosystem-links"><a href={selectedProject.website} target="_blank" rel="noreferrer">{t('Website', '官网')} <ExternalLink size={12}/></a><a href={selectedProject.x} target="_blank" rel="noreferrer">X <ExternalLink size={12}/></a></div></div>
+        <div className="ecosystem-detail-footer"><div className="ecosystem-links"><a href={selectedProject.website} target="_blank" rel="noreferrer">{t('Website', '官网')} <ExternalLink size={12}/></a><a href={selectedProject.x} target="_blank" rel="noreferrer">X <ExternalLink size={12}/></a></div></div>
       </article>
     </div> : <div className="ecosystem-empty"><Search size={19}/><b>{loading ? t('Loading project directory…', '正在加载项目目录…') : loadError ? t('Project directory is temporarily unavailable.', '项目目录暂时无法加载。') : t('No projects match your search.', '没有找到匹配的项目。')}</b><span>{loading ? t('Fetching curated data.', '正在读取已整理的项目信息。') : loadError ? t('Please try again in a moment.', '请稍后重试。') : t('Try a different name or category.', '试试其他项目名称或类别。')}</span></div>}
 
-    <div className="ecosystem-data-note"><span>ⓘ</span><p>{t('On-chain metrics appear when a project has a reliable data source. “Not indexed” means the metric has not been confirmed; it does not mean zero.', '项目接入可靠数据源后才会显示链上指标。“未收录”表示暂未确认数据，不代表数值为零。')}</p></div>
-    <footer><span>© 2026 ARC WATCH <i>·</i> {t('COMMUNITY BUILT', '社区共建')}</span><span>{t('PROJECT INFO: OFFICIAL SOURCES', '项目信息：官方来源')} <i>·</i> {t('Reviewed', '资料核实')} {selectedProject?.verifiedOn ?? '—'} <i>·</i> <a href="https://unavatar.io" target="_blank" rel="noreferrer">{t('Avatars by Unavatar', '头像由 Unavatar 提供')}</a></span></footer>
+    <div className="ecosystem-data-note"><span>ⓘ</span><p>{t('“Not indexed” means the metric has not been confirmed; it does not mean zero.', '“未收录”表示暂未确认指标，不代表数值为零。')}</p></div>
+    <footer><span>© 2026 ARC WATCH <i>·</i> {t('COMMUNITY BUILT', '社区共建')}</span><span><a href="https://unavatar.io" target="_blank" rel="noreferrer">{t('Avatars by Unavatar', '头像由 Unavatar 提供')}</a></span></footer>
   </div>;
 }

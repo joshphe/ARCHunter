@@ -4,6 +4,7 @@ import { ARC_LAUNCH_START_TIMESTAMP } from '@/lib/arc';
 type ChartPoint = [number, number];
 type ProtocolFee = {
   name: string;
+  slug?: string;
   module?: string;
   category?: string;
   logo?: string;
@@ -11,6 +12,7 @@ type ProtocolFee = {
   total7d?: number;
   total30d?: number;
   change_1d?: number;
+  twitter?: string;
 };
 type FeeOverview = {
   total24h?: number;
@@ -21,10 +23,10 @@ type FeeOverview = {
   protocols?: ProtocolFee[];
 };
 type TvlPoint = { date: number; tvl: number };
-async function fetchLlama<T>(path: string): Promise<T | null> {
+async function fetchLlama<T>(path: string, revalidate = 300): Promise<T | null> {
   try {
     const response = await fetch(`https://api.llama.fi${path}`, {
-      next: { revalidate: 300 },
+      next: { revalidate },
       headers: { accept: 'application/json' },
     });
     if (!response.ok) return null;
@@ -67,6 +69,12 @@ export async function GET() {
     .filter((protocol) => typeof protocol.total24h === 'number')
     .sort((a, b) => (b.total24h ?? 0) - (a.total24h ?? 0))
     .slice(0, 8);
+  const protocolsWithX = await Promise.all(protocols.map(async (protocol) => {
+    const slug = protocol.slug ?? protocol.module?.split('/')[0];
+    if (!slug) return protocol;
+    const metadata = await fetchLlama<{ twitter?: string }>(`/protocol/${encodeURIComponent(slug)}`, 86400);
+    return { ...protocol, twitter: metadata?.twitter ?? protocol.twitter };
+  }));
 
   return NextResponse.json({
     updatedAt: new Date().toISOString(),
@@ -82,7 +90,7 @@ export async function GET() {
       protocolCount: fees?.protocols?.length ?? null,
     },
     history: [...history.values()].sort((a, b) => a.timestamp - b.timestamp),
-    topProtocols: protocols,
+    topProtocols: protocolsWithX,
     partial: !fees || !dex || !tvl,
   });
 }

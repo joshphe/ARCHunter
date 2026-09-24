@@ -2,12 +2,12 @@ import { NextResponse } from 'next/server';
 import { ARC_LAUNCH_START_TIMESTAMP } from '@/lib/arc';
 
 const launchpads = [
-  { slug: 'argus-world', name: 'Argus', logo: 'A', color: '#9ce86b' },
-  { slug: 'foci', name: 'Foci', logo: 'F', color: '#a88bff' },
-  { slug: 'wonk-fun', name: 'Wonk Fun', logo: 'W', color: '#ff9c72' },
-  { slug: 'peach-launchpad', name: 'Peach', logo: 'P', color: '#ff8fba' },
-  { slug: 'tolly', name: 'Tolly', logo: 'T', color: '#74c9ff' },
-  { slug: 'solonpad', name: 'Solon', logo: 'S', color: '#ffd36b' },
+  { slug: 'argus-world', name: 'Argus', logo: 'A', xHandle: 'arguspad', color: '#9ce86b' },
+  { slug: 'foci', name: 'Foci', logo: 'F', xHandle: 'focidotfamily', color: '#a88bff' },
+  { slug: 'wonk-fun', name: 'Wonk Fun', logo: 'W', xHandle: 'wonk_fun', color: '#ff9c72' },
+  { slug: 'peach-launchpad', name: 'Peach', logo: 'P', xHandle: 'peachlfg', color: '#ff8fba' },
+  { slug: 'tolly', name: 'Tolly', logo: 'T', xHandle: 'TollyLabs', color: '#74c9ff' },
+  { slug: 'solonpad', name: 'Solon', logo: 'S', xHandle: 'Solonlabs1', color: '#ffd36b' },
 ] as const;
 
 type LlamaFeeSummary = {

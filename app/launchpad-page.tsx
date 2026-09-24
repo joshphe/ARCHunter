@@ -4,9 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, Brush, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ArrowDownRight, ArrowUpRight, ExternalLink, Flame, Radio, RefreshCw, Trophy } from 'lucide-react';
 import { ARC_LAUNCH_START_TIMESTAMP } from '@/lib/arc';
+import ProjectAvatar from '@/app/project-avatar';
 
 type Launchpad = {
-  slug: string; name: string; logo: string; color: string; available: boolean;
+  slug: string; name: string; logo: string; xHandle: string; color: string; available: boolean;
   fees24h: number | null; fees7d: number | null; fees30d: number | null; feesAllTime: number | null;
   change24h: number | null; history: [number, number][]; methodology: string | null; sourceUrl: string;
 };
@@ -102,7 +103,7 @@ export default function LaunchpadPage({ language, isDark }: Props) {
     </div>
 
     <div className="launchpad-sourcebar">
-      <div className="launchpad-live"><span className="pulse-dot"/>{t('LIVE FROM DEFILLAMA', 'DEFILLAMA 实时数据')}</div>
+      <div className="launchpad-live"><span className="pulse-dot"/>{t('LIVE DATA', '实时数据')}</div>
       <span className="launchpad-sourcecopy">{t('Arc · Fees in USD', 'Arc · 美元计价费用')}</span>
       {updatedLabel && <span className="launchpad-updated">{t('Updated', '更新时间')} {updatedLabel}</span>}
       {failed && <span className="launchpad-warning">{t('Some data could not be loaded', '部分数据暂时无法加载')}</span>}
@@ -163,19 +164,18 @@ export default function LaunchpadPage({ language, isDark }: Props) {
     </section>
 
     <section className="launchpad-table-card">
-      <div className="launchpad-panel-head"><div><div className="section-kicker">{t('PROTOCOL BREAKDOWN', '协议明细')}</div><h3>{t('Launchpad leaderboard', '发射台排行榜')}</h3></div><a className="defillama-link" href="https://defillama.com/chain/arc" target="_blank" rel="noreferrer">{t('View Arc on DefiLlama', '在 DefiLlama 查看 Arc')} <ExternalLink size={13}/></a></div>
-      <div className="launchpad-table-scroll"><table className="launchpad-table"><thead><tr><th>#</th><th>{t('LAUNCHPAD', '发射台')}</th><th>{t('FEES · 24H', '费用 · 24 小时')}</th><th>{t('FEES · 7D', '费用 · 7 天')}</th><th>{t('FEES · 30D', '费用 · 30 天')}</th><th>{t('24H CHANGE', '24 小时变化')}</th><th>{t('SOURCE', '来源')}</th></tr></thead><tbody>
+      <div className="launchpad-panel-head"><div><div className="section-kicker">{t('PROTOCOL BREAKDOWN', '协议明细')}</div><h3>{t('Launchpad leaderboard', '发射台排行榜')}</h3></div></div>
+      <div className="launchpad-table-scroll"><table className="launchpad-table"><thead><tr><th>#</th><th>{t('LAUNCHPAD', '发射台')}</th><th>{t('FEES · 24H', '费用 · 24 小时')}</th><th>{t('FEES · 7D', '费用 · 7 天')}</th><th>{t('FEES · 30D', '费用 · 30 天')}</th><th>{t('24H CHANGE', '24 小时变化')}</th></tr></thead><tbody>
         {[...launchpads].sort((a, b) => (b.fees24h ?? -1) - (a.fees24h ?? -1)).map((item, index) => <tr key={item.slug}>
           <td className="launchpad-rank">{item.available ? String(index + 1).padStart(2, '0') : '—'}</td>
-          <td><div className="launchpad-project"><span className="launchpad-avatar" style={{ '--launchpad-color': item.color } as React.CSSProperties}>{item.logo}</span><span><b>{item.name}</b><small>{item.available ? t('Tracked on Arc', 'Arc 链上追踪中') : t('Data unavailable', '暂不可用')}</small></span></div></td>
+          <td><div className="launchpad-project"><ProjectAvatar key={item.xHandle} className="launchpad-avatar" handle={item.xHandle} symbol={item.logo}/><span><b>{item.name}</b><small>{item.available ? t('Tracked on Arc', 'Arc 链上追踪中') : t('Data unavailable', '暂不可用')}</small></span></div></td>
           <td className="launchpad-money">{money(item.fees24h)}</td><td className="launchpad-money">{money(item.fees7d)}</td><td className="launchpad-money">{money(item.fees30d)}</td>
           <td><span className={item.change24h === null ? 'launchpad-change unavailable' : item.change24h >= 0 ? 'launchpad-change positive' : 'launchpad-change negative'}>{item.change24h !== null && (item.change24h >= 0 ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>)} {pct(item.change24h)}</span></td>
-          <td><a className="launchpad-row-source" href={item.sourceUrl} target="_blank" rel="noreferrer">{t('DefiLlama', 'DefiLlama')} <ExternalLink size={11}/></a></td>
         </tr>)}
-        {!data && <tr><td colSpan={7} className="launchpad-loading">{t('Loading launchpad fees…', '正在加载发射台费用…')}</td></tr>}
+        {!data && <tr><td colSpan={6} className="launchpad-loading">{t('Loading launchpad fees…', '正在加载发射台费用…')}</td></tr>}
       </tbody></table></div>
-      <div className="launchpad-methodology"><span>{t('Fee methodology varies by protocol; figures follow each protocol’s DefiLlama adapter.', '各协议费用口径有所不同，数据采用 DefiLlama 对应协议适配器的统计方式。')}</span><a href="https://defillama.com/protocol/argus-world" target="_blank" rel="noreferrer">{t('About fee methodology', '了解费用口径')} <ExternalLink size={11}/></a></div>
+      <div className="launchpad-methodology"><span>{t('Fee methodology may vary by protocol.', '各协议费用统计口径可能有所不同。')}</span></div>
     </section>
-    <footer><span>© 2026 ARC WATCH <i>·</i> {t('COMMUNITY BUILT', '社区共建')}</span><span>{t('DATA SOURCE: DEFILLAMA', '数据来源：DEFILLAMA')} <i>·</i> <a href="https://defillama.com/chain/arc" target="_blank" rel="noreferrer">DefiLlama</a></span></footer>
+    <footer><span>© 2026 ARC WATCH <i>·</i> {t('COMMUNITY BUILT', '社区共建')}</span></footer>
   </div>;
 }
