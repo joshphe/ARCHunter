@@ -134,3 +134,6 @@ html[data-theme='light'] .admin-shell{background:#f4f6f1;color:#30372e}html[data
 html[data-theme='light'] .admin-updates{border-color:#dfe3da}html[data-theme='light'] .admin-update-row{border-color:#dfe3da;background:#fbfcfa}html[data-theme='light'] .admin-update-row b{color:#30372e}
 .ecosystem-update-list{display:grid;gap:7px}.ecosystem-update-list>a{padding:10px 11px;display:grid;gap:4px;border:1px solid #2d333c;border-radius:5px;background:#111419;text-decoration:none}.ecosystem-update-list>a:hover{border-color:#536445}.ecosystem-update-list small{color:#819071;font:8px 'DM Mono',monospace}.ecosystem-update-list b{color:#dfe4dc;font-size:10px;font-weight:600}.ecosystem-update-list span{color:#929ba4;font-size:9px;line-height:1.55}
 html[data-theme='light'] .ecosystem-update-list>a{border-color:#dfe3da;background:#fbfcfa}html[data-theme='light'] .ecosystem-update-list b{color:#30372e}html[data-theme='light'] .ecosystem-update-list span{color:#697265}
+
+.ecosystem-project-mark.has-avatar{padding:0;overflow:hidden;border-radius:50%;background:#fff;border-color:#424a3e}.ecosystem-project-mark.has-avatar img{display:block;width:100%;height:100%;border-radius:inherit;object-fit:cover}
+html[data-theme='light'] .ecosystem-project-mark.has-avatar{border-color:#d5dccf}

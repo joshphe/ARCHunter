@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowUpRight, ExternalLink, Search } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
+import ProjectAvatar from '@/app/project-avatar';
 
 type Props = { language: 'en' | 'zh' };
 
@@ -83,7 +84,7 @@ export default function EcosystemPage({ language }: Props) {
     {selectedProject ? <div className="ecosystem-layout">
       <section className="ecosystem-project-list" aria-label={t('Project results', '项目列表')}>
         {filteredProjects.map((project) => <button type="button" key={project.slug} onClick={() => setSelectedSlug(project.slug)} className={`ecosystem-project-card ${selectedProject.slug === project.slug ? 'selected' : ''}`} aria-pressed={selectedProject.slug === project.slug}>
-          <span className="ecosystem-project-mark">{project.symbol}</span>
+          <ProjectAvatar key={project.handle} handle={project.handle} symbol={project.symbol}/>
           <span className="ecosystem-card-copy"><b>{project.name}</b><small>{project.handle} <i>·</i> {project.categories.map((item) => categoryLabel(item, zh)).join(' / ')}</small></span>
           <span className={`ecosystem-status ${project.status}`}>{project.status === 'beta' ? t('BETA', '测试版') : project.status === 'live' ? t('LIVE', '已上线') : t('UPCOMING', '即将上线')}</span>
           <ArrowUpRight size={15}/>
@@ -92,7 +93,7 @@ export default function EcosystemPage({ language }: Props) {
 
       <article className="ecosystem-detail-card">
         <div className="ecosystem-detail-top">
-          <div className="ecosystem-detail-brand"><span className="ecosystem-project-mark large">{selectedProject.symbol}</span><div><div className="ecosystem-handle">{selectedProject.handle}</div><h2>{selectedProject.name}</h2></div></div>
+          <div className="ecosystem-detail-brand"><ProjectAvatar key={selectedProject.handle} handle={selectedProject.handle} symbol={selectedProject.symbol} large/><div><div className="ecosystem-handle">{selectedProject.handle}</div><h2>{selectedProject.name}</h2></div></div>
           <span className={`ecosystem-status ${selectedProject.status}`}>{selectedProject.status === 'beta' ? t('BETA', '测试版') : selectedProject.status === 'live' ? t('LIVE ON ARC', '已上线 ARC') : t('UPCOMING', '即将上线')}</span>
         </div>
         <p className="ecosystem-tagline">{zh ? selectedProject.taglineZh || selectedProject.tagline : selectedProject.tagline}</p>
@@ -118,6 +119,6 @@ export default function EcosystemPage({ language }: Props) {
     </div> : <div className="ecosystem-empty"><Search size={19}/><b>{loading ? t('Loading project directory…', '正在加载项目目录…') : loadError ? t('Project directory is temporarily unavailable.', '项目目录暂时无法加载。') : t('No projects match your search.', '没有找到匹配的项目。')}</b><span>{loading ? t('Fetching curated data.', '正在读取已整理的项目信息。') : loadError ? t('Please try again in a moment.', '请稍后重试。') : t('Try a different name or category.', '试试其他项目名称或类别。')}</span></div>}
 
     <div className="ecosystem-data-note"><span>ⓘ</span><p>{t('On-chain metrics appear when a project has a reliable data source. “Not indexed” means the metric has not been confirmed; it does not mean zero.', '项目接入可靠数据源后才会显示链上指标。“未收录”表示暂未确认数据，不代表数值为零。')}</p></div>
-    <footer><span>© 2026 ARC WATCH <i>·</i> {t('COMMUNITY BUILT', '社区共建')}</span><span>{t('PROJECT INFO: OFFICIAL SOURCES', '项目信息：官方来源')} <i>·</i> {t('Reviewed', '资料核实')} {selectedProject?.verifiedOn ?? '—'}</span></footer>
+    <footer><span>© 2026 ARC WATCH <i>·</i> {t('COMMUNITY BUILT', '社区共建')}</span><span>{t('PROJECT INFO: OFFICIAL SOURCES', '项目信息：官方来源')} <i>·</i> {t('Reviewed', '资料核实')} {selectedProject?.verifiedOn ?? '—'} <i>·</i> <a href="https://unavatar.io" target="_blank" rel="noreferrer">{t('Avatars by Unavatar', '头像由 Unavatar 提供')}</a></span></footer>
   </div>;
 }
