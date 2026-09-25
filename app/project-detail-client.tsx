@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, Copy, ExternalLink, Moon, Sun } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, Compass, Copy, ExternalLink, LayoutDashboard, Menu, Moon, Sparkles, Sun, X } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
 import ProjectAvatar from '@/app/project-avatar';
 
@@ -23,6 +23,7 @@ export default function ProjectDetailClient({ slug }: Props) {
   const [language, setLanguage] = useState<'en' | 'zh'>('en');
   const [isDark, setIsDark] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const zh = language === 'zh';
   const t = (en: string, cn: string) => zh ? cn : en;
 
@@ -70,12 +71,20 @@ export default function ProjectDetailClient({ slug }: Props) {
     { label: t('VOLUME · 24H', '交易量 · 24 小时'), value: project.volume24h, display: amount(project.volume24h, zh) },
   ] : [];
 
-  return <main className="project-route">
-    <header className="project-route-header">
-      <Link className="brand" href="/"><span className="brand-mark"><span/></span><span>arc<span className="brand-light">watch</span></span></Link>
-      <div className="project-route-actions"><button className="language-button" onClick={() => setLanguage(zh ? 'en' : 'zh')} aria-label={zh ? '切换为英文' : 'Switch to Chinese'}>{zh ? 'CN' : 'EN'}</button><button className="icon-button" onClick={() => setIsDark(!isDark)} aria-label={isDark ? '切换到白天模式' : '切换到夜间模式'}>{isDark ? <Sun size={17}/> : <Moon size={17}/>}</button></div>
-    </header>
-    <div className="project-route-content">
+  return <main className="shell project-detail-shell">
+    <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
+      <div className="brand"><div className="brand-mark"><span/></div><span>arc<span className="brand-light">watch</span></span><button className="mobile-close" onClick={() => setMobileOpen(false)} aria-label={t('Close menu', '关闭菜单')}><X size={18}/></button></div>
+      <div className="network"><span className="network-dot"/> {t('ARC Network', 'ARC 网络')} <ChevronDown size={14}/><span className="network-main">MAINNET</span></div>
+      <div className="nav-label">{t('WORKSPACE', '工作区')}</div>
+      <nav>
+        <Link className="nav-item" href="/"><LayoutDashboard size={17}/><span>{t('Overview', '概览')}</span></Link>
+        <Link className="nav-item selected" href="/?view=ecosystem"><Compass size={17}/><span>{t('Ecosystem', '生态')}</span></Link>
+        <Link className="nav-item" href="/?view=launchpad"><Sparkles size={17}/><span>{t('Launchpad', '发射台')}</span></Link>
+      </nav>
+    </aside>
+    <section className="main-area">
+      <header className="topbar"><button className="hamburger" onClick={() => setMobileOpen(!mobileOpen)} aria-label={t('Open menu', '打开菜单')}><Menu size={19}/></button><div className="breadcrumbs"><span>{t('Workspace', '工作区')}</span><span className="slash">/</span><Link href="/?view=ecosystem">{t('Ecosystem', '生态')}</Link><span className="slash">/</span><b>{project?.name ?? t('Project', '项目')}</b></div><div className="top-actions"><div className="live-indicator"><span/> {t('LIVE DATA', '实时数据')}</div><button className="language-button" onClick={() => setLanguage(zh ? 'en' : 'zh')} aria-label={zh ? '切换为英文' : 'Switch to Chinese'}>{zh ? 'CN' : 'EN'}</button><button className="icon-button" onClick={() => setIsDark(!isDark)} aria-label={isDark ? '切换到白天模式' : '切换到夜间模式'}>{isDark ? <Sun size={17}/> : <Moon size={17}/>}</button></div></header>
+      <div className="project-route-content">
       <Link className="project-back-link" href="/?view=ecosystem"><ArrowLeft size={15}/>{t('Back to project directory', '返回项目目录')}</Link>
       {project === undefined ? <div className="project-route-state">{t('Loading project profile…', '正在加载项目详情…')}</div> : project === null ? <div className="project-route-state"><b>{t('Project not found', '未找到该项目')}</b><Link href="/?view=ecosystem">{t('Browse all projects', '浏览全部项目')}</Link></div> : <>
         <section className="project-detail-hero">
@@ -97,6 +106,8 @@ export default function ProjectDetailClient({ slug }: Props) {
 
         {project.updates.length ? <section className="project-detail-panel project-updates-panel"><div className="ecosystem-detail-label">{t('PROJECT UPDATES', '项目动态')}</div><div className="ecosystem-update-list">{project.updates.map((update) => <a key={update.sourceUrl} href={update.sourceUrl} target="_blank" rel="noreferrer"><small>{update.publishedAt ? new Date(update.publishedAt).toLocaleDateString(zh ? 'zh-CN' : 'en-US') : t('Date not set', '日期未注明')}</small><b>{zh ? update.titleZh || update.titleEn : update.titleEn}</b><span>{zh ? update.summaryZh || update.summaryEn : update.summaryEn}</span></a>)}</div></section> : null}
       </>}
-    </div>
+      </div>
+    </section>
+    {mobileOpen ? <button className="mobile-scrim" onClick={() => setMobileOpen(false)} aria-label={t('Close menu', '关闭菜单')}/> : null}
   </main>;
 }
