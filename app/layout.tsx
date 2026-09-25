@@ -7,6 +7,10 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: 'ARC Watch — Ecosystem Intelligence',
   description: 'Track ARC ecosystem projects, launchpad fees, and on-chain activity in one place.',
+  icons: {
+    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
+    shortcut: '/icon.svg',
+  },
   openGraph: {
     type: 'website',
     url: '/',
