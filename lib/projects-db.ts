@@ -49,6 +49,7 @@ export async function listProjects(publishedOnly = true): Promise<EcosystemProje
     fees24h: row.fees24hUsd == null ? null : Number(row.fees24hUsd),
     volume24h: row.volume24hUsd == null ? null : Number(row.volume24hUsd),
     tokenAddress: row.tokenAddress == null ? null : String(row.tokenAddress),
+    tokenMetrics: null,
     website: String(row.website),
     x: String(row.x),
     sourceUrls: row.sourceUrls as string[],

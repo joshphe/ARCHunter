@@ -70,7 +70,7 @@ INSERT INTO ecosystem_projects (
     'Arc 上的综合金融平台，整合预测市场、兑换、永续合约、代币创建与奖励产品。',
     ARRAY['DeFi','Prediction Markets'], 'live',
     '[{"en":"Prediction markets","zh":"预测市场"},{"en":"Swap","zh":"兑换"},{"en":"Perpetuals","zh":"永续合约"},{"en":"Create token","zh":"创建代币"},{"en":"KAIRO Pools","zh":"KAIRO 池","status":"upcoming"}]'::jsonb,
-    'https://kairo.market/', 'https://x.com/kairo_market', NULL,
+    'https://kairo.market/', 'https://x.com/kairo_market', '0x3ead4e80e9e5bc0e01682d7ee74c4881b040d3ea',
     NULL, NULL, NULL, ARRAY['https://kairo.market/'], DATE '2026-09-23', 20, true
   )
 ON CONFLICT (slug) DO UPDATE SET

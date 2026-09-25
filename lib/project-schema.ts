@@ -1,3 +1,5 @@
+import type { TokenMetrics } from '@/lib/token-metrics';
+
 export type ProjectProduct = { en: string; zh: string; status?: 'upcoming' };
 export type ProjectUpdate = { titleEn: string; titleZh: string; summaryEn: string; summaryZh: string; sourceUrl: string; publishedAt: string | null };
 
@@ -16,6 +18,7 @@ export type EcosystemProject = {
   fees24h: number | null;
   volume24h: number | null;
   tokenAddress: string | null;
+  tokenMetrics: TokenMetrics | null;
   website: string;
   x: string;
   sourceUrls: string[];
@@ -26,7 +29,7 @@ export type EcosystemProject = {
   updates: ProjectUpdate[];
 };
 
-export type ProjectInput = Omit<EcosystemProject, 'sourceUrls' | 'verifiedOn' | 'recommended' | 'recommendationReason' | 'taglineZh' | 'isPublished' | 'updates'> & {
+export type ProjectInput = Omit<EcosystemProject, 'sourceUrls' | 'verifiedOn' | 'recommended' | 'recommendationReason' | 'taglineZh' | 'isPublished' | 'updates' | 'tokenMetrics'> & {
   taglineZh?: string;
   isPublished?: boolean;
   sourceUrls?: string[];

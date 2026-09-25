@@ -140,6 +140,11 @@ html[data-theme='light'] .ecosystem-reviewed{border-color:#dce5d2;background:#f6
 /* Keep long ARC token addresses readable and easy to copy. */
 .ecosystem-token-address{display:block;max-width:100%;padding:10px 11px;overflow-wrap:anywhere;border:1px solid #2b3038;border-radius:5px;background:#101317;color:#c7d1bc;font:10px/1.6 'DM Mono',monospace;user-select:text}
 .ecosystem-token-row{display:flex;align-items:stretch;gap:7px;min-width:0}
+.ecosystem-metrics.token-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}
+.ecosystem-token-summary{display:flex;flex-wrap:wrap;gap:7px 14px;padding:8px 11px;border:1px solid #2b3038;border-top:0;border-radius:0 0 5px 5px;background:#12161b;color:#727b86;font:8px 'DM Mono',monospace}
+.ecosystem-token-summary span{display:flex;align-items:center;gap:5px}.ecosystem-token-summary b{color:#cbd2c7;font-weight:500}.ecosystem-token-summary em{font-style:normal}.ecosystem-token-summary em.positive{color:#9fce6c}.ecosystem-token-summary em.negative{color:#e47e78}.ecosystem-source-note small a{display:inline-flex;align-items:center;gap:3px;color:#a9c981}
+html[data-theme='light'] .ecosystem-token-summary{border-color:#dfe3da;background:#f8faf6;color:#788174}html[data-theme='light'] .ecosystem-token-summary b{color:#394235}html[data-theme='light'] .ecosystem-source-note small a{color:#607e3d}
+@media(max-width:660px){.ecosystem-metrics.token-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.ecosystem-metrics.token-metrics .ecosystem-metric:nth-child(2){border-right:0}.ecosystem-metrics.token-metrics .ecosystem-metric:nth-child(-n+2){border-bottom:1px solid #2b3038}html[data-theme='light'] .ecosystem-metrics.token-metrics .ecosystem-metric:nth-child(-n+2){border-bottom-color:#e2e6df}}
 .ecosystem-token-address{min-width:0;flex:1}
 .ecosystem-token-action{min-height:39px;padding:0 10px;display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:none;border:1px solid #333b42;border-radius:5px;background:#171b20;color:#b8c1b2;font-size:9px;white-space:nowrap;cursor:pointer}
 .ecosystem-token-action:hover{border-color:#59694a;background:#1b2118;color:#d8f1ba}

@@ -9,7 +9,7 @@ type EditableProject = EcosystemProject & { taglineZh: string; isPublished: bool
 const blankProject = (): EditableProject => ({
   slug: '', name: '', symbol: '', handle: '', tagline: '', taglineZh: '',
   description: { en: '', zh: '' }, categories: ['DeFi'], status: 'upcoming', products: [],
-  tvl: null, fees24h: null, volume24h: null, tokenAddress: null, website: '', x: '',
+  tvl: null, fees24h: null, volume24h: null, tokenAddress: null, tokenMetrics: null, website: '', x: '',
   sourceUrls: [], verifiedOn: new Date().toISOString().slice(0, 10), recommended: false,
   recommendationReason: null, isPublished: true, updates: [],
 });

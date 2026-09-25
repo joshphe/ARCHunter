@@ -19,6 +19,14 @@ const amount = (value: number | null, zh: boolean) => value == null
   ? (zh ? '未收录' : 'Not indexed')
   : new Intl.NumberFormat(zh ? 'zh-CN' : 'en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 2 }).format(value);
 
+const count = (value: number | null, zh: boolean) => value == null
+  ? (zh ? '未收录' : 'Not indexed')
+  : new Intl.NumberFormat(zh ? 'zh-CN' : 'en-US', { notation: 'compact', maximumFractionDigits: 2 }).format(value);
+
+const price = (value: number | null, zh: boolean) => value == null
+  ? (zh ? '未收录' : 'Not indexed')
+  : new Intl.NumberFormat(zh ? 'zh-CN' : 'en-US', { style: 'currency', currency: 'USD', maximumSignificantDigits: 6 }).format(value);
+
 const categoryLabel = (category: string, zh: boolean) => {
   if (!zh) return category;
   if (category === 'Prediction Markets') return '预测市场';
@@ -82,6 +90,7 @@ export default function EcosystemPage({ language, selectedProjectSlug }: Props) 
   const visibleProjects = filteredProjects.slice((page - 1) * PROJECTS_PER_PAGE, page * PROJECTS_PER_PAGE);
   const firstVisibleProject = filteredProjects.length ? (page - 1) * PROJECTS_PER_PAGE + 1 : 0;
   const lastVisibleProject = Math.min(page * PROJECTS_PER_PAGE, filteredProjects.length);
+  const tokenMetrics = selectedProject?.tokenMetrics ?? null;
 
   return <div className="content ecosystem-content">
     <aside className="ecosystem-contact-banner">
@@ -135,13 +144,23 @@ export default function EcosystemPage({ language, selectedProjectSlug }: Props) 
         <p className="ecosystem-description">{zh ? selectedProject.description.zh : selectedProject.description.en}</p>
         <div className="ecosystem-category-tags">{selectedProject.categories.map((item) => <span key={item}>{categoryLabel(item, zh)}</span>)}</div>
 
-        <div className="ecosystem-metrics">
-          {[
-            { label: 'TVL', value: selectedProject.tvl },
-            { label: t('FEES · 24H', '费用 · 24 小时'), value: selectedProject.fees24h },
-            { label: t('VOLUME · 24H', '交易量 · 24 小时'), value: selectedProject.volume24h },
-          ].map((metric) => <div className="ecosystem-metric" key={metric.label}><span>{metric.label}</span><b className={metric.value == null ? 'not-indexed' : ''}>{amount(metric.value, zh)}</b></div>)}
+        <div className={`ecosystem-metrics ${tokenMetrics ? 'token-metrics' : ''}`}>
+          {(tokenMetrics ? [
+            { label: t('MARKET CAP', '市值'), value: tokenMetrics.marketCapUsd, display: amount(tokenMetrics.marketCapUsd, zh) },
+            { label: t('LIQUIDITY', '流动性'), value: tokenMetrics.liquidityUsd, display: amount(tokenMetrics.liquidityUsd, zh) },
+            { label: t('VOLUME · 24H', '交易量 · 24 小时'), value: tokenMetrics.volume24hUsd, display: amount(tokenMetrics.volume24hUsd, zh) },
+            { label: t('HOLDERS', '持币地址'), value: tokenMetrics.holders, display: count(tokenMetrics.holders, zh) },
+          ] : [
+            { label: 'TVL', value: selectedProject.tvl, display: amount(selectedProject.tvl, zh) },
+            { label: t('FEES · 24H', '费用 · 24 小时'), value: selectedProject.fees24h, display: amount(selectedProject.fees24h, zh) },
+            { label: t('VOLUME · 24H', '交易量 · 24 小时'), value: selectedProject.volume24h, display: amount(selectedProject.volume24h, zh) },
+          ]).map((metric) => <div className="ecosystem-metric" key={metric.label}><span>{metric.label}</span><b className={metric.value == null ? 'not-indexed' : ''}>{metric.display}</b></div>)}
         </div>
+        {tokenMetrics && <div className="ecosystem-token-summary">
+          <span>{t('PRICE', '价格')} <b>{price(tokenMetrics.priceUsd, zh)}</b>{tokenMetrics.priceChange24h != null && <em className={tokenMetrics.priceChange24h >= 0 ? 'positive' : 'negative'}>{tokenMetrics.priceChange24h >= 0 ? '+' : ''}{tokenMetrics.priceChange24h.toFixed(2)}%</em>}</span>
+          <span>{t('TRADES · 24H', '交易笔数 · 24 小时')} <b>{count((tokenMetrics.buys24h ?? 0) + (tokenMetrics.sells24h ?? 0), zh)}</b></span>
+          <span>{t('TOTAL FEES', '总手续费')} <b>{count(tokenMetrics.totalFee, zh)}</b></span>
+        </div>}
 
         <div className="ecosystem-detail-section"><div className="ecosystem-detail-label">{t('PRODUCTS', '产品')}</div><div className="ecosystem-product-tags">{selectedProject.products.map((product) => <span key={product.en}>{zh ? product.zh : product.en}{product.status === 'upcoming' && <em>{t('SOON', '即将推出')}</em>}</span>)}</div></div>
 
@@ -149,11 +168,11 @@ export default function EcosystemPage({ language, selectedProjectSlug }: Props) 
 
         {selectedProject.tokenAddress && <div className="ecosystem-detail-section"><div className="ecosystem-detail-label">{t('TOKEN CONTRACT · ARC', '代币合约 · ARC')}</div><div className="ecosystem-token-row"><code className="ecosystem-token-address">{selectedProject.tokenAddress}</code><button type="button" className="ecosystem-token-action" onClick={() => void copyTokenAddress(selectedProject.tokenAddress!)} title={copiedAddress === selectedProject.tokenAddress ? t('Copied', '已复制') : t('Copy contract address', '复制合约地址')} aria-label={copiedAddress === selectedProject.tokenAddress ? t('Address copied', '合约地址已复制') : t('Copy contract address', '复制合约地址')}>{copiedAddress === selectedProject.tokenAddress ? <Check size={14}/> : <Copy size={14}/>}<span>{copiedAddress === selectedProject.tokenAddress ? t('Copied', '已复制') : t('Copy', '复制')}</span></button><a className="ecosystem-token-action ecosystem-token-okx" href={`https://web3.okx.com/zh-hans/token/arc/${encodeURIComponent(selectedProject.tokenAddress)}`} target="_blank" rel="noreferrer" aria-label={t('Open token chart on OKX', '在 OKX 打开代币图表')}>OKX {t('Chart', '图表')} <ExternalLink size={13}/></a></div></div>}
 
-        <div className="ecosystem-detail-footer"><div className="ecosystem-links"><a href={selectedProject.website} target="_blank" rel="noreferrer">{t('Website', '官网')} <ExternalLink size={12}/></a><a href={selectedProject.x} target="_blank" rel="noreferrer">X <ExternalLink size={12}/></a></div></div>
+        <div className="ecosystem-detail-footer">{tokenMetrics ? <div className="ecosystem-source-note"><span>{t('LIVE TOKEN DATA', '实时代币数据')}</span><small>{tokenMetrics.source === 'dexscreener+okx' ? 'DEX Screener + OKX' : tokenMetrics.source === 'okx' ? 'OKX' : 'DEX Screener'} · {new Date(tokenMetrics.updatedAt).toLocaleTimeString(zh ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit' })}{tokenMetrics.sourceUrl && <> · <a href={tokenMetrics.sourceUrl} target="_blank" rel="noreferrer">{t('Source', '数据源')} <ExternalLink size={10}/></a></>}</small></div> : <div className="ecosystem-source-note"><span>{t('PROTOCOL DATA', '协议数据')}</span><small>{t('Curated project-level metrics', '人工整理的项目级指标')}</small></div>}<div className="ecosystem-links"><a href={selectedProject.website} target="_blank" rel="noreferrer">{t('Website', '官网')} <ExternalLink size={12}/></a><a href={selectedProject.x} target="_blank" rel="noreferrer">X <ExternalLink size={12}/></a></div></div>
       </article>
     </div> : <div className="ecosystem-empty"><Search size={19}/><b>{loading ? t('Loading project directory…', '正在加载项目目录…') : loadError ? t('Project directory is temporarily unavailable.', '项目目录暂时无法加载。') : t('No projects match your search.', '没有找到匹配的项目。')}</b><span>{loading ? t('Fetching curated data.', '正在读取已整理的项目信息。') : loadError ? t('Please try again in a moment.', '请稍后重试。') : t('Try a different name or category.', '试试其他项目名称或类别。')}</span></div>}
 
-    <div className="ecosystem-data-note"><span>ⓘ</span><p>{t('“Not indexed” means the metric has not been confirmed; it does not mean zero.', '“未收录”表示暂未确认指标，不代表数值为零。')}</p></div>
+    <div className="ecosystem-data-note"><span>ⓘ</span><p>{t('Token market metrics are refreshed every five minutes. TVL and protocol fees remain project-level metrics. “Not indexed” means unavailable, not zero.', '代币市场指标每五分钟更新一次；TVL 与协议费用仍属于项目级指标。“未收录”表示数据暂不可用，不代表数值为零。')}</p></div>
     <footer><span>© 2026 ARC WATCH <i>·</i> {t('COMMUNITY BUILT', '社区共建')}</span><span><a href="https://unavatar.io" target="_blank" rel="noreferrer">{t('Avatars by Unavatar', '头像由 Unavatar 提供')}</a></span></footer>
   </div>;
 }
