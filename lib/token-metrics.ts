@@ -48,34 +48,37 @@ const sum = (values: Array<number | null>) => {
   return available.length ? available.reduce((total, value) => total + value, 0) : null;
 };
 
-async function getDexScreenerMetric(address: string): Promise<TokenMetrics | null> {
-  const response = await fetch(`https://api.dexscreener.com/token-pairs/v1/arc/${address}`, {
+async function getDexScreenerMetrics(addresses: string[]): Promise<Map<string, TokenMetrics>> {
+  const output = new Map<string, TokenMetrics>();
+  if (!addresses.length) return output;
+  const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addresses.join(',')}`, {
     headers: { Accept: 'application/json' },
     next: { revalidate: 300 },
   });
   if (!response.ok) throw new Error(`DEX Screener returned ${response.status}`);
-  const payload = await response.json() as DexPair[];
-  const pairs = (Array.isArray(payload) ? payload : []).filter((pair) =>
-    pair.chainId === 'arc' && pair.baseToken?.address?.toLowerCase() === address,
-  );
-  if (!pairs.length) return null;
-
-  const primary = [...pairs].sort((a, b) => (numberOrNull(b.liquidity?.usd) ?? 0) - (numberOrNull(a.liquidity?.usd) ?? 0))[0];
-  return {
-    priceUsd: numberOrNull(primary.priceUsd),
-    priceChange24h: numberOrNull(primary.priceChange?.h24),
-    marketCapUsd: numberOrNull(primary.marketCap),
-    fdvUsd: numberOrNull(primary.fdv),
-    liquidityUsd: sum(pairs.map((pair) => numberOrNull(pair.liquidity?.usd))),
-    volume24hUsd: sum(pairs.map((pair) => numberOrNull(pair.volume?.h24))),
-    holders: null,
-    totalFee: null,
-    buys24h: sum(pairs.map((pair) => numberOrNull(pair.txns?.h24?.buys))),
-    sells24h: sum(pairs.map((pair) => numberOrNull(pair.txns?.h24?.sells))),
-    source: 'dexscreener',
-    sourceUrl: primary.url || null,
-    updatedAt: new Date().toISOString(),
-  };
+  const payload = await response.json() as { pairs?: DexPair[] };
+  const allPairs = Array.isArray(payload.pairs) ? payload.pairs : [];
+  for (const address of addresses) {
+    const pairs = allPairs.filter((pair) => pair.chainId === 'arc' && pair.baseToken?.address?.toLowerCase() === address);
+    if (!pairs.length) continue;
+    const primary = [...pairs].sort((a, b) => (numberOrNull(b.liquidity?.usd) ?? 0) - (numberOrNull(a.liquidity?.usd) ?? 0))[0];
+    output.set(address, {
+      priceUsd: numberOrNull(primary.priceUsd),
+      priceChange24h: numberOrNull(primary.priceChange?.h24),
+      marketCapUsd: numberOrNull(primary.marketCap),
+      fdvUsd: numberOrNull(primary.fdv),
+      liquidityUsd: sum(pairs.map((pair) => numberOrNull(pair.liquidity?.usd))),
+      volume24hUsd: sum(pairs.map((pair) => numberOrNull(pair.volume?.h24))),
+      holders: null,
+      totalFee: null,
+      buys24h: sum(pairs.map((pair) => numberOrNull(pair.txns?.h24?.buys))),
+      sells24h: sum(pairs.map((pair) => numberOrNull(pair.txns?.h24?.sells))),
+      source: 'dexscreener',
+      sourceUrl: primary.url || null,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+  return output;
 }
 
 const hasOkxCredentials = () => Boolean(
@@ -144,17 +147,13 @@ export async function getTokenMetrics(inputAddresses: string[]): Promise<Map<str
   });
   if (!missing.length) return result;
 
-  const dexResults = await Promise.all(missing.map(async (address) => {
-    try { return await getDexScreenerMetric(address); }
-    catch (error) {
-      console.warn(`Could not load DEX Screener data for ${address}:`, error instanceof Error ? error.message : 'unknown error');
-      return null;
-    }
-  }));
+  let dexMetrics = new Map<string, TokenMetrics>();
+  try { dexMetrics = await getDexScreenerMetrics(missing); }
+  catch (error) { console.warn('Could not load DEX Screener token data:', error instanceof Error ? error.message : 'unknown error'); }
   const okxMetrics = await getOkxMetrics(missing);
 
-  missing.forEach((address, index) => {
-    const dex = dexResults[index];
+  missing.forEach((address) => {
+    const dex = dexMetrics.get(address) ?? null;
     const okx = okxMetrics.get(address);
     const market = okx?.market;
     const metric: TokenMetrics | null = dex || market ? {
