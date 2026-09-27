@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { ArrowLeft, Check, ChevronDown, Compass, Copy, ExternalLink, LayoutDashboard, Menu, Moon, Sparkles, Sun, X } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
 import ProjectAvatar from '@/app/project-avatar';
+import ProjectScoreRadar from '@/app/project-score-radar';
+import { emptyScorecard, getProjectScore, scoreDimensions } from '@/lib/project-scoring';
 
 type Props = { slug: string };
 
@@ -93,6 +95,25 @@ export default function ProjectDetailClient({ slug }: Props) {
         </section>
 
         <section className="project-detail-intro"><p>{zh ? project.description.zh : project.description.en}</p><div className="ecosystem-category-tags">{project.categories.map((item) => <span key={item}>{item === 'Prediction Markets' && zh ? '预测市场' : item === 'Tokens' && zh ? '代币项目' : item}</span>)}</div></section>
+
+        {(() => {
+          const scorecard = project.scorecard ?? emptyScorecard();
+          const { total, coverage } = getProjectScore(project.scorecard);
+          return <section className="project-score-panel">
+            <div className="project-score-heading"><div><div className="ecosystem-detail-label">{t('ARC WATCH OBSERVATION SCORE', 'ARC WATCH 生态观察分')}</div><p>{t('A transparent editorial snapshot of project progress and ecosystem activity.', '基于可查证信息，观察项目进展与生态活跃度。')}</p></div><div className="project-score-total"><b>{total ?? '—'}</b><span>/100</span></div></div>
+            <div className="project-score-content">
+              <div className="project-score-chart-wrap"><ProjectScoreRadar scorecard={project.scorecard} language={language}/><div className="project-score-coverage">{t('EVIDENCE COVERAGE', '评分覆盖度')} <b>{Math.round(coverage * 100)}%</b></div></div>
+              <div className="project-score-breakdown">{scoreDimensions.map((dimension) => {
+                const item = scorecard[dimension.key];
+                return <div className="project-score-dimension" key={dimension.key}>
+                  <div className="project-score-dimension-top"><b>{zh ? dimension.labelZh : dimension.labelEn}</b><span>{dimension.weight}%</span><strong>{!item.applicable ? 'N/A' : item.score == null ? '—' : `${item.score} / 5`}</strong></div>
+                  <p>{item.applicable ? (zh ? item.noteZh || '评分依据待补充' : item.noteEn || 'Evidence note pending') : t('Not applicable to this project type.', '此维度不适用于该项目类型。')}</p>
+                </div>;
+              })}</div>
+            </div>
+            <div className="project-score-method">{t('Weighted score = Σ (dimension score ÷ 5 × weight). 1 = little public evidence; 3 = working baseline with gaps; 5 = strong, repeatedly verifiable evidence. N/A is excluded; totals require at least 70% evidence coverage.', '总分 = 各维度（分数 ÷ 5 × 权重）之和。1 分代表公开证据较少；3 分代表已有基础运行表现，但仍有关键数据缺口；5 分代表表现突出且有持续、可核验证据。N/A 不纳入计算；评分覆盖度达到 70% 才显示总分。')}</div>
+          </section>;
+        })()}
 
         <section className={`ecosystem-metrics project-detail-metrics ${metrics ? 'token-metrics' : ''}`}>{metricItems.map((metric) => <div className="ecosystem-metric" key={metric.label}><span>{metric.label}</span><b className={metric.value == null ? 'not-indexed' : ''}>{metric.display}</b></div>)}</section>
         {metrics ? <div className="ecosystem-token-summary project-detail-summary"><span>{t('PRICE', '价格')} <b>{price(metrics.priceUsd, zh)}</b>{metrics.priceChange24h != null ? <em className={metrics.priceChange24h >= 0 ? 'positive' : 'negative'}>{metrics.priceChange24h >= 0 ? '+' : ''}{metrics.priceChange24h.toFixed(2)}%</em> : null}</span><span>{t('TRADES · 24H', '交易笔数 · 24 小时')} <b>{count((metrics.buys24h ?? 0) + (metrics.sells24h ?? 0), zh)}</b></span><span>{t('TOTAL FEES', '总手续费')} <b>{count(metrics.totalFee, zh)}</b></span></div> : null}

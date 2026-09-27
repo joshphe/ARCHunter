@@ -22,6 +22,13 @@ export async function listProjects(publishedOnly = true): Promise<EcosystemProje
     WHERE u.is_published = true ${publishedOnly ? 'AND p.is_published = true' : ''}
     ORDER BY p.slug, u.published_at DESC NULLS LAST, u.created_at DESC`),
   ]);
+  let scoreRows: Array<Record<string, unknown>> = [];
+  try {
+    scoreRows = await sql.query(`SELECT slug, scorecard FROM ecosystem_projects ${publishedOnly ? 'WHERE is_published = true' : ''}`) as Array<Record<string, unknown>>;
+  } catch {
+    // Keep the directory available before the optional scorecard migration is applied.
+  }
+  const scorecardsBySlug = new Map(scoreRows.map((row) => [String(row.slug), row.scorecard as EcosystemProject['scorecard']]));
   const updatesBySlug = new Map<string, EcosystemProject['updates']>();
   for (const update of updateRows as Array<Record<string, unknown>>) {
     const slug = String(update.slug);
@@ -60,6 +67,7 @@ export async function listProjects(publishedOnly = true): Promise<EcosystemProje
       : null,
     isPublished: Boolean(row.isPublished),
     updates: updatesBySlug.get(String(row.slug)) ?? [],
+    scorecard: scorecardsBySlug.get(String(row.slug)) ?? null,
   }));
 }
 
@@ -93,6 +101,9 @@ export async function saveProject(project: import('@/lib/project-schema').Projec
       project.recommendationReason?.zh ?? null, project.isPublished ?? true,
     ],
   );
+  if (project.scorecard) {
+    await sql.query('UPDATE ecosystem_projects SET scorecard = $2::jsonb, updated_at = now() WHERE slug = $1', [project.slug, JSON.stringify(project.scorecard)]);
+  }
 }
 
 export type ProjectUpdateInput = {

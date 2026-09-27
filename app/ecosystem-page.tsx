@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight, ExternalLink, Search, Send } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
 import ProjectAvatar from '@/app/project-avatar';
+import { getProjectScore } from '@/lib/project-scoring';
 
 type Props = { language: 'en' | 'zh'; projects: EcosystemProject[] };
 const PROJECTS_PER_PAGE = 8;
@@ -76,16 +77,18 @@ export default function EcosystemPage({ language, projects }: Props) {
 
     {visibleProjects.length > 0 ? <section className="ecosystem-table" aria-label={t('Project directory', '项目目录')}>
       <div className="ecosystem-table-head" aria-hidden="true">
-        <span>{t('PROJECT', '项目')}</span><span>{t('TAGS', '标签')}</span><span>{t('INTRODUCTION', '简介')}</span><span>{t('MARKET CAP / TVL', '市值 / TVL')}</span><span>{t('STATUS', '状态')}</span><span/>
+        <span>{t('PROJECT', '项目')}</span><span>{t('TAGS', '标签')}</span><span>{t('INTRODUCTION', '简介')}</span><span>{t('MARKET CAP / TVL', '市值 / TVL')}</span><span>{t('SCORE', '观察分')}</span><span>{t('STATUS', '状态')}</span><span/>
       </div>
       <div className="ecosystem-table-body">
         {visibleProjects.map((project) => {
           const marketValue = project.tokenMetrics?.marketCapUsd ?? project.tvl;
+          const score = getProjectScore(project.scorecard).total;
           return <Link href={`/projects/${encodeURIComponent(project.slug)}`} className="ecosystem-table-row" key={project.slug}>
             <span className="ecosystem-table-project"><ProjectAvatar handle={project.handle} symbol={project.symbol}/><span><b>{project.name}</b><small>{project.handle}</small></span></span>
             <span className="ecosystem-table-tags">{project.categories.slice(0, 3).map((item) => <i key={item}>{categoryLabel(item, zh)}</i>)}</span>
             <span className="ecosystem-table-description">{zh ? project.description.zh || project.taglineZh || project.tagline : project.description.en || project.tagline}</span>
             <span className="ecosystem-table-value"><small>{project.tokenMetrics?.marketCapUsd != null ? t('MARKET CAP', '市值') : 'TVL'}</small><b className={marketValue == null ? 'not-indexed' : ''}>{amount(marketValue, zh)}</b></span>
+            <span className={`ecosystem-score-value ${score == null ? 'unrated' : ''}`}><b>{score ?? '—'}</b>{score != null ? <small>/100</small> : null}</span>
             <span className={`ecosystem-status ${project.status}`}>{project.status === 'beta' ? t('BETA', '测试版') : project.status === 'live' ? t('LIVE', '已上线') : t('UPCOMING', '即将上线')}</span>
             <ChevronRight className="ecosystem-row-arrow" size={16}/>
           </Link>;

@@ -1,4 +1,5 @@
 import type { EcosystemProject } from '@/lib/project-schema';
+import { initialProjectScorecards } from '@/lib/project-scorecard-proposal';
 
 export const fallbackProjects: EcosystemProject[] = [
   {
@@ -13,7 +14,7 @@ export const fallbackProjects: EcosystemProject[] = [
     tvl: null, fees24h: null, volume24h: null,
     tokenAddress: '0x4d57060f3825d3b995f35a30194f3e74e105f3ec', tokenMetrics: null,
     website: 'https://vort.bot/', x: 'https://x.com/VortLaunch', sourceUrls: ['https://vort.bot/'],
-    verifiedOn: '2026-09-23', recommended: true, recommendationReason: null, isPublished: true, updates: [],
+    verifiedOn: '2026-09-23', recommended: true, recommendationReason: null, isPublished: true, updates: [], scorecard: initialProjectScorecards.vort,
   },
   {
     slug: 'kairo', name: 'KAIRO', symbol: 'K', handle: '@kairo_market',
@@ -27,6 +28,6 @@ export const fallbackProjects: EcosystemProject[] = [
     tvl: null, fees24h: null, volume24h: null,
     tokenAddress: '0x3ead4e80e9e5bc0e01682d7ee74c4881b040d3ea', tokenMetrics: null,
     website: 'https://kairo.market/', x: 'https://x.com/kairo_market', sourceUrls: ['https://kairo.market/'],
-    verifiedOn: '2026-09-23', recommended: true, recommendationReason: null, isPublished: true, updates: [],
+    verifiedOn: '2026-09-23', recommended: true, recommendationReason: null, isPublished: true, updates: [], scorecard: initialProjectScorecards.kairo,
   },
 ];

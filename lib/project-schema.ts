@@ -2,6 +2,9 @@ import type { TokenMetrics } from '@/lib/token-metrics';
 
 export type ProjectProduct = { en: string; zh: string; status?: 'upcoming' };
 export type ProjectUpdate = { titleEn: string; titleZh: string; summaryEn: string; summaryZh: string; sourceUrl: string; publishedAt: string | null };
+export type ProjectScoreDimensionKey = 'delivery' | 'adoption' | 'economics' | 'security' | 'ecosystem';
+export type ProjectScoreDimension = { score: number | null; applicable: boolean; noteEn: string; noteZh: string };
+export type ProjectScorecard = Record<ProjectScoreDimensionKey, ProjectScoreDimension>;
 
 export type EcosystemProject = {
   slug: string;
@@ -27,6 +30,7 @@ export type EcosystemProject = {
   recommendationReason: { en: string; zh: string } | null;
   isPublished: boolean;
   updates: ProjectUpdate[];
+  scorecard: ProjectScorecard | null;
 };
 
 export type ProjectInput = Omit<EcosystemProject, 'sourceUrls' | 'verifiedOn' | 'recommended' | 'recommendationReason' | 'taglineZh' | 'isPublished' | 'updates' | 'tokenMetrics'> & {
@@ -36,6 +40,7 @@ export type ProjectInput = Omit<EcosystemProject, 'sourceUrls' | 'verifiedOn' | 
   verifiedOn?: string;
   recommended?: boolean;
   recommendationReason?: { en: string; zh: string } | null;
+  scorecard?: ProjectScorecard | null;
 };
 
 const isHttpUrl = (value: unknown): value is string => {
@@ -69,6 +74,15 @@ export function validateProjectInput(value: unknown): { ok: true; project: Proje
     if (project[field] != null && (typeof project[field] !== 'number' || !Number.isFinite(project[field]) || project[field] < 0)) return { ok: false, error: `Invalid ${field} metric.` };
   }
   if (project.recommended != null && typeof project.recommended !== 'boolean') return { ok: false, error: 'Invalid recommendation flag.' };
+  if (project.scorecard != null) {
+    const scorecard = project.scorecard as Record<string, unknown>;
+    for (const key of ['delivery', 'adoption', 'economics', 'security', 'ecosystem']) {
+      const item = scorecard[key] as Record<string, unknown> | undefined;
+      if (!item || typeof item.applicable !== 'boolean' || (item.score !== null && (typeof item.score !== 'number' || !Number.isInteger(item.score) || item.score < 1 || item.score > 5)) || typeof item.noteEn !== 'string' || typeof item.noteZh !== 'string') {
+        return { ok: false, error: `Invalid ${key} score.` };
+      }
+    }
+  }
   if (project.isPublished != null && typeof project.isPublished !== 'boolean') return { ok: false, error: 'Invalid publication flag.' };
   const reason = project.recommendationReason;
   if (reason != null && (typeof reason !== 'object' || typeof (reason as Record<string, unknown>).en !== 'string' || typeof (reason as Record<string, unknown>).zh !== 'string')) return { ok: false, error: 'Recommendation reason must include English and Chinese text.' };

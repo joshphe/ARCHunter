@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { ArrowLeft, LogOut, Plus, Save } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
+import { emptyScorecard, scoreDimensions } from '@/lib/project-scoring';
 
 type EditableProject = EcosystemProject & { taglineZh: string; isPublished: boolean };
 
@@ -11,7 +12,7 @@ const blankProject = (): EditableProject => ({
   description: { en: '', zh: '' }, categories: ['DeFi'], status: 'upcoming', products: [],
   tvl: null, fees24h: null, volume24h: null, tokenAddress: null, tokenMetrics: null, website: '', x: '',
   sourceUrls: [], verifiedOn: new Date().toISOString().slice(0, 10), recommended: false,
-  recommendationReason: null, isPublished: true, updates: [],
+  recommendationReason: null, isPublished: true, updates: [], scorecard: emptyScorecard(),
 });
 
 export default function AdminPage() {
@@ -96,6 +97,7 @@ export default function AdminPage() {
       products,
       sourceUrls: sourcesText.split('\n').map((item) => item.trim()).filter(Boolean),
       recommendationReason: recommendationReason.en || recommendationReason.zh ? recommendationReason : null,
+      scorecard: form.scorecard ?? emptyScorecard(),
     };
     try {
       const response = await fetch('/api/admin/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -184,6 +186,26 @@ export default function AdminPage() {
           <label className="admin-wide">Recommendation reason · EN<textarea rows={2} value={form.recommendationReason?.en ?? ''} onChange={(event) => update('recommendationReason', { en: event.target.value, zh: form.recommendationReason?.zh ?? '' })}/></label>
           <label className="admin-wide">推荐理由 · 中文<textarea rows={2} value={form.recommendationReason?.zh ?? ''} onChange={(event) => update('recommendationReason', { en: form.recommendationReason?.en ?? '', zh: event.target.value })}/></label>
         </div>
+        <section className="admin-score-editor">
+          <div className="admin-editor-heading"><div><h2>ARC Watch score</h2><p>Enter evidence-based editorial scores from 1 to 5. Use N/A only when a dimension does not fit the project.</p></div></div>
+          <div className="admin-score-grid">{scoreDimensions.map((dimension) => {
+            const item = form.scorecard?.[dimension.key] ?? emptyScorecard()[dimension.key];
+            return <div className="admin-score-field" key={dimension.key}>
+              <label>{dimension.labelEn} <span>{dimension.weight}%</span></label>
+              <select value={!item.applicable ? 'na' : item.score ?? ''} onChange={(event) => update('scorecard', {
+                ...(form.scorecard ?? emptyScorecard()),
+                [dimension.key]: event.target.value === 'na'
+                  ? { ...item, applicable: false, score: null }
+                  : { ...item, applicable: true, score: event.target.value ? Number(event.target.value) : null },
+              })}>
+                <option value="">Awaiting review</option><option value="na">Not applicable</option>
+                {[1, 2, 3, 4, 5].map((value) => <option value={value} key={value}>{value} / 5</option>)}
+              </select>
+              <input value={item.noteEn} onChange={(event) => update('scorecard', { ...(form.scorecard ?? emptyScorecard()), [dimension.key]: { ...item, noteEn: event.target.value } })} placeholder="Evidence / rationale · EN"/>
+              <input value={item.noteZh} onChange={(event) => update('scorecard', { ...(form.scorecard ?? emptyScorecard()), [dimension.key]: { ...item, noteZh: event.target.value } })} placeholder="评分依据 · 中文"/>
+            </div>;
+          })}</div>
+        </section>
         {message && <div className={message.includes('saved') ? 'admin-success' : 'admin-error'}>{message}</div>}
         <section className="admin-updates">
           <div className="admin-editor-heading"><div><h2>Project updates</h2><p>Updates are linked to a source and shown on the public project profile.</p></div></div>
