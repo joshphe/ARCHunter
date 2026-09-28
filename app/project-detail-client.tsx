@@ -45,7 +45,7 @@ export default function ProjectDetailClient({ slug }: Props) {
   }, [language, zh]);
   useEffect(() => {
     let current = true;
-    fetch(`/api/ecosystem-projects/${encodeURIComponent(slug)}`, { cache: 'no-store' })
+    fetch(`/api/ecosystem-projects/${encodeURIComponent(slug)}`)
       .then((response) => response.ok ? response.json() as Promise<EcosystemProject> : Promise.reject(new Error('Unavailable')))
       .then((item) => { if (current) setProject(item); })
       .catch(() => { if (current) setProject(null); });
@@ -99,8 +99,9 @@ export default function ProjectDetailClient({ slug }: Props) {
         {(() => {
           const scorecard = project.scorecard ?? emptyScorecard();
           const { total, coverage } = getProjectScore(project.scorecard);
+          const priorReviews = [...(project.scoreHistory ?? [])].reverse().slice(0, 5);
           return <section className="project-score-panel">
-            <div className="project-score-heading"><div><div className="ecosystem-detail-label">{t('ARC WATCH OBSERVATION SCORE', 'ARC WATCH 生态观察分')}</div><p>{t('A transparent editorial snapshot of project progress and ecosystem activity.', '基于可查证信息，观察项目进展与生态活跃度。')}</p></div><div className="project-score-total"><b>{total ?? '—'}</b><span>/100</span></div></div>
+            <div className="project-score-heading"><div><div className="ecosystem-detail-label">{t('ARC WATCH OBSERVATION SCORE', 'ARC WATCH 生态观察分')}</div><p>{t('A transparent editorial snapshot of project progress and ecosystem activity.', '基于可查证信息，观察项目进展与生态活跃度。')}</p>{project.scoreReviewedAt ? <small className="project-score-reviewed">{t('Last reviewed', '最近复核')} · {new Date(project.scoreReviewedAt).toLocaleDateString(zh ? 'zh-CN' : 'en-US')}</small> : null}</div><div className="project-score-total"><b>{total ?? '—'}</b><span>/100</span></div></div>
             <div className="project-score-content">
               <div className="project-score-chart-wrap"><ProjectScoreRadar scorecard={project.scorecard} language={language}/><div className="project-score-coverage">{t('EVIDENCE COVERAGE', '评分覆盖度')} <b>{Math.round(coverage * 100)}%</b></div></div>
               <div className="project-score-breakdown">{scoreDimensions.map((dimension) => {
@@ -112,6 +113,7 @@ export default function ProjectDetailClient({ slug }: Props) {
               })}</div>
             </div>
             <div className="project-score-method">{t('Weighted score = Σ (dimension score ÷ 5 × weight). 1 = little public evidence; 3 = working baseline with gaps; 5 = strong, repeatedly verifiable evidence. N/A is excluded; totals require at least 70% evidence coverage.', '总分 = 各维度（分数 ÷ 5 × 权重）之和。1 分代表公开证据较少；3 分代表已有基础运行表现，但仍有关键数据缺口；5 分代表表现突出且有持续、可核验证据。N/A 不纳入计算；评分覆盖度达到 70% 才显示总分。')}</div>
+            {priorReviews.length ? <details className="project-score-history"><summary>{t('Previous score reviews', '历史评分')} · {priorReviews.length}</summary>{priorReviews.map((review, index) => <div key={`${review.reviewedAt}-${index}`}><span>{new Date(review.reviewedAt).toLocaleDateString(zh ? 'zh-CN' : 'en-US')}</span><b>{getProjectScore(review.scorecard).total ?? '—'} / 100</b></div>)}</details> : null}
           </section>;
         })()}
 
@@ -120,7 +122,7 @@ export default function ProjectDetailClient({ slug }: Props) {
 
         <div className="project-detail-grid">
           <section className="project-detail-panel"><div className="ecosystem-detail-label">{t('PRODUCTS', '产品')}</div><div className="ecosystem-product-tags">{project.products.map((product) => <span key={product.en}>{zh ? product.zh : product.en}{product.status === 'upcoming' ? <em>{t('SOON', '即将推出')}</em> : null}</span>)}</div></section>
-          <section className="project-detail-panel"><div className="ecosystem-detail-label">{t('PROJECT INFO', '项目信息')}</div><dl><div><dt>{t('VERIFIED', '资料核验')}</dt><dd>{project.verifiedOn}</dd></div><div><dt>{t('DATA SOURCE', '数据来源')}</dt><dd>{metrics?.source === 'dexscreener+okx' ? 'DEX Screener + OKX' : metrics?.source === 'okx' ? 'OKX' : metrics ? 'DEX Screener' : t('Curated', '人工整理')}</dd></div></dl></section>
+          <section className="project-detail-panel"><div className="ecosystem-detail-label">{t('PROJECT INFO', '项目信息')}</div><dl><div><dt>{t('VERIFIED', '资料核验')}</dt><dd>{project.verifiedOn}</dd></div><div><dt>{t('PROJECT STATUS', '项目状态')}</dt><dd>{project.status === 'live' ? t('Live on Arc', '已上线 ARC') : project.status === 'beta' ? t('Beta', '测试版') : t('Upcoming', '即将上线')}</dd></div></dl></section>
         </div>
 
         {project.tokenAddress ? <section className="project-detail-panel project-contract-panel"><div className="ecosystem-detail-label">{t('TOKEN CONTRACT · ARC', '代币合约 · ARC')}</div><div className="ecosystem-token-row"><code className="ecosystem-token-address">{project.tokenAddress}</code><button type="button" className="ecosystem-token-action" onClick={() => void copyAddress()}>{copied ? <Check size={14}/> : <Copy size={14}/>}<span>{copied ? t('Copied', '已复制') : t('Copy', '复制')}</span></button><a className="ecosystem-token-action ecosystem-token-okx" href={`https://web3.okx.com/zh-hans/token/arc/${encodeURIComponent(project.tokenAddress)}`} target="_blank" rel="noreferrer">OKX {t('Chart', '图表')} <ExternalLink size={13}/></a></div></section> : null}

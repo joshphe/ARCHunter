@@ -1,22 +1,27 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import LaunchpadPage from './launchpad-page';
-import OverviewPage from './overview-page';
-import EcosystemPage from './ecosystem-page';
+import dynamic from 'next/dynamic';
 import ProjectTicker from './project-ticker';
 import type { EcosystemProject } from '@/lib/project-schema';
 import { ChevronDown, Compass, LayoutDashboard, Menu, Moon, Sparkles, Sun, Users, X } from 'lucide-react';
 
+const OverviewPage = dynamic(() => import('./overview-page'));
+const EcosystemPage = dynamic(() => import('./ecosystem-page'));
+const LaunchpadPage = dynamic(() => import('./launchpad-page'));
+
 export default function Home(){
  const [active,setActive]=useState('Overview'); const [mobileOpen,setMobileOpen]=useState(false);
  const [ecosystemProjects,setEcosystemProjects]=useState<EcosystemProject[]>([]);
+ const [projectsLoaded,setProjectsLoaded]=useState(false);
+ const [marketDataLoaded,setMarketDataLoaded]=useState(false);
  const [totalVisits,setTotalVisits]=useState<number|null>(null);
  const [isDark,setIsDark]=useState(true); const [language,setLanguage]=useState<'en'|'zh'>('en'); const tr=(en:string,zh:string)=>language==='zh'?zh:en; const router=useRouter();
  useEffect(()=>{const saved=localStorage.getItem('arcwatch-theme');if(saved==='light')setIsDark(false);const savedLanguage=localStorage.getItem('arcwatch-language');if(savedLanguage==='zh')setLanguage('zh')},[]);
  useEffect(()=>{const view=new URLSearchParams(window.location.search).get('view');if(view==='ecosystem')setActive('Ecosystem');if(view==='launchpad')setActive('Launchpad')},[]);
- useEffect(()=>{fetch('/api/ecosystem-projects',{cache:'no-store'}).then(r=>r.ok?r.json():[]).then((projects:unknown)=>{if(Array.isArray(projects))setEcosystemProjects(projects as EcosystemProject[])}).catch(()=>setEcosystemProjects([]))},[]);
- useEffect(()=>{let current=true;const loadVisits=async()=>{try{const response=await fetch('/api/site-visits',{cache:'no-store'});if(!response.ok)throw new Error('Unavailable');const result=await response.json() as {totalVisits:number};if(current)setTotalVisits(result.totalVisits);let counted=false;try{counted=sessionStorage.getItem('arcwatch-visit-counted')==='1'||sessionStorage.getItem('arcwatch-visit-pending')==='1'}catch{return}if(counted||location.hostname==='localhost'||location.hostname==='127.0.0.1')return;sessionStorage.setItem('arcwatch-visit-pending','1');try{const visitResponse=await fetch('/api/site-visits',{method:'POST'});if(!visitResponse.ok)throw new Error('Unavailable');const visitResult=await visitResponse.json() as {totalVisits:number};if(current)setTotalVisits(visitResult.totalVisits);sessionStorage.setItem('arcwatch-visit-counted','1')}finally{sessionStorage.removeItem('arcwatch-visit-pending')}}catch{/* Keep the sidebar usable when the database is unavailable. */}};void loadVisits();return()=>{current=false}},[]);
+ useEffect(()=>{fetch('/api/ecosystem-projects').then(r=>r.ok?r.json():[]).then((projects:unknown)=>{if(Array.isArray(projects))setEcosystemProjects(projects as EcosystemProject[])}).catch(()=>setEcosystemProjects([])).finally(()=>setProjectsLoaded(true))},[]);
+ useEffect(()=>{if(active!=='Ecosystem'||!projectsLoaded||marketDataLoaded)return;fetch('/api/ecosystem-projects?includeMetrics=1').then(r=>{if(!r.ok)throw new Error('Could not load market data');return r.json()}).then((projects:unknown)=>{if(Array.isArray(projects)){setEcosystemProjects(projects as EcosystemProject[]);setMarketDataLoaded(true)}}).catch(()=>{})},[active,marketDataLoaded,projectsLoaded]);
+ useEffect(()=>{let current=true;const loadVisits=async()=>{let shouldCount=false;try{const alreadyCounted=sessionStorage.getItem('arcwatch-visit-counted')==='1'||sessionStorage.getItem('arcwatch-visit-pending')==='1';shouldCount=!alreadyCounted&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1';if(shouldCount)sessionStorage.setItem('arcwatch-visit-pending','1')}catch{/* Still show the count when browser storage is disabled. */}try{const response=await fetch('/api/site-visits',{method:shouldCount?'POST':'GET',cache:'no-store'});if(!response.ok)throw new Error('Unavailable');const result=await response.json() as {totalVisits:number};if(current)setTotalVisits(result.totalVisits);if(shouldCount)sessionStorage.setItem('arcwatch-visit-counted','1')}catch{/* Keep the sidebar usable when the database is unavailable. */}finally{if(shouldCount)try{sessionStorage.removeItem('arcwatch-visit-pending')}catch{/* Ignore disabled storage. */}}};void loadVisits();return()=>{current=false}},[]);
  useEffect(()=>{document.documentElement.dataset.theme=isDark?'dark':'light';localStorage.setItem('arcwatch-theme',isDark?'dark':'light')},[isDark]); useEffect(()=>{document.documentElement.lang=language==='zh'?'zh-CN':'en';localStorage.setItem('arcwatch-language',language)},[language]);
  return <main className="shell">
   <aside className={`sidebar ${mobileOpen?'mobile-open':''}`}>
@@ -29,6 +34,6 @@ export default function Home(){
   </aside>
   <section className="main-area"><header className="topbar"><button className="hamburger" onClick={()=>setMobileOpen(!mobileOpen)}><Menu size={19}/></button><div className="breadcrumbs"><span>{tr('Workspace','工作区')}</span><span className="slash">/</span><b>{tr(active,({Overview:'概览',Ecosystem:'生态',Launchpad:'发射台'} as Record<string,string>)[active]||active)}</b></div><div className="top-actions"><div className="live-indicator"><span/> {tr('LIVE DATA','实时数据')}</div><button className="language-button" onClick={()=>setLanguage(language==='en'?'zh':'en')} aria-label={language==='en'?'Switch to Chinese':'切换为英文'} title={language==='en'?'Switch to Chinese':'切换为英文'}>{language==='en'?'EN':'CN'}</button><button className="icon-button" aria-label={isDark?'切换到白天模式':'切换到夜间模式'} title={isDark?'白天模式':'夜间模式'} onClick={()=>setIsDark(!isDark)}>{isDark?<Sun size={17}/>:<Moon size={17}/>}</button></div></header>
   {active==='Overview'&&<ProjectTicker projects={ecosystemProjects} language={language} onSelectProject={(slug)=>{router.push(`/projects/${encodeURIComponent(slug)}`);setMobileOpen(false)}}/>}
-  {active==='Launchpad'?<LaunchpadPage language={language} isDark={isDark}/>:active==='Ecosystem'?<EcosystemPage language={language} projects={ecosystemProjects}/>:<OverviewPage language={language} isDark={isDark} onNavigate={()=>setActive('Launchpad')}/> } </section>
+  {active==='Launchpad'?<LaunchpadPage language={language} isDark={isDark}/>:active==='Ecosystem'?<EcosystemPage language={language} projects={ecosystemProjects}/>:<OverviewPage language={language} isDark={isDark} projects={ecosystemProjects} onNavigate={()=>setActive('Launchpad')}/> } </section>
   {mobileOpen&&<button className="mobile-scrim" onClick={()=>setMobileOpen(false)} aria-label={tr('Close menu','关闭菜单')}/>}</main>
 }

@@ -5,6 +5,8 @@ import { Area, AreaChart, Brush, CartesianGrid, ResponsiveContainer, Tooltip, XA
 import { ArrowDownRight, ArrowUpRight, ExternalLink, Flame, Radio, RefreshCw, Sparkles, Wallet } from 'lucide-react';
 import { ARC_LAUNCH_START_TIMESTAMP } from '@/lib/arc';
 import ProjectAvatar from '@/app/project-avatar';
+import type { EcosystemProject } from '@/lib/project-schema';
+import Link from 'next/link';
 
 type Protocol = { name: string; twitter?: string; module?: string; category?: string; logo?: string; total24h?: number; total7d?: number; total30d?: number; change_1d?: number };
 type HistoryPoint = { timestamp: number; tvl?: number; fees?: number; volume?: number };
@@ -15,7 +17,7 @@ type OverviewData = {
 };
 type Launchpad = { slug: string; name: string; logo: string; xHandle: string; available: boolean; fees24h: number | null; fees7d: number | null; change24h: number | null };
 type LaunchpadData = { launchpads: Launchpad[] };
-type Props = { language: 'en' | 'zh'; isDark: boolean; onNavigate: () => void };
+type Props = { language: 'en' | 'zh'; isDark: boolean; projects: EcosystemProject[]; onNavigate: () => void };
 type Metric = 'tvl' | 'fees' | 'volume';
 
 const currency = (value: number | null | undefined, compact = true) => value == null ? '—' : new Intl.NumberFormat('en-US', {
@@ -23,7 +25,7 @@ const currency = (value: number | null | undefined, compact = true) => value == 
 }).format(value);
 const percent = (value: number | null | undefined) => value == null ? '—' : `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
 
-export default function OverviewPage({ language, isDark, onNavigate }: Props) {
+export default function OverviewPage({ language, isDark, projects, onNavigate }: Props) {
   const zh = language === 'zh';
   const t = (en: string, cn: string) => zh ? cn : en;
   const [data, setData] = useState<OverviewData | null>(null);
@@ -34,11 +36,11 @@ export default function OverviewPage({ language, isDark, onNavigate }: Props) {
   const [period, setPeriod] = useState<number | null>(30);
   const [chartWindow, setChartWindow] = useState({ startIndex: 0, endIndex: 0 });
 
-  async function loadData() {
+  async function loadData(force = false) {
     setRefreshing(true);
     const [overviewResult, launchpadResult] = await Promise.allSettled([
-      fetch('/api/overview', { cache: 'no-store' }).then((res) => { if (!res.ok) throw new Error('Failed'); return res.json() as Promise<OverviewData>; }),
-      fetch('/api/launchpads', { cache: 'no-store' }).then((res) => { if (!res.ok) throw new Error('Failed'); return res.json() as Promise<LaunchpadData>; }),
+      fetch('/api/overview', force ? { cache: 'no-store' } : undefined).then((res) => { if (!res.ok) throw new Error('Failed'); return res.json() as Promise<OverviewData>; }),
+      fetch('/api/launchpads', force ? { cache: 'no-store' } : undefined).then((res) => { if (!res.ok) throw new Error('Failed'); return res.json() as Promise<LaunchpadData>; }),
     ]);
     if (overviewResult.status === 'fulfilled') { setData(overviewResult.value); setFailed(overviewResult.value.partial); }
     else setFailed(true);
@@ -81,13 +83,16 @@ export default function OverviewPage({ language, isDark, onNavigate }: Props) {
 
   const updatedLabel = data?.updatedAt ? new Intl.DateTimeFormat(zh ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short' }).format(new Date(data.updatedAt)) : null;
   const launchpadLeaders = [...launchpads].filter((item) => item.available).sort((a, b) => (b.fees24h ?? 0) - (a.fees24h ?? 0)).slice(0, 4);
+  const recentUpdates = projects.flatMap((project) => project.updates.map((update) => ({ project, update })))
+    .sort((a, b) => (Date.parse(b.update.publishedAt ?? '') || 0) - (Date.parse(a.update.publishedAt ?? '') || 0))
+    .slice(0, 5);
 
   return <div className="content overview-content">
     <div className="page-heading overview-heading">
       <div><div className="eyebrow"><span className="eyebrow-line"/>{t('ARC ECOSYSTEM INTELLIGENCE', 'ARC 生态情报')}<span className="eyebrow-line"/></div><h1>ARC <span>{t('Overview', '总览')}</span></h1><p className="subtitle">{t('A live pulse of activity across the Arc ecosystem.', '实时掌握 Arc 生态整体动态。')}</p></div>
-      <button className="overview-refresh" onClick={() => void loadData()} disabled={refreshing}><RefreshCw size={14} className={refreshing ? 'spin' : ''}/>{t('Refresh', '刷新')}</button>
+      <button className="overview-refresh" onClick={() => void loadData(true)} disabled={refreshing}><RefreshCw size={14} className={refreshing ? 'spin' : ''}/>{t('Refresh', '刷新')}</button>
     </div>
-    <div className="overview-sourcebar"><span className="overview-live"><i/> {t('LIVE DATA', '实时数据')}</span><span>{t('Source: DefiLlama', '数据来源：DefiLlama')}</span>{updatedLabel && <span className="overview-updated">{t('Updated', '更新时间')} {updatedLabel}</span>}{failed && <span className="overview-partial">{t('Some data is temporarily unavailable', '部分数据暂时不可用')}</span>}<a href="https://defillama.com/chain/arc" target="_blank" rel="noreferrer">{t('Open source page', '打开数据源')} <ExternalLink size={12}/></a></div>
+    <div className="overview-sourcebar"><span className="overview-live"><i/> {t('LIVE DATA', '实时数据')}</span><span>{t('Source: DefiLlama', '数据来源：DefiLlama')}</span>{updatedLabel && <span className="overview-updated">{t('Checked', '最近检查')} {updatedLabel}</span>}{failed && <span className="overview-partial">{t('Some data is temporarily unavailable', '部分数据暂时不可用')}</span>}<a href="https://defillama.com/chain/arc" target="_blank" rel="noreferrer">{t('Open source page', '打开数据源')} <ExternalLink size={12}/></a></div>
 
     <div className="overview-metrics">
       <article className="overview-metric-card"><div className="overview-metric-label"><span>{t('TOTAL VALUE LOCKED', '总锁仓价值')}</span><Wallet size={15}/></div><strong>{currency(data?.metrics.tvl)}</strong><div className="overview-metric-foot"><span className={data?.metrics.tvlChange24h != null && data.metrics.tvlChange24h < 0 ? 'negative' : 'positive'}>{data?.metrics.tvlChange24h != null && (data.metrics.tvlChange24h >= 0 ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>)} {percent(data?.metrics.tvlChange24h)}</span><span>{t('24h change', '24 小时变化')}</span></div></article>
@@ -107,6 +112,7 @@ export default function OverviewPage({ language, isDark, onNavigate }: Props) {
         <Area type="monotone" dataKey={currentMetric.dataKey} name={currentMetric.label} stroke={currentMetric.color} strokeWidth={2} fill="url(#overviewMetricFill)" connectNulls isAnimationActive={false}/>
         {history.length > 1 && <Brush dataKey="timestamp" height={40} travellerWidth={15} gap={1} startIndex={chartWindow.startIndex} endIndex={chartWindow.endIndex} onChange={handleBrush} alwaysShowText tickFormatter={(value) => new Intl.DateTimeFormat(zh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(value * 1000))} fill={isDark ? '#15191e' : '#f6f8f3'} stroke={isDark ? '#303640' : '#dce2d6'} traveller={(props: { x: number; y: number; width: number; height: number }) => { const cx = props.x + props.width / 2; const cy = props.y + props.height / 2; return <g className="launchpad-brush-handle"><rect x={cx - 5} y={props.y + 5} width={10} height={props.height - 10} rx={5}/><path d={`M ${cx - 1.5} ${cy - 4} v 8 M ${cx + 1.5} ${cy - 4} v 8`}/></g>; }} />}
       </AreaChart></ResponsiveContainer> : <div className="overview-chart-empty">{failed ? t('Metrics could not be loaded.', '指标暂时无法加载。') : t('Loading chain data…', '正在加载链上数据…')}</div>}</div>
+      <div className="overview-chart-footnote">{t('Daily history uses UTC dates. The latest day may be incomplete.', '历史数据按 UTC 自然日统计，最新一天可能尚未完整。')}</div>
       <div className="overview-chart-summary"><span>{currentMetric.label}<b>{currency(currentMetric.value)}</b></span><span>{t('24h change', '24 小时变化')}<b className={(currentMetric.change ?? 0) < 0 ? 'negative' : 'positive'}>{percent(currentMetric.change)}</b></span><span className="overview-chart-source">{t('Daily data', '每日数据')}</span></div>
     </section>
 
@@ -119,6 +125,7 @@ export default function OverviewPage({ language, isDark, onNavigate }: Props) {
         <div className="overview-launchpad-foot"><span>{t('Selected Arc launchpads', '精选 Arc 发射台')}</span><Sparkles size={13}/></div>
       </section>
     </div>
+    {recentUpdates.length ? <section className="overview-updates-panel"><div className="overview-panel-head"><div><div className="section-kicker">{t('ECOSYSTEM SIGNALS', '生态动态')}</div><h3>{t('Recent project updates', '近期项目动态')}</h3></div><button onClick={() => onNavigate()}>{t('Browse projects', '浏览项目')} <ArrowUpRight size={12}/></button></div><div className="overview-updates-list">{recentUpdates.map(({ project, update }) => <article key={`${project.slug}-${update.sourceUrl}`}><ProjectAvatar handle={project.handle} symbol={project.symbol}/><div className="overview-update-copy"><Link href={`/projects/${encodeURIComponent(project.slug)}`}>{project.name}<span>{update.publishedAt ? new Date(update.publishedAt).toLocaleDateString(zh ? 'zh-CN' : 'en-US') : ''}</span></Link><b>{zh ? update.titleZh || update.titleEn : update.titleEn}</b><p>{zh ? update.summaryZh || update.summaryEn : update.summaryEn}</p></div><a className="overview-update-source" href={update.sourceUrl} target="_blank" rel="noreferrer" aria-label={t(`Open source for ${project.name}`, `打开 ${project.name} 的动态来源`)}><ExternalLink size={14}/></a></article>)}</div></section> : null}
     <footer><span>© 2026 ARC WATCH <i>·</i> {t('COMMUNITY BUILT', '社区共建')}</span></footer>
   </div>;
 }

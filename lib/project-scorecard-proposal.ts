@@ -75,4 +75,18 @@ export const initialProjectScorecards: Record<string, ProjectScorecard> = {
     security: { score: 4, applicable: true, noteEn: 'The app does not custody or sign user keys, and public APIs document unsigned transaction construction; no audit was verified. Source: https://vialiq.xyz/docs', noteZh: '应用不托管或签署用户密钥，公共 API 提供未签名交易构建；本次未核验到独立审计。来源：https://vialiq.xyz/docs' },
     ecosystem: { score: 4, applicable: true, noteEn: 'Adds reusable swap routing and agent-facing integration tools for Arc applications. Source: https://vialiq.xyz/docs', noteZh: '为 Arc 应用提供可复用兑换路由与面向智能体的集成工具。来源：https://vialiq.xyz/docs' },
   },
+  fuci: {
+    delivery: { score: 4, applicable: true, noteEn: 'Live agents can buy Argus data over x402, generate reports, trade, and run scheduled autopilot jobs. Source: https://www.fuci.family/docs', noteZh: '智能体已可通过 x402 购买 Argus 数据、生成报告、交易并运行定时自动任务。来源：https://www.fuci.family/docs' },
+    adoption: { score: 4, applicable: true, noteEn: 'The public stats endpoint reports 302 total agents, 701 x402 calls, and eight on-chain agents at review time. Source: https://www.fuci.family/api/stats/public', noteZh: '核验时公共统计接口报告 302 个智能体、701 次 x402 调用及 8 个链上智能体。来源：https://www.fuci.family/api/stats/public' },
+    economics: { score: 3, applicable: true, noteEn: 'The API reports 8.001 USDC total revenue so far; trade and creation fees are public, but overall revenue remains early. Source: https://www.fuci.family/api/stats/public', noteZh: '接口报告目前累计收入为 8.001 USDC，创建费与交易费机制公开，但整体仍处早期。来源：https://www.fuci.family/api/stats/public' },
+    security: { score: 2, applicable: true, noteEn: 'The project says agent wallet keys are encrypted on its server and trading limits are enforced server-side; this custody model raises trust assumptions and no independent audit was verified. Source: https://www.fuci.family/docs', noteZh: '项目说明智能体钱包密钥在服务端加密，交易限额也由服务端执行；该托管模式增加了信任假设，本次未核验到独立审计。来源：https://www.fuci.family/docs' },
+    ecosystem: { score: 4, applicable: true, noteEn: 'Connects Arc agents to Argus market data through x402 and supports MCP/A2A integration. Source: https://www.fuci.family/docs', noteZh: '通过 x402 将 Arc 智能体接入 Argus 市场数据，并支持 MCP/A2A 集成。来源：https://www.fuci.family/docs' },
+  },
+  'kata-finance': {
+    delivery: { score: 4, applicable: true, noteEn: 'The live swap aggregator supports Uniswap v2/v3/v4 and KyberSwap routes, with Dojo staking and rewards. Source: https://katafinance.xyz/docs', noteZh: '兑换聚合器已上线，支持 Uniswap v2/v3/v4 与 KyberSwap 路径，并提供 Dojo 质押和奖励。来源：https://katafinance.xyz/docs' },
+    adoption: { score: 3, applicable: true, noteEn: 'The product and fee routes are live, but comparable public totals for unique users or routed volume were not verified. Source: https://katafinance.xyz/docs', noteZh: '产品与费率路由已上线，但本次未核验到可比较的独立用户数或路由交易量总计。来源：https://katafinance.xyz/docs' },
+    economics: { score: 3, applicable: true, noteEn: 'Published platform fees are 0.10%, reducible to 0.05% by Dojo staking; realized aggregate fees were not verified. Source: https://katafinance.xyz/docs/fees', noteZh: '已披露平台费为 0.10%，Dojo 质押可降至 0.05%；本次未核验累计实际费用。来源：https://katafinance.xyz/docs/fees' },
+    security: { score: 3, applicable: true, noteEn: 'Users sign swaps from their own wallets and contract/security documentation is public; no independent audit was verified. Source: https://katafinance.xyz/docs/security', noteZh: '兑换由用户自己的钱包签名，合约与安全文档公开；本次未核验到独立审计。来源：https://katafinance.xyz/docs/security' },
+    ecosystem: { score: 4, applicable: true, noteEn: 'Aggregates multiple Arc liquidity sources and adds reusable routing, staking, and liquidity rewards. Source: https://katafinance.xyz/docs', noteZh: '聚合 Arc 上多个流动性来源，并提供可复用路由、质押和流动性奖励。来源：https://katafinance.xyz/docs' },
+  },
 };

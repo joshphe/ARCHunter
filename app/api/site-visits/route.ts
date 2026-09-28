@@ -3,28 +3,9 @@ import { getSql } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-let schemaReady: Promise<void> | null = null;
-
-async function getReadySql() {
-  const sql = getSql();
-  schemaReady ??= (async () => {
-    await sql.query(`CREATE TABLE IF NOT EXISTS arc_site_metrics (
-      id smallint PRIMARY KEY CHECK (id = 1),
-      total_visits bigint NOT NULL DEFAULT 0 CHECK (total_visits >= 0),
-      updated_at timestamptz NOT NULL DEFAULT now()
-    )`);
-    await sql.query('INSERT INTO arc_site_metrics (id) VALUES (1) ON CONFLICT (id) DO NOTHING');
-  })().catch((error) => {
-    schemaReady = null;
-    throw error;
-  });
-  await schemaReady;
-  return sql;
-}
-
 export async function GET() {
   try {
-    const sql = await getReadySql();
+    const sql = getSql();
     const rows = await sql.query('SELECT total_visits AS "totalVisits" FROM arc_site_metrics WHERE id = 1');
     return NextResponse.json({ totalVisits: Number(rows[0]?.totalVisits ?? 0) }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
@@ -35,7 +16,7 @@ export async function GET() {
 
 export async function POST() {
   try {
-    const sql = await getReadySql();
+    const sql = getSql();
     const rows = await sql.query(`
       UPDATE arc_site_metrics
       SET total_visits = total_visits + 1, updated_at = now()

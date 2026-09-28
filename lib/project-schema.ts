@@ -5,6 +5,7 @@ export type ProjectUpdate = { titleEn: string; titleZh: string; summaryEn: strin
 export type ProjectScoreDimensionKey = 'delivery' | 'adoption' | 'economics' | 'security' | 'ecosystem';
 export type ProjectScoreDimension = { score: number | null; applicable: boolean; noteEn: string; noteZh: string };
 export type ProjectScorecard = Record<ProjectScoreDimensionKey, ProjectScoreDimension>;
+export type ProjectScoreHistoryEntry = { reviewedAt: string; scorecard: ProjectScorecard };
 
 export type EcosystemProject = {
   slug: string;
@@ -31,6 +32,8 @@ export type EcosystemProject = {
   isPublished: boolean;
   updates: ProjectUpdate[];
   scorecard: ProjectScorecard | null;
+  scoreReviewedAt: string | null;
+  scoreHistory: ProjectScoreHistoryEntry[];
 };
 
 export type ProjectInput = Omit<EcosystemProject, 'sourceUrls' | 'verifiedOn' | 'recommended' | 'recommendationReason' | 'taglineZh' | 'isPublished' | 'updates' | 'tokenMetrics'> & {

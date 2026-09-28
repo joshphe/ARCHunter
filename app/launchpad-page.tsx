@@ -27,10 +27,10 @@ export default function LaunchpadPage({ language, isDark }: Props) {
   const [hiddenLaunchpads, setHiddenLaunchpads] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  async function loadData() {
+  async function loadData(force = false) {
     setRefreshing(true);
     try {
-      const response = await fetch('/api/launchpads', { cache: 'no-store' });
+      const response = await fetch('/api/launchpads', force ? { cache: 'no-store' } : undefined);
       if (!response.ok) throw new Error('Unable to load launchpad fees');
       setData(await response.json());
       setFailed(false);
@@ -97,7 +97,7 @@ export default function LaunchpadPage({ language, isDark }: Props) {
         <h1>{t('Launchpad', '发射台')} <span>{t('Fees', '费用')}</span></h1>
         <p className="subtitle">{t('Compare launchpad fees across the Arc ecosystem.', '对比 Arc 生态各发射台的费用表现。')}</p>
       </div>
-      <button className="launchpad-refresh" onClick={() => void loadData()} disabled={refreshing}>
+      <button className="launchpad-refresh" onClick={() => void loadData(true)} disabled={refreshing}>
         <RefreshCw size={14} className={refreshing ? 'spin' : ''}/>{t('Refresh data', '刷新数据')}
       </button>
     </div>
@@ -105,7 +105,7 @@ export default function LaunchpadPage({ language, isDark }: Props) {
     <div className="launchpad-sourcebar">
       <div className="launchpad-live"><span className="pulse-dot"/>{t('LIVE DATA', '实时数据')}</div>
       <span className="launchpad-sourcecopy">{t('Arc · Fees in USD', 'Arc · 美元计价费用')}</span>
-      {updatedLabel && <span className="launchpad-updated">{t('Updated', '更新时间')} {updatedLabel}</span>}
+      {updatedLabel && <span className="launchpad-updated">{t('Checked', '最近检查')} {updatedLabel}</span>}
       {failed && <span className="launchpad-warning">{t('Some data could not be loaded', '部分数据暂时无法加载')}</span>}
     </div>
 
@@ -153,6 +153,7 @@ export default function LaunchpadPage({ language, isDark }: Props) {
           </Brush>}
         </AreaChart></ResponsiveContainer> : <div className="launchpad-chart-empty">{failed ? t('Unable to load fee history.', '费用历史暂时无法加载。') : t('Loading fee history…', '正在加载费用记录…')}</div>}
       </div>
+      <div className="overview-chart-footnote">{t('Daily history uses UTC dates. The latest day may be incomplete.', '历史数据按 UTC 自然日统计，最新一天可能尚未完整。')}</div>
       <div className="launchpad-legend" aria-label={t('Toggle launchpad chart series', '切换发射台数据线')}>
         {launchpads.map((item) => {
           const hidden = hiddenLaunchpads.includes(item.slug);

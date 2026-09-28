@@ -23,6 +23,26 @@ type FeeOverview = {
   protocols?: ProtocolFee[];
 };
 type TvlPoint = { date: number; tvl: number };
+const protocolXHandles: Record<string, string> = {
+  'argus-world': 'arguspad',
+  foci: 'focidotfamily',
+  'wonk-fun': 'wonk_fun',
+  'peach-launchpad': 'peachlfg',
+  tolly: 'TollyLabs',
+  solonpad: 'Solonlabs1',
+  'uniswap-v2': 'Uniswap',
+  'uniswap-v3': 'Uniswap',
+  'sushiswap-v3': 'SushiSwap',
+  'rainbow-wallet': 'rainbowdotme',
+  'morpho-blue': 'Morpho',
+  definitive: 'DefinitiveFi',
+  'vfat.io': 'vfat_io',
+  gmgn: 'gmgnai',
+  'virtuals-protocol': 'virtuals_io',
+  'uniswap-v4': 'Uniswap',
+  'fomo-wallet': 'fomo',
+  'aave-v4': 'aave',
+};
 async function fetchLlama<T>(path: string, revalidate = 300): Promise<T | null> {
   try {
     const response = await fetch(`https://api.llama.fi${path}`, {
@@ -38,8 +58,8 @@ async function fetchLlama<T>(path: string, revalidate = 300): Promise<T | null> 
 
 export async function GET() {
   const [fees, dex, tvl] = await Promise.all([
-    fetchLlama<FeeOverview>('/overview/fees/Arc?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=false'),
-    fetchLlama<FeeOverview>('/overview/dexs/Arc?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=false'),
+    fetchLlama<FeeOverview>('/overview/fees/Arc?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=true'),
+    fetchLlama<FeeOverview>('/overview/dexs/Arc?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=true'),
     fetchLlama<TvlPoint[]>('/v2/historicalChainTvl/Arc'),
   ]);
 
@@ -69,12 +89,10 @@ export async function GET() {
     .filter((protocol) => typeof protocol.total24h === 'number')
     .sort((a, b) => (b.total24h ?? 0) - (a.total24h ?? 0))
     .slice(0, 8);
-  const protocolsWithX = await Promise.all(protocols.map(async (protocol) => {
+  const protocolsWithX = protocols.map((protocol) => {
     const slug = protocol.slug ?? protocol.module?.split('/')[0];
-    if (!slug) return protocol;
-    const metadata = await fetchLlama<{ twitter?: string }>(`/protocol/${encodeURIComponent(slug)}`, 86400);
-    return { ...protocol, twitter: metadata?.twitter ?? protocol.twitter };
-  }));
+    return { ...protocol, twitter: protocol.twitter ?? protocolXHandles[slug ?? ''] };
+  });
 
   return NextResponse.json({
     updatedAt: new Date().toISOString(),
@@ -91,6 +109,6 @@ export async function GET() {
     },
     history: [...history.values()].sort((a, b) => a.timestamp - b.timestamp),
     topProtocols: protocolsWithX,
-    partial: !fees || !dex || !tvl,
-  });
+    partial: !fees || !dex || !tvl || typeof fees.total24h !== 'number' || typeof dex.total24h !== 'number' || !tvl?.length,
+  }, { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } });
 }

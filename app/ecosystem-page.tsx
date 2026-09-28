@@ -8,7 +8,7 @@ import ProjectAvatar from '@/app/project-avatar';
 import { getProjectScore } from '@/lib/project-scoring';
 
 type Props = { language: 'en' | 'zh'; projects: EcosystemProject[] };
-const PROJECTS_PER_PAGE = 8;
+const PROJECTS_PER_PAGE = 10;
 
 const categories = [
   { en: 'All projects', zh: '全部项目', value: 'all' },
@@ -33,18 +33,29 @@ export default function EcosystemPage({ language, projects }: Props) {
   const t = (en: string, cn: string) => zh ? cn : en;
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
+  const [status, setStatus] = useState('all');
+  const [sortBy, setSortBy] = useState<'recommended' | 'score' | 'market-cap' | 'recent'>('recommended');
   const [page, setPage] = useState(1);
 
   const filteredProjects = useMemo(() => projects.filter((project) => {
     const matchesCategory = category === 'all' || project.categories.includes(category);
+    const matchesStatus = status === 'all' || project.status === status;
     const term = query.trim().toLowerCase();
     const searchableText = `${project.name} ${project.handle} ${project.categories.join(' ')} ${project.tagline} ${project.description.en} ${project.description.zh}`;
-    return matchesCategory && (!term || searchableText.toLowerCase().includes(term));
-  }), [category, projects, query]);
-  const pageCount = Math.max(1, Math.ceil(filteredProjects.length / PROJECTS_PER_PAGE));
-  const visibleProjects = filteredProjects.slice((page - 1) * PROJECTS_PER_PAGE, page * PROJECTS_PER_PAGE);
-  const firstVisibleProject = filteredProjects.length ? (page - 1) * PROJECTS_PER_PAGE + 1 : 0;
-  const lastVisibleProject = Math.min(page * PROJECTS_PER_PAGE, filteredProjects.length);
+    return matchesCategory && matchesStatus && (!term || searchableText.toLowerCase().includes(term));
+  }), [category, projects, query, status]);
+  const sortedProjects = useMemo(() => {
+    if (sortBy === 'recommended') return filteredProjects;
+    return [...filteredProjects].sort((a, b) => {
+      if (sortBy === 'score') return (getProjectScore(b.scorecard).total ?? -1) - (getProjectScore(a.scorecard).total ?? -1);
+      if (sortBy === 'market-cap') return (b.tokenMetrics?.marketCapUsd ?? b.tvl ?? -1) - (a.tokenMetrics?.marketCapUsd ?? a.tvl ?? -1);
+      return b.verifiedOn.localeCompare(a.verifiedOn);
+    });
+  }, [filteredProjects, sortBy]);
+  const pageCount = Math.max(1, Math.ceil(sortedProjects.length / PROJECTS_PER_PAGE));
+  const visibleProjects = sortedProjects.slice((page - 1) * PROJECTS_PER_PAGE, page * PROJECTS_PER_PAGE);
+  const firstVisibleProject = sortedProjects.length ? (page - 1) * PROJECTS_PER_PAGE + 1 : 0;
+  const lastVisibleProject = Math.min(page * PROJECTS_PER_PAGE, sortedProjects.length);
 
   return <div className="content ecosystem-content">
     <aside className="ecosystem-contact-banner">
@@ -71,9 +82,13 @@ export default function EcosystemPage({ language, projects }: Props) {
       <div className="ecosystem-filters" aria-label={t('Filter by category', '按类别筛选')}>
         {categories.map((item) => <button key={item.value} type="button" className={category === item.value ? 'active' : ''} onClick={() => { setCategory(item.value); setPage(1); }}>{t(item.en, item.zh)}</button>)}
       </div>
+      <div className="ecosystem-filter-selects">
+        <label>{t('Status', '状态')}<select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="all">{t('All', '全部')}</option><option value="live">{t('Live', '已上线')}</option><option value="beta">{t('Beta', '测试版')}</option><option value="upcoming">{t('Upcoming', '即将上线')}</option></select></label>
+        <label>{t('Sort', '排序')}<select value={sortBy} onChange={(event) => { setSortBy(event.target.value as typeof sortBy); setPage(1); }}><option value="recommended">{t('Recommended', '推荐优先')}</option><option value="score">{t('Observation score', '观察分')}</option><option value="market-cap">{t('Market cap / TVL', '市值 / TVL')}</option><option value="recent">{t('Recently verified', '最近核验')}</option></select></label>
+      </div>
     </section>
 
-    <div className="ecosystem-results-bar"><span>{t('CURATED DIRECTORY', '精选项目目录')}</span><b>{zh ? `${String(filteredProjects.length).padStart(2, '0')} 个项目` : `${filteredProjects.length} ${filteredProjects.length === 1 ? 'project' : 'projects'}`}</b><i/><span>{t('Select a project for details', '选择项目查看详情')}</span></div>
+    <div className="ecosystem-results-bar"><span>{t('CURATED DIRECTORY', '精选项目目录')}</span><b>{zh ? `${String(sortedProjects.length).padStart(2, '0')} 个项目` : `${sortedProjects.length} ${sortedProjects.length === 1 ? 'project' : 'projects'}`}</b><i/><span>{t('Select a project for details', '选择项目查看详情')}</span></div>
 
     {visibleProjects.length > 0 ? <section className="ecosystem-table" aria-label={t('Project directory', '项目目录')}>
       <div className="ecosystem-table-head" aria-hidden="true">

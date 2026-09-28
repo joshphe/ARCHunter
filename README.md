@@ -17,6 +17,9 @@ After linking the repository to the Vercel project and configuring its environme
 
 ```bash
 vercel env run -- npm run db:migrate
+vercel env run -- npm run db:migrate:scores
+vercel env run -- npm run db:migrate:score-history
+vercel env run -- npm run db:migrate:site-visits
 ```
 
 The migration creates the project directory and project updates tables and imports the existing Vort and KAIRO entries. It can be re-run safely.

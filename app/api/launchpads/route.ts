@@ -60,5 +60,7 @@ export async function GET() {
     }),
   );
 
-  return NextResponse.json({ updatedAt: new Date().toISOString(), source: 'DefiLlama', launchpads: results });
+  return NextResponse.json({ updatedAt: new Date().toISOString(), source: 'DefiLlama', launchpads: results }, {
+    headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
+  });
 }

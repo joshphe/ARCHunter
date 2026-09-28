@@ -12,7 +12,7 @@ const projectSelect = `
 
 export async function listProjects(publishedOnly = true): Promise<EcosystemProject[]> {
   const sql = getSql();
-  const [rows, updateRows] = await Promise.all([
+  const [rows, updateRows, scoreRows] = await Promise.all([
     sql.query(`${projectSelect} ${publishedOnly ? 'WHERE is_published = true' : ''} ORDER BY recommended DESC, sort_order ASC, name ASC`),
     sql.query(`
     SELECT p.slug, u.title_en AS "titleEn", u.title_zh AS "titleZh", u.summary_en AS "summaryEn",
@@ -21,14 +21,9 @@ export async function listProjects(publishedOnly = true): Promise<EcosystemProje
     JOIN ecosystem_projects p ON p.id = u.project_id
     WHERE u.is_published = true ${publishedOnly ? 'AND p.is_published = true' : ''}
     ORDER BY p.slug, u.published_at DESC NULLS LAST, u.created_at DESC`),
+    sql.query(`SELECT slug, scorecard, score_reviewed_at AS "scoreReviewedAt", scorecard_history AS "scoreHistory" FROM ecosystem_projects ${publishedOnly ? 'WHERE is_published = true' : ''}`).catch(() => []),
   ]);
-  let scoreRows: Array<Record<string, unknown>> = [];
-  try {
-    scoreRows = await sql.query(`SELECT slug, scorecard FROM ecosystem_projects ${publishedOnly ? 'WHERE is_published = true' : ''}`) as Array<Record<string, unknown>>;
-  } catch {
-    // Keep the directory available before the optional scorecard migration is applied.
-  }
-  const scorecardsBySlug = new Map(scoreRows.map((row) => [String(row.slug), row.scorecard as EcosystemProject['scorecard']]));
+  const scoresBySlug = new Map((scoreRows as Array<Record<string, unknown>>).map((row) => [String(row.slug), row]));
   const updatesBySlug = new Map<string, EcosystemProject['updates']>();
   for (const update of updateRows as Array<Record<string, unknown>>) {
     const slug = String(update.slug);
@@ -41,34 +36,60 @@ export async function listProjects(publishedOnly = true): Promise<EcosystemProje
     });
     updatesBySlug.set(slug, current);
   }
-  return (rows as Array<Record<string, unknown>>).map((row) => ({
-    slug: String(row.slug),
-    name: String(row.name),
-    symbol: String(row.symbol),
-    handle: String(row.handle),
-    tagline: String(row.taglineEn),
-    taglineZh: String(row.taglineZh ?? ''),
+  return (rows as Array<Record<string, unknown>>).map((row) => mapProject(row, updatesBySlug.get(String(row.slug)) ?? [], scoresBySlug.get(String(row.slug))));
+}
+
+function mapProject(row: Record<string, unknown>, updates: EcosystemProject['updates'], scoreRow?: Record<string, unknown>): EcosystemProject {
+  const reviewedAt = scoreRow?.scoreReviewedAt;
+  return {
+    slug: String(row.slug), name: String(row.name), symbol: String(row.symbol), handle: String(row.handle),
+    tagline: String(row.taglineEn), taglineZh: String(row.taglineZh ?? ''),
     description: { en: String(row.descriptionEn), zh: String(row.descriptionZh ?? '') },
-    categories: row.categories as string[],
-    status: row.status as EcosystemProject['status'],
+    categories: row.categories as string[], status: row.status as EcosystemProject['status'],
     products: row.products as EcosystemProject['products'],
     tvl: row.tvlUsd == null ? null : Number(row.tvlUsd),
     fees24h: row.fees24hUsd == null ? null : Number(row.fees24hUsd),
     volume24h: row.volume24hUsd == null ? null : Number(row.volume24hUsd),
-    tokenAddress: row.tokenAddress == null ? null : String(row.tokenAddress),
-    tokenMetrics: null,
-    website: String(row.website),
-    x: String(row.x),
-    sourceUrls: row.sourceUrls as string[],
+    tokenAddress: row.tokenAddress == null ? null : String(row.tokenAddress), tokenMetrics: null,
+    website: String(row.website), x: String(row.x), sourceUrls: row.sourceUrls as string[],
     verifiedOn: row.verifiedOn instanceof Date ? row.verifiedOn.toISOString().slice(0, 10) : String(row.verifiedOn),
     recommended: Boolean(row.recommended),
     recommendationReason: row.recommendationReasonEn || row.recommendationReasonZh
       ? { en: String(row.recommendationReasonEn ?? ''), zh: String(row.recommendationReasonZh ?? '') }
       : null,
-    isPublished: Boolean(row.isPublished),
-    updates: updatesBySlug.get(String(row.slug)) ?? [],
-    scorecard: scorecardsBySlug.get(String(row.slug)) ?? null,
+    isPublished: Boolean(row.isPublished), updates, scorecard: scoreRow?.scorecard as EcosystemProject['scorecard'] ?? null,
+    scoreReviewedAt: reviewedAt instanceof Date ? reviewedAt.toISOString() : reviewedAt == null ? null : String(reviewedAt),
+    scoreHistory: Array.isArray(scoreRow?.scoreHistory) ? scoreRow.scoreHistory as EcosystemProject['scoreHistory'] : [],
+  };
+}
+
+export async function getProjectBySlug(slug: string, publishedOnly = true): Promise<EcosystemProject | null> {
+  const sql = getSql();
+  const [rows, updateRows, scoreRows] = await Promise.all([
+    sql.query(`${projectSelect} WHERE slug = $1 ${publishedOnly ? 'AND is_published = true' : ''}`, [slug]),
+    sql.query(`
+      SELECT u.title_en AS "titleEn", u.title_zh AS "titleZh", u.summary_en AS "summaryEn",
+        u.summary_zh AS "summaryZh", u.source_url AS "sourceUrl", u.published_at AS "publishedAt"
+      FROM ecosystem_project_updates u JOIN ecosystem_projects p ON p.id = u.project_id
+      WHERE p.slug = $1 AND u.is_published = true ${publishedOnly ? 'AND p.is_published = true' : ''}
+      ORDER BY u.published_at DESC NULLS LAST, u.created_at DESC LIMIT 3`, [slug]),
+    sql.query('SELECT scorecard, score_reviewed_at AS "scoreReviewedAt", scorecard_history AS "scoreHistory" FROM ecosystem_projects WHERE slug = $1', [slug]).catch(() => []),
+  ]);
+  const projectRows = rows as Array<Record<string, unknown>>;
+  if (!projectRows[0]) return null;
+  const updates = (updateRows as Array<Record<string, unknown>>).map((item) => ({
+    titleEn: String(item.titleEn), titleZh: String(item.titleZh ?? ''),
+    summaryEn: String(item.summaryEn), summaryZh: String(item.summaryZh ?? ''), sourceUrl: String(item.sourceUrl),
+    publishedAt: item.publishedAt instanceof Date ? item.publishedAt.toISOString() : item.publishedAt == null ? null : String(item.publishedAt),
   }));
+  const scores = scoreRows as Array<Record<string, unknown>>;
+  return mapProject(projectRows[0], updates, scores[0]);
+}
+
+export async function listPublishedTokenAddresses(): Promise<string[]> {
+  const sql = getSql();
+  const rows = await sql.query('SELECT lower(token_address) AS address FROM ecosystem_projects WHERE is_published = true AND token_address IS NOT NULL') as Array<Record<string, unknown>>;
+  return rows.map((row) => String(row.address));
 }
 
 export async function saveProject(project: import('@/lib/project-schema').ProjectInput) {
@@ -102,7 +123,19 @@ export async function saveProject(project: import('@/lib/project-schema').Projec
     ],
   );
   if (project.scorecard) {
-    await sql.query('UPDATE ecosystem_projects SET scorecard = $2::jsonb, updated_at = now() WHERE slug = $1', [project.slug, JSON.stringify(project.scorecard)]);
+    await sql.query(`UPDATE ecosystem_projects
+      SET scorecard_history = CASE
+            WHEN scorecard IS NOT NULL AND scorecard IS DISTINCT FROM $2::jsonb
+              THEN COALESCE(scorecard_history, '[]'::jsonb) || jsonb_build_array(jsonb_build_object(
+                'reviewedAt', COALESCE(score_reviewed_at, updated_at), 'scorecard', scorecard))
+            ELSE COALESCE(scorecard_history, '[]'::jsonb)
+          END,
+          score_reviewed_at = CASE
+            WHEN scorecard IS DISTINCT FROM $2::jsonb THEN now()
+            ELSE COALESCE(score_reviewed_at, updated_at)
+          END,
+          scorecard = $2::jsonb, updated_at = now()
+      WHERE slug = $1`, [project.slug, JSON.stringify(project.scorecard)]);
   }
 }
 

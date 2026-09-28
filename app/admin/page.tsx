@@ -12,7 +12,7 @@ const blankProject = (): EditableProject => ({
   description: { en: '', zh: '' }, categories: ['DeFi'], status: 'upcoming', products: [],
   tvl: null, fees24h: null, volume24h: null, tokenAddress: null, tokenMetrics: null, website: '', x: '',
   sourceUrls: [], verifiedOn: new Date().toISOString().slice(0, 10), recommended: false,
-  recommendationReason: null, isPublished: true, updates: [], scorecard: emptyScorecard(),
+  recommendationReason: null, isPublished: true, updates: [], scorecard: emptyScorecard(), scoreReviewedAt: null, scoreHistory: [],
 });
 
 export default function AdminPage() {
