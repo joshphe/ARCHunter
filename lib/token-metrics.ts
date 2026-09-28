@@ -30,10 +30,12 @@ type DexPair = {
 };
 
 type OkxMetric = { priceUsd?: string; price?: string; marketCap?: string; volume24H?: string; liquidity?: string; holders?: string };
-type CacheEntry = { expiresAt: number; value: TokenMetrics | null };
+type CacheEntry = { expiresAt: number; staleUntil: number; value: TokenMetrics | null };
 
 const ARC_CHAIN_INDEX = process.env.OKX_ARC_CHAIN_INDEX || '5042';
 const CACHE_TTL_MS = 5 * 60 * 1000;
+const STALE_TTL_MS = 60 * 60 * 1000;
+const PROVIDER_TIMEOUT_MS = 4500;
 const cache = new Map<string, CacheEntry>();
 const addressPattern = /^0x[a-fA-F0-9]{40}$/;
 
@@ -53,6 +55,7 @@ async function getDexScreenerMetrics(addresses: string[]): Promise<Map<string, T
   if (!addresses.length) return output;
   const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addresses.join(',')}`, {
     headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
     next: { revalidate: 300 },
   });
   if (!response.ok) throw new Error(`DEX Screener returned ${response.status}`);
@@ -100,6 +103,7 @@ async function okxRequest<T>(method: 'GET' | 'POST', path: string, body?: unknow
       ...(process.env.OKX_PROJECT_ID ? { 'OK-ACCESS-PROJECT': process.env.OKX_PROJECT_ID } : {}),
     },
     body: bodyText || undefined,
+    signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
     cache: 'no-store',
   });
   if (!response.ok) throw new Error(`OKX returned ${response.status}`);
@@ -111,27 +115,30 @@ async function okxRequest<T>(method: 'GET' | 'POST', path: string, body?: unknow
 async function getOkxMetrics(addresses: string[]) {
   if (!hasOkxCredentials() || !addresses.length) return new Map<string, { market?: OkxMetric; totalFee?: number }>();
   const output = new Map<string, { market?: OkxMetric; totalFee?: number }>();
-  try {
-    const rows = await okxRequest<Array<OkxMetric & { tokenContractAddress?: string }>>('POST', '/api/v6/dex/market/price-info', addresses.map((tokenContractAddress) => ({ chainIndex: ARC_CHAIN_INDEX, tokenContractAddress })));
-    for (let index = 0; index < rows.length; index += 1) {
-      const address = rows[index].tokenContractAddress?.toLowerCase() || addresses[index];
-      output.set(address, { market: rows[index] });
-    }
-  } catch (error) {
-    console.warn('Could not load OKX token market metrics:', error instanceof Error ? error.message : 'unknown error');
+  const [marketRows, feeRows] = await Promise.all([
+    okxRequest<Array<OkxMetric & { tokenContractAddress?: string }>>('POST', '/api/v6/dex/market/price-info', addresses.map((tokenContractAddress) => ({ chainIndex: ARC_CHAIN_INDEX, tokenContractAddress })))
+      .catch((error) => {
+        console.warn('Could not load OKX token market metrics:', error instanceof Error ? error.message : 'unknown error');
+        return [];
+      }),
+    Promise.all(addresses.map(async (address) => {
+      try {
+        const path = `/api/v6/dex/market/token/advanced-info?chainIndex=${encodeURIComponent(ARC_CHAIN_INDEX)}&tokenContractAddress=${encodeURIComponent(address)}`;
+        const rows = await okxRequest<Array<{ totalFee?: string }>>('GET', path);
+        return [address, numberOrNull(rows[0]?.totalFee) ?? undefined] as const;
+      } catch (error) {
+        console.warn(`Could not load OKX fee data for ${address}:`, error instanceof Error ? error.message : 'unknown error');
+        return [address, undefined] as const;
+      }
+    })),
+  ]);
+  for (let index = 0; index < marketRows.length; index += 1) {
+    const address = marketRows[index].tokenContractAddress?.toLowerCase() || addresses[index];
+    output.set(address, { market: marketRows[index] });
   }
-
-  await Promise.all(addresses.map(async (address) => {
-    try {
-      const path = `/api/v6/dex/market/token/advanced-info?chainIndex=${encodeURIComponent(ARC_CHAIN_INDEX)}&tokenContractAddress=${encodeURIComponent(address)}`;
-      const rows = await okxRequest<Array<{ totalFee?: string }>>('GET', path);
-      const current = output.get(address) || {};
-      current.totalFee = numberOrNull(rows[0]?.totalFee) ?? undefined;
-      output.set(address, current);
-    } catch (error) {
-      console.warn(`Could not load OKX fee data for ${address}:`, error instanceof Error ? error.message : 'unknown error');
-    }
-  }));
+  for (const [address, totalFee] of feeRows) {
+    output.set(address, { ...output.get(address), totalFee });
+  }
   return output;
 }
 
@@ -141,16 +148,18 @@ export async function getTokenMetrics(inputAddresses: string[]): Promise<Map<str
   const now = Date.now();
   const missing = addresses.filter((address) => {
     const cached = cache.get(address);
-    if (!cached || cached.expiresAt <= now) return true;
-    if (cached.value) result.set(address, cached.value);
-    return false;
+    if (cached && cached.expiresAt > now) {
+      if (cached.value) result.set(address, cached.value);
+      return false;
+    }
+    return true;
   });
   if (!missing.length) return result;
 
-  let dexMetrics = new Map<string, TokenMetrics>();
-  try { dexMetrics = await getDexScreenerMetrics(missing); }
-  catch (error) { console.warn('Could not load DEX Screener token data:', error instanceof Error ? error.message : 'unknown error'); }
-  const okxMetrics = await getOkxMetrics(missing);
+  const [dexResult, okxResult] = await Promise.allSettled([getDexScreenerMetrics(missing), getOkxMetrics(missing)]);
+  const dexMetrics = dexResult.status === 'fulfilled' ? dexResult.value : new Map<string, TokenMetrics>();
+  const okxMetrics = okxResult.status === 'fulfilled' ? okxResult.value : new Map<string, { market?: OkxMetric; totalFee?: number }>();
+  if (dexResult.status === 'rejected') console.warn('Could not load DEX Screener token data:', dexResult.reason instanceof Error ? dexResult.reason.message : 'unknown error');
 
   missing.forEach((address) => {
     const dex = dexMetrics.get(address) ?? null;
@@ -171,8 +180,17 @@ export async function getTokenMetrics(inputAddresses: string[]): Promise<Map<str
       sourceUrl: dex?.sourceUrl ?? null,
       updatedAt: new Date().toISOString(),
     } : null;
-    cache.set(address, { expiresAt: now + CACHE_TTL_MS, value: metric });
-    if (metric) result.set(address, metric);
+    if (metric) {
+      cache.set(address, { expiresAt: now + CACHE_TTL_MS, staleUntil: now + CACHE_TTL_MS + STALE_TTL_MS, value: metric });
+      result.set(address, metric);
+      return;
+    }
+    const stale = cache.get(address);
+    if (stale?.value && stale.staleUntil > Date.now()) {
+      result.set(address, stale.value);
+      return;
+    }
+    cache.set(address, { expiresAt: now + CACHE_TTL_MS, staleUntil: now + CACHE_TTL_MS, value: null });
   });
   return result;
 }
