@@ -265,3 +265,41 @@ html[data-theme='light'] .project-score-panel{border-color:#dfe3da;background:li
 .ecosystem-metric.metric-loading b.not-indexed{color:#9ba593;animation:metric-pulse 1.25s ease-in-out infinite alternate}
 html[data-theme='light'] .ecosystem-metric.metric-loading b.not-indexed{color:#7b8574}
 @keyframes metric-pulse{from{opacity:.48}to{opacity:1}}
+
+.network-activity-panel{margin:16px 0 18px;padding:19px;border:1px solid #272c34;border-radius:6px;background:var(--panel)}
+.network-activity-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}
+.network-activity-heading h3{margin:5px 0 0;font:500 17px 'Space Grotesk',sans-serif}
+.network-activity-heading p{margin:5px 0 0;color:#89909a;font-size:12px}
+.network-activity-meta{display:grid;justify-items:end;gap:5px;color:#818994;font-size:10px;text-align:right}
+.network-activity-meta a{color:#b6c997;text-decoration:underline;text-underline-offset:3px}
+.network-activity-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:17px 0 12px}
+.network-activity-card{min-width:0;padding:13px 14px;border:1px solid #272c34;border-radius:6px;background:#15191f}
+.network-activity-card-label{display:flex;align-items:center;justify-content:space-between;gap:7px;color:#949ca6;font-size:11px}
+.network-activity-card-label svg{color:#82906f}
+.network-activity-card strong{display:block;margin:10px 0 6px;color:#eef0eb;font:500 25px 'Space Grotesk',sans-serif;letter-spacing:-.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.network-activity-card small{display:block;color:#737c87;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.network-activity-chart-card{padding:14px 14px 10px;border:1px solid #272c34;border-radius:6px;background:#111419}
+.network-activity-chart-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.network-activity-metric-switch,.network-activity-range{display:flex;flex-wrap:wrap;gap:5px}
+.network-activity-metric-switch button,.network-activity-range button{min-height:31px;padding:0 10px;border:1px solid #2c323c;border-radius:4px;background:#15191f;color:#949ca6;font-size:11px}
+.network-activity-metric-switch button.selected{border-color:color-mix(in srgb,var(--activity-color),transparent 45%);background:color-mix(in srgb,var(--activity-color),transparent 91%);color:var(--activity-color)}
+.network-activity-range button.active{border-color:#596b45;background:#20271b;color:#d8f5b0}
+.network-activity-chart{height:245px;margin-top:10px}
+.network-activity-empty{height:100%;display:grid;place-items:center;color:#89909a;font-size:12px}
+.network-activity-note{display:flex;justify-content:space-between;gap:12px;margin-top:7px;color:#747d88;font-size:10px;line-height:1.5}
+.network-activity-method{margin-top:10px;color:#818994;font-size:11px}
+.network-activity-method summary{width:max-content;cursor:pointer;color:#a5ad9f}
+.network-activity-method ul{display:grid;gap:5px;margin:8px 0 0;padding-left:18px;line-height:1.55}
+html[data-theme='light'] .network-activity-panel{border-color:#dfe3da;background:#fff}
+html[data-theme='light'] .network-activity-heading p,html[data-theme='light'] .network-activity-meta,html[data-theme='light'] .network-activity-note,html[data-theme='light'] .network-activity-method{color:#697265}
+html[data-theme='light'] .network-activity-meta a{color:#526d37}
+html[data-theme='light'] .network-activity-card{border-color:#e1e6dd;background:#fbfcfa}
+html[data-theme='light'] .network-activity-card-label{color:#697265}
+html[data-theme='light'] .network-activity-card strong{color:#30372e}
+html[data-theme='light'] .network-activity-card small{color:#788174}
+html[data-theme='light'] .network-activity-chart-card{border-color:#e1e6dd;background:#fbfcfa}
+html[data-theme='light'] .network-activity-metric-switch button,html[data-theme='light'] .network-activity-range button{border-color:#dfe3da;background:#fff;color:#687262}
+html[data-theme='light'] .network-activity-range button.active{border-color:#aebd9d;background:#f0f5e9;color:#526d37}
+html[data-theme='light'] .network-activity-method summary{color:#596252}
+@media(max-width:900px){.network-activity-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:660px){.network-activity-panel{padding:14px}.network-activity-heading{flex-direction:column}.network-activity-meta{justify-items:start;text-align:left}.network-activity-cards{gap:8px;margin:13px 0 9px}.network-activity-card{padding:11px}.network-activity-card strong{font-size:21px}.network-activity-chart-card{padding:10px}.network-activity-chart-head{align-items:flex-start;flex-direction:column}.network-activity-metric-switch button{min-height:30px;padding:0 8px;font-size:10px}.network-activity-range{align-self:flex-end}.network-activity-chart{height:220px}.network-activity-note{flex-direction:column;gap:3px}}

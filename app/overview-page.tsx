@@ -6,6 +6,7 @@ import { ArrowDownRight, ArrowUpRight, ExternalLink, Flame, Radio, RefreshCw, Sp
 import { ARC_LAUNCH_START_TIMESTAMP } from '@/lib/arc';
 import ProjectAvatar from '@/app/project-avatar';
 import type { EcosystemProject } from '@/lib/project-schema';
+import NetworkActivityPanel, { type NetworkActivityData } from '@/app/network-activity-panel';
 import Link from 'next/link';
 
 type Protocol = { name: string; twitter?: string; module?: string; category?: string; logo?: string; total24h?: number; total7d?: number; total30d?: number; change_1d?: number };
@@ -29,6 +30,8 @@ export default function OverviewPage({ language, isDark, projects, onNavigate }:
   const zh = language === 'zh';
   const t = (en: string, cn: string) => zh ? cn : en;
   const [data, setData] = useState<OverviewData | null>(null);
+  const [networkActivity, setNetworkActivity] = useState<NetworkActivityData | null>(null);
+  const [networkActivityLoaded, setNetworkActivityLoaded] = useState(false);
   const [launchpads, setLaunchpads] = useState<Launchpad[]>([]);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -38,13 +41,16 @@ export default function OverviewPage({ language, isDark, projects, onNavigate }:
 
   async function loadData(force = false) {
     setRefreshing(true);
-    const [overviewResult, launchpadResult] = await Promise.allSettled([
+    const [overviewResult, launchpadResult, activityResult] = await Promise.allSettled([
       fetch('/api/overview', force ? { cache: 'no-store' } : undefined).then((res) => { if (!res.ok) throw new Error('Failed'); return res.json() as Promise<OverviewData>; }),
       fetch('/api/launchpads', force ? { cache: 'no-store' } : undefined).then((res) => { if (!res.ok) throw new Error('Failed'); return res.json() as Promise<LaunchpadData>; }),
+      fetch('/api/network-activity', force ? { cache: 'no-store' } : undefined).then((res) => { if (!res.ok) throw new Error('Failed'); return res.json() as Promise<NetworkActivityData>; }),
     ]);
     if (overviewResult.status === 'fulfilled') { setData(overviewResult.value); setFailed(overviewResult.value.partial); }
     else setFailed(true);
     if (launchpadResult.status === 'fulfilled') setLaunchpads(launchpadResult.value.launchpads);
+    if (activityResult.status === 'fulfilled') setNetworkActivity(activityResult.value);
+    setNetworkActivityLoaded(true);
     setRefreshing(false);
   }
 
@@ -82,7 +88,7 @@ export default function OverviewPage({ language, isDark, projects, onNavigate }:
   }
 
   const updatedLabel = data?.updatedAt ? new Intl.DateTimeFormat(zh ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short' }).format(new Date(data.updatedAt)) : null;
-  const launchpadLeaders = [...launchpads].filter((item) => item.available).sort((a, b) => (b.fees24h ?? 0) - (a.fees24h ?? 0)).slice(0, 4);
+  const launchpadLeaders = [...launchpads].sort((a, b) => (b.fees24h ?? -1) - (a.fees24h ?? -1));
   const recentUpdates = projects.flatMap((project) => project.updates.map((update) => ({ project, update })))
     .sort((a, b) => (Date.parse(b.update.publishedAt ?? '') || 0) - (Date.parse(a.update.publishedAt ?? '') || 0))
     .slice(0, 5);
@@ -116,13 +122,15 @@ export default function OverviewPage({ language, isDark, projects, onNavigate }:
       <div className="overview-chart-summary"><span>{currentMetric.label}<b>{currency(currentMetric.value)}</b></span><span>{t('24h change', '24 小时变化')}<b className={(currentMetric.change ?? 0) < 0 ? 'negative' : 'positive'}>{percent(currentMetric.change)}</b></span><span className="overview-chart-source">{t('Daily data', '每日数据')}</span></div>
     </section>
 
+    <NetworkActivityPanel data={networkActivity} loaded={networkActivityLoaded} zh={zh} isDark={isDark}/>
+
     <div className="overview-lower-grid">
       <section className="overview-panel"><div className="overview-panel-head"><div><div className="section-kicker">{t('ON-CHAIN FEES', '链上费用')}</div><h3>{t('Top protocols · 24h', '协议费用榜 · 24 小时')}</h3></div></div>
         <div className="overview-table-scroll"><table className="overview-table"><thead><tr><th>#</th><th>{t('PROTOCOL', '协议')}</th><th>{t('CATEGORY', '类别')}</th><th>{t('FEES · 24H', '费用 · 24 小时')}</th><th>{t('FEES · 7D', '费用 · 7 天')}</th></tr></thead><tbody>{data?.topProtocols.map((protocol, index) => <tr key={`${protocol.name}-${index}`}><td className="overview-rank">{String(index + 1).padStart(2, '0')}</td><td><div className="overview-protocol-name"><ProjectAvatar key={protocol.twitter ?? protocol.name} className="overview-x-avatar" handle={protocol.twitter ?? ''} symbol={protocol.name.slice(0, 1)}/><b>{protocol.name}</b></div></td><td className="overview-category">{protocol.category ?? '—'}</td><td className="overview-money">{currency(protocol.total24h)}</td><td className="overview-money">{currency(protocol.total7d)}</td></tr>)}{!data && <tr><td colSpan={5} className="overview-loading">{t('Loading protocol fees…', '正在加载协议费用…')}</td></tr>}{data?.topProtocols.length === 0 && <tr><td colSpan={5} className="overview-loading">{t('No protocol fee data available.', '暂无协议费用数据。')}</td></tr>}</tbody></table></div>
       </section>
-      <section className="overview-panel launchpad-pulse-panel"><div className="overview-panel-head"><div><div className="section-kicker">{t('LAUNCHPAD PULSE', '发射台动态')}</div><h3>{t('Top launchpads · 24h fees', '发射台费用榜 · 24 小时')}</h3></div><button onClick={onNavigate}>{t('View all', '查看全部')} <ArrowUpRight size={12}/></button></div>
+      <section className="overview-panel launchpad-pulse-panel"><div className="overview-panel-head"><div><div className="section-kicker">{t('LAUNCHPAD PULSE', '发射台动态')}</div><h3>{t('Tracked launchpads · 24h fees', '已追踪发射台 · 24 小时费用')}</h3></div><button onClick={onNavigate}>{t('View all', '查看全部')} <ArrowUpRight size={12}/></button></div>
         <div className="overview-launchpad-list">{launchpadLeaders.map((item, index) => <div className="overview-launchpad-row" key={item.slug}><span className="overview-rank">{String(index + 1).padStart(2, '0')}</span><ProjectAvatar key={item.xHandle} className="overview-x-avatar launchpad-x-avatar" handle={item.xHandle} symbol={item.logo}/><b>{item.name}</b><span className="overview-money">{currency(item.fees24h)}</span><span className={item.change24h == null ? 'launchpad-change unavailable' : item.change24h >= 0 ? 'launchpad-change positive' : 'launchpad-change negative'}>{item.change24h != null && (item.change24h >= 0 ? <ArrowUpRight size={11}/> : <ArrowDownRight size={11}/>)}{percent(item.change24h)}</span></div>)}{launchpadLeaders.length === 0 && <div className="overview-loading">{failed ? t('Launchpad metrics unavailable.', '发射台数据暂不可用。') : t('Loading launchpad fees…', '正在加载发射台费用…')}</div>}</div>
-        <div className="overview-launchpad-foot"><span>{t('Selected Arc launchpads', '精选 Arc 发射台')}</span><Sparkles size={13}/></div>
+        <div className="overview-launchpad-foot"><span>{t('Tracked Arc launchpads', '已追踪 Arc 发射台')}</span><Sparkles size={13}/></div>
       </section>
     </div>
     {recentUpdates.length ? <section className="overview-updates-panel"><div className="overview-panel-head"><div><div className="section-kicker">{t('ECOSYSTEM SIGNALS', '生态动态')}</div><h3>{t('Recent project updates', '近期项目动态')}</h3></div><button onClick={() => onNavigate()}>{t('Browse projects', '浏览项目')} <ArrowUpRight size={12}/></button></div><div className="overview-updates-list">{recentUpdates.map(({ project, update }) => <article key={`${project.slug}-${update.sourceUrl}`}><ProjectAvatar handle={project.handle} symbol={project.symbol}/><div className="overview-update-copy"><Link href={`/projects/${encodeURIComponent(project.slug)}`}>{project.name}<span>{update.publishedAt ? new Date(update.publishedAt).toLocaleDateString(zh ? 'zh-CN' : 'en-US') : ''}</span></Link><b>{zh ? update.titleZh || update.titleEn : update.titleEn}</b><p>{zh ? update.summaryZh || update.summaryEn : update.summaryEn}</p></div><a className="overview-update-source" href={update.sourceUrl} target="_blank" rel="noreferrer" aria-label={t(`Open source for ${project.name}`, `打开 ${project.name} 的动态来源`)}><ExternalLink size={14}/></a></article>)}</div></section> : null}
