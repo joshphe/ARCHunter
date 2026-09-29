@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import type { DragEvent, KeyboardEvent } from 'react';
 import ProjectTicker from './project-ticker';
+import { useSiteVisits } from './site-visits-provider';
 import type { EcosystemProject } from '@/lib/project-schema';
 import { ChevronDown, Coins, Compass, GripVertical, LayoutDashboard, Menu, Moon, Sparkles, Sun, Users, X } from 'lucide-react';
 
@@ -25,7 +26,7 @@ export default function Home(){
  const [ecosystemProjects,setEcosystemProjects]=useState<EcosystemProject[]>([]);
  const [projectsLoaded,setProjectsLoaded]=useState(false);
  const [marketDataLoaded,setMarketDataLoaded]=useState(false);
- const [totalVisits,setTotalVisits]=useState<number|null>(null);
+ const totalVisits=useSiteVisits();
  const [workspaceOrder,setWorkspaceOrder]=useState<Workspace[]>(()=>WORKSPACES.map(({key})=>key));
  const [workspaceOrderReady,setWorkspaceOrderReady]=useState(false);
  const [draggedWorkspace,setDraggedWorkspace]=useState<Workspace|null>(null);
@@ -37,7 +38,6 @@ export default function Home(){
  useEffect(()=>{const view=new URLSearchParams(window.location.search).get('view');if(view==='ecosystem')setActive('Ecosystem');if(view==='launchpad')setActive('Launchpad');if(view==='capital')setActive('Capital')},[]);
  useEffect(()=>{fetch('/api/ecosystem-projects').then(r=>r.ok?r.json():[]).then((projects:unknown)=>{if(Array.isArray(projects))setEcosystemProjects(projects as EcosystemProject[])}).catch(()=>setEcosystemProjects([])).finally(()=>setProjectsLoaded(true))},[]);
  useEffect(()=>{if(active!=='Ecosystem'||!projectsLoaded||marketDataLoaded)return;fetch('/api/ecosystem-projects?includeMetrics=1').then(r=>{if(!r.ok)throw new Error('Could not load market data');return r.json()}).then((projects:unknown)=>{if(Array.isArray(projects)){setEcosystemProjects(projects as EcosystemProject[]);setMarketDataLoaded(true)}}).catch(()=>{})},[active,marketDataLoaded,projectsLoaded]);
- useEffect(()=>{let current=true;const loadVisits=async()=>{let shouldCount=false;try{const alreadyCounted=sessionStorage.getItem('arcwatch-visit-counted')==='1'||sessionStorage.getItem('arcwatch-visit-pending')==='1';shouldCount=!alreadyCounted&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1';if(shouldCount)sessionStorage.setItem('arcwatch-visit-pending','1')}catch{/* Still show the count when browser storage is disabled. */}try{const response=await fetch('/api/site-visits',{method:shouldCount?'POST':'GET',cache:'no-store'});if(!response.ok)throw new Error('Unavailable');const result=await response.json() as {totalVisits:number};if(current)setTotalVisits(result.totalVisits);if(shouldCount)sessionStorage.setItem('arcwatch-visit-counted','1')}catch{/* Keep the sidebar usable when the database is unavailable. */}finally{if(shouldCount)try{sessionStorage.removeItem('arcwatch-visit-pending')}catch{/* Ignore disabled storage. */}}};void loadVisits();return()=>{current=false}},[]);
  useEffect(()=>{document.documentElement.dataset.theme=isDark?'dark':'light';localStorage.setItem('arcwatch-theme',isDark?'dark':'light')},[isDark]); useEffect(()=>{document.documentElement.lang=language==='zh'?'zh-CN':'en'},[language]);
  const reorderWorkspace=(from:Workspace,to:Workspace)=>setWorkspaceOrder((current)=>{const next=[...current];const fromIndex=next.indexOf(from);const toIndex=next.indexOf(to);if(fromIndex<0||toIndex<0||fromIndex===toIndex)return current;next.splice(fromIndex,1);next.splice(toIndex,0,from);return next});
  const moveWorkspace=(key:Workspace,direction:-1|1)=>setWorkspaceOrder((current)=>{const index=current.indexOf(key);const destination=index+direction;if(index<0||destination<0||destination>=current.length)return current;const next=[...current];[next[index],next[destination]]=[next[destination],next[index]];return next});
