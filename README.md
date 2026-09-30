@@ -13,6 +13,8 @@ Project directory data is read from Neon. Configure `DATABASE_URL`, `ADMIN_PASSW
 
 Token market data is fetched server-side from DEX Screener and refreshed every five minutes. To enrich it with OKX holder counts and total network fees, optionally configure `OKX_API_KEY`, `OKX_SECRET_KEY`, `OKX_API_PASSPHRASE`, and `OKX_PROJECT_ID`. Arc defaults to OKX chain index `5042`; override it with `OKX_ARC_CHAIN_INDEX` if OKX changes the index.
 
+Arc stablecoin supply history uses DeFiLlama’s public Stablecoins API without an API key. The capital workspace presents changes in reported USD-pegged stablecoin supply as a trend indicator; this does not identify bridge inflows or outflows. Requests are cached for 30 minutes.
+
 After linking the repository to the Vercel project and configuring its environment variables, initialize the database with:
 
 ```bash
