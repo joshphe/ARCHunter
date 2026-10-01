@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, ChevronDown, Compass, Copy, ExternalLink, LayoutDashboard, Menu, Moon, Sparkles, Sun, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, Coins, Compass, Copy, ExternalLink, LayoutDashboard, Menu, Moon, Sparkles, Sun, X } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
 import ProjectAvatar from '@/app/project-avatar';
 import ProjectScoreRadar from '@/app/project-score-radar';
@@ -85,6 +85,7 @@ export default function ProjectDetailClient({ project, initialLanguage }: Props)
       <nav>
         <Link className="nav-item" href="/"><LayoutDashboard size={17}/><span>{t('Overview', '概览')}</span></Link>
         <Link className="nav-item selected" href="/?view=ecosystem"><Compass size={17}/><span>{t('Ecosystem', '生态')}</span></Link>
+        <Link className="nav-item" href="/?view=capital"><Coins size={17}/><span>{t('Capital', '资金与流动性')}</span></Link>
         <Link className="nav-item" href="/?view=launchpad"><Sparkles size={17}/><span>{t('Launchpad', '发射台')}</span></Link>
       </nav>
     </aside>
