@@ -433,3 +433,11 @@ html[data-theme='light'] .capital-utilization>div{background:#e7eadf}
 html[data-theme='light'] .workspace-drag-icon{color:#718064!important}
 html[data-theme='light'] .workspace-nav-row.drop-target{background:#f1f6e9;outline-color:#789b49}
 @media(hover:none){.workspace-drag-icon{opacity:.65}}
+
+/* Rug archive */
+.rug-notice{display:flex;align-items:flex-start;gap:12px;padding:18px;border:1px solid #bb665866;background:var(--panel);border-radius:12px;margin:20px 0;color:var(--text)}
+.rug-notice svg{color:#d97b69;flex-shrink:0}.rug-notice p{margin:0;line-height:1.8}
+.rug-card{background:var(--panel);border:1px solid var(--line);border-top:3px solid #bd6758;border-radius:12px;padding:24px;margin:20px 0;line-height:1.8;min-width:0}
+.rug-card header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.rug-card h2{margin:0;font-size:25px}.rug-card h2 small{font-size:13px;color:var(--muted);margin-left:8px}.rug-card header span,.rug-history-note{color:var(--muted)}
+.rug-badge{border:1px solid #bb665866;color:#db8270;border-radius:6px;padding:5px 10px;font-size:12px}.rug-facts{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:20px 0;border-bottom:1px solid var(--line)}.rug-facts dt{color:var(--muted);font-size:12px}.rug-facts dd{margin:4px 0 0}.rug-contract{overflow-wrap:anywhere;font-family:'DM Mono',monospace;font-size:12px}.rug-card h3{font-size:14px;margin:22px 0 6px}.rug-card details{border-top:1px solid var(--line);padding-top:16px;margin-top:20px}.rug-card summary{cursor:pointer;font-weight:600}.rug-card a{text-decoration:underline}.rug-card textarea{display:block;width:100%;min-height:85px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:10px}.rug-card label{display:block;margin:12px 0}.rug-card button{padding:9px 14px;background:var(--panel2);border:1px solid var(--line2);border-radius:6px}.rug-card button:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:600px){.rug-card{padding:17px}.rug-facts{grid-template-columns:1fr}.rug-badge{font-size:11px}.rug-notice{padding:14px}}

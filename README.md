@@ -26,7 +26,15 @@ vercel env run -- npm run db:migrate:site-visits
 
 The migration creates the project directory and project updates tables and imports the existing Vort and KAIRO entries. It can be re-run safely.
 
-When `DATABASE_URL` is unavailable, the public directory falls back to the bundled Vort and KAIRO profiles so local previews remain usable. The admin area still requires the database.
+When `DATABASE_URL` is unavailable, the public directory falls back to the bundled KAIRO profile. Vort has been removed from that fallback because it is archived. The admin area still requires the database.
+
+## Rug archive
+
+Apply `004_rug_projects.sql` before deploying the Rug workspace. `/?view=rug` reads the independent archive via `/api/rug-projects`. A database error is shown as an error, not an empty archive.
+
+In `/admin`, select an existing project and expand “移入 Rug 档案”. Supply both incident descriptions, then archive it. This stores its complete project row and updates as immutable initial snapshots, removes publication and recommendation flags, and classifies the record as a user report pending independent verification. Repeated submissions preserve the first snapshot. The archive table can hold a verified classification, incident date and evidence links when supporting material is established; the intake action never claims independent verification automatically.
+
+Public project queries and token lists exclude archived records even if a stale editor attempts to republish one. The admin save endpoint also refuses archived projects. Historical scores in the archive are labeled as historical, not current recommendations. Existing archived project URLs redirect to the archive.
 
 ## Project management
 

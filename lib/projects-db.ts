@@ -13,15 +13,15 @@ const projectSelect = `
 export async function listProjects(publishedOnly = true): Promise<EcosystemProject[]> {
   const sql = getSql();
   const [rows, updateRows, scoreRows] = await Promise.all([
-    sql.query(`${projectSelect} ${publishedOnly ? 'WHERE is_published = true' : ''} ORDER BY recommended DESC, sort_order ASC, name ASC`),
+    sql.query(`${projectSelect} ${publishedOnly ? 'WHERE is_published = true AND NOT EXISTS (SELECT 1 FROM rug_projects r WHERE r.slug=ecosystem_projects.slug)' : ''} ORDER BY recommended DESC, sort_order ASC, name ASC`),
     sql.query(`
     SELECT p.slug, u.title_en AS "titleEn", u.title_zh AS "titleZh", u.summary_en AS "summaryEn",
       u.summary_zh AS "summaryZh", u.source_url AS "sourceUrl", u.published_at AS "publishedAt"
     FROM ecosystem_project_updates u
     JOIN ecosystem_projects p ON p.id = u.project_id
-    WHERE u.is_published = true ${publishedOnly ? 'AND p.is_published = true' : ''}
+    WHERE u.is_published = true ${publishedOnly ? 'AND p.is_published = true AND NOT EXISTS (SELECT 1 FROM rug_projects r WHERE r.slug=p.slug)' : ''}
     ORDER BY p.slug, u.published_at DESC NULLS LAST, u.created_at DESC`),
-    sql.query(`SELECT slug, scorecard, score_reviewed_at AS "scoreReviewedAt", scorecard_history AS "scoreHistory" FROM ecosystem_projects ${publishedOnly ? 'WHERE is_published = true' : ''}`).catch(() => []),
+    sql.query(`SELECT slug, scorecard, score_reviewed_at AS "scoreReviewedAt", scorecard_history AS "scoreHistory" FROM ecosystem_projects ${publishedOnly ? 'WHERE is_published = true AND NOT EXISTS (SELECT 1 FROM rug_projects r WHERE r.slug=ecosystem_projects.slug)' : ''}`).catch(() => []),
   ]);
   const scoresBySlug = new Map((scoreRows as Array<Record<string, unknown>>).map((row) => [String(row.slug), row]));
   const updatesBySlug = new Map<string, EcosystemProject['updates']>();
@@ -66,12 +66,12 @@ function mapProject(row: Record<string, unknown>, updates: EcosystemProject['upd
 export async function getProjectBySlug(slug: string, publishedOnly = true): Promise<EcosystemProject | null> {
   const sql = getSql();
   const [rows, updateRows, scoreRows] = await Promise.all([
-    sql.query(`${projectSelect} WHERE slug = $1 ${publishedOnly ? 'AND is_published = true' : ''}`, [slug]),
+    sql.query(`${projectSelect} WHERE slug = $1 ${publishedOnly ? 'AND is_published = true AND NOT EXISTS (SELECT 1 FROM rug_projects r WHERE r.slug=ecosystem_projects.slug)' : ''}`, [slug]),
     sql.query(`
       SELECT u.title_en AS "titleEn", u.title_zh AS "titleZh", u.summary_en AS "summaryEn",
         u.summary_zh AS "summaryZh", u.source_url AS "sourceUrl", u.published_at AS "publishedAt"
       FROM ecosystem_project_updates u JOIN ecosystem_projects p ON p.id = u.project_id
-      WHERE p.slug = $1 AND u.is_published = true ${publishedOnly ? 'AND p.is_published = true' : ''}
+      WHERE p.slug = $1 AND u.is_published = true ${publishedOnly ? 'AND p.is_published = true AND NOT EXISTS (SELECT 1 FROM rug_projects r WHERE r.slug=p.slug)' : ''}
       ORDER BY u.published_at DESC NULLS LAST, u.created_at DESC LIMIT 3`, [slug]),
     sql.query('SELECT scorecard, score_reviewed_at AS "scoreReviewedAt", scorecard_history AS "scoreHistory" FROM ecosystem_projects WHERE slug = $1', [slug]).catch(() => []),
   ]);
@@ -88,7 +88,7 @@ export async function getProjectBySlug(slug: string, publishedOnly = true): Prom
 
 export async function listPublishedTokenAddresses(): Promise<string[]> {
   const sql = getSql();
-  const rows = await sql.query('SELECT lower(token_address) AS address FROM ecosystem_projects WHERE is_published = true AND token_address IS NOT NULL') as Array<Record<string, unknown>>;
+  const rows = await sql.query('SELECT lower(token_address) AS address FROM ecosystem_projects WHERE is_published = true AND token_address IS NOT NULL AND NOT EXISTS (SELECT 1 FROM rug_projects r WHERE r.slug=ecosystem_projects.slug)') as Array<Record<string, unknown>>;
   return rows.map((row) => String(row.address));
 }
 

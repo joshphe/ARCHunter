@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isRugProject } from '@/lib/rug-projects';
 import { isAdmin, isSameOrigin } from '@/lib/admin-auth';
 import { listProjects, saveProject } from '@/lib/projects-db';
 import { validateProjectInput } from '@/lib/project-schema';
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
   const result = validateProjectInput(body);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
   try {
+    if (await isRugProject(result.project.slug)) return NextResponse.json({ error: 'This project is in the Rug archive and cannot be republished here.' }, { status: 409 });
     await saveProject(result.project);
     return NextResponse.json({ ok: true });
   } catch (error) {

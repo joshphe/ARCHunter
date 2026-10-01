@@ -87,6 +87,7 @@ export default function ProjectDetailClient({ project, initialLanguage }: Props)
         <Link className="nav-item selected" href="/?view=ecosystem"><Compass size={17}/><span>{t('Ecosystem', '生态')}</span></Link>
         <Link className="nav-item" href="/?view=capital"><Coins size={17}/><span>{t('Capital', '资金与流动性')}</span></Link>
         <Link className="nav-item" href="/?view=launchpad"><Sparkles size={17}/><span>{t('Launchpad', '发射台')}</span></Link>
+        <Link className="nav-item" href="/?view=rug"><Compass size={17}/><span>{t('Rug archive', 'Rug 档案')}</span></Link>
       </nav>
     </aside>
     <section className="main-area">

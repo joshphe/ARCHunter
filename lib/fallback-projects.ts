@@ -3,20 +3,6 @@ import { initialProjectScorecards } from '@/lib/project-scorecard-proposal';
 
 export const fallbackProjects: EcosystemProject[] = [
   {
-    slug: 'vort', name: 'Vort', symbol: 'V', handle: '@VortLaunch',
-    tagline: 'Verifiable reward flow on Arc.', taglineZh: 'Arc 上可验证的奖励分配机制。',
-    description: {
-      en: 'Vort routes creator proceeds into holder rewards through settled epochs, with reward allocations and settlement records published on Arc.',
-      zh: 'Vort 将创作者收益按周期分配给持币者，并在 Arc 上公开奖励分配与结算记录。',
-    },
-    categories: ['Tokens'], status: 'live',
-    products: [{ en: 'Holder rewards', zh: '持币者奖励' }, { en: 'Epoch settlements', zh: '周期结算' }, { en: 'Public reward ledger', zh: '公开奖励账本' }, { en: 'Buyback and burn', zh: '回购与销毁' }],
-    tvl: null, fees24h: null, volume24h: null,
-    tokenAddress: '0x4d57060f3825d3b995f35a30194f3e74e105f3ec', tokenMetrics: null,
-    website: 'https://vort.bot/', x: 'https://x.com/VortLaunch', sourceUrls: ['https://vort.bot/'],
-    verifiedOn: '2026-09-23', recommended: true, recommendationReason: null, isPublished: true, updates: [], scorecard: initialProjectScorecards.vort, scoreReviewedAt: '2026-09-27T00:00:00.000Z', scoreHistory: [],
-  },
-  {
     slug: 'kairo', name: 'KAIRO', symbol: 'K', handle: '@kairo_market',
     tagline: 'Trade. Predict. Earn. Create.', taglineZh: '交易、预测、赚取、创建。',
     description: {
