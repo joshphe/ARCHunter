@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, ExternalLink, Search, Send } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Search, Send, TriangleAlert } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
 import ProjectAvatar from '@/app/project-avatar';
 import { getProjectScore } from '@/lib/project-scoring';
@@ -98,8 +98,12 @@ export default function EcosystemPage({ language, projects }: Props) {
         {visibleProjects.map((project) => {
           const marketValue = project.tokenMetrics?.marketCapUsd ?? project.tvl;
           const score = getProjectScore(project.scorecard).total;
+          const hasRiskNotice = project.updates.some(update =>
+            update.titleZh === 'Rug 风险复核：发现与核验限制' || update.titleZh === 'ARCHunter 复核：当前风险与证据缺口'
+          ) || /本次(?: Rug 风险复核|风险提示)/.test(project.description.zh);
+
           return <Link href={`/projects/${encodeURIComponent(project.slug)}`} className="ecosystem-table-row" key={project.slug}>
-            <span className="ecosystem-table-project"><ProjectAvatar handle={project.handle} symbol={project.symbol}/><span><b>{project.name}</b><small>{project.handle}</small></span></span>
+            <span className="ecosystem-table-project"><ProjectAvatar handle={project.handle} symbol={project.symbol}/><span><span className="ecosystem-project-name"><b>{project.name}</b>{hasRiskNotice && <span className="ecosystem-risk-badge" title={t('Risk findings are recorded in the project profile. This does not mean a confirmed rug.', '项目详情中已记录风险事项，不代表已确认跑路。')}><TriangleAlert size={11} aria-hidden="true"/>{t('Risk notice', '风险提示')}</span>}</span><small>{project.handle}</small></span></span>
             <span className="ecosystem-table-tags">{project.categories.slice(0, 3).map((item) => <i key={item}>{categoryLabel(item, zh)}</i>)}</span>
             <span className="ecosystem-table-description">{zh ? project.description.zh || project.taglineZh || project.tagline : project.description.en || project.tagline}</span>
             <span className="ecosystem-table-value"><small>{project.tokenMetrics?.marketCapUsd != null ? t('MARKET CAP', '市值') : 'TVL'}</small><b className={marketValue == null ? 'not-indexed' : ''}>{amount(marketValue, zh)}</b></span>
