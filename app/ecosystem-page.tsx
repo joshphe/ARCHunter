@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, ExternalLink, Search, Send, TriangleAlert } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
-import { riskLabels, evidenceLabels } from '@/lib/project-risk';
+import { riskLabels, evidenceLabels, riskDescriptions, evidenceDescriptions } from '@/lib/project-risk';
 import ProjectAvatar from '@/app/project-avatar';
 import { getProjectScore } from '@/lib/project-scoring';
 
@@ -138,7 +138,7 @@ export default function EcosystemPage({ language, projects }: Props) {
           const score = getProjectScore(project.scorecard).total;
           const review = project.riskReviews?.[0];
           return <Link href={`/projects/${encodeURIComponent(project.slug)}`} className="ecosystem-table-row" key={project.slug} onClick={rememberScroll}>
-            <span className="ecosystem-table-project"><ProjectAvatar handle={project.handle} symbol={project.symbol}/><span><span className="ecosystem-project-name"><b>{project.name}</b><span className={`ecosystem-risk-badge risk-${review?.priority ?? 'unassessed'}`} title={t('Review priority, not a probability of fraud.','核查优先级，不是跑路概率。')}><TriangleAlert size={11} aria-hidden="true"/>{riskLabels[review?.priority ?? 'unassessed'][language]}</span></span><small>{project.handle}</small>{review && <small>{evidenceLabels[review.evidenceStatus][language]} · {review.reviewedOn}</small>}</span></span>
+            <span className="ecosystem-table-project"><ProjectAvatar handle={project.handle} symbol={project.symbol}/><span><span className="ecosystem-project-name"><b>{project.name}</b><span className={`ecosystem-risk-badge risk-${review?.priority ?? 'unassessed'}`} title={riskDescriptions[review?.priority ?? 'unassessed'][language]}><TriangleAlert size={11} aria-hidden="true"/>{riskLabels[review?.priority ?? 'unassessed'][language]}</span></span><small>{project.handle}</small>{review && <small title={evidenceDescriptions[review.evidenceStatus][language]}>{evidenceLabels[review.evidenceStatus][language]} · {review.reviewedOn}</small>}</span></span>
             <span className="ecosystem-table-tags">{project.categories.slice(0, 3).map((item) => <i key={item}>{categoryLabel(item, zh)}</i>)}</span>
             <span className="ecosystem-table-description">{zh ? project.taglineZh || project.tagline : project.tagline}</span>
             <span className="ecosystem-table-value"><small>{t('MARKET CAP', '市值')}</small><b className={marketValue == null ? 'not-indexed' : ''}>{amount(marketValue, zh)}</b></span>
