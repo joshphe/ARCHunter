@@ -45,3 +45,11 @@ The `arc-project-intake` Codex skill gathers and checks project details from off
 ## Deploy
 
 Vercel deploys the connected GitHub branch using the default Next.js build settings. Environment-variable changes apply to new deployments.
+
+### Structured risk reviews
+
+Apply `db/migrations/005_project_risk_reviews.sql` before deploying this version. `project_risk_reviews` stores append-only bilingual findings, priority, evidence status, source URLs and review dates; the latest saved record is current. Admin risk reviews save separately from project descriptions and observation scores. Existing editorial risk updates can be retained with `update_kind=risk` while news remains separate.
+
+Directory filters, contract search, sort and page are stored in the URL and restored within the browser session, including scroll position after opening a project. Market cap and protocol TVL have separate columns and sorting; no automatic market refresh is enabled.
+
+Validation: `node --test tests/project-risk.test.cjs`.

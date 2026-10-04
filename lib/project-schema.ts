@@ -1,3 +1,4 @@
+import type { RiskReview } from '@/lib/project-risk';
 import type { TokenMetrics } from '@/lib/token-metrics';
 
 export type ProjectProduct = { en: string; zh: string; status?: 'upcoming' };
@@ -34,6 +35,7 @@ export type EcosystemProject = {
   scorecard: ProjectScorecard | null;
   scoreReviewedAt: string | null;
   scoreHistory: ProjectScoreHistoryEntry[];
+  riskReviews?: RiskReview[];
 };
 
 export type ProjectInput = Omit<EcosystemProject, 'sourceUrls' | 'verifiedOn' | 'recommended' | 'recommendationReason' | 'taglineZh' | 'isPublished' | 'updates' | 'tokenMetrics'> & {

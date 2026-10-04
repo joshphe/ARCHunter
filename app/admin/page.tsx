@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { ArrowLeft, LogOut, Plus, Save } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
 import { emptyScorecard, scoreDimensions } from '@/lib/project-scoring';
+import ProjectRiskForm from './project-risk-form';
 import RugArchiveForm from './rug-archive-form';
 
 type EditableProject = EcosystemProject & { taglineZh: string; isPublished: boolean };
@@ -166,6 +167,7 @@ export default function AdminPage() {
       <form onSubmit={save} className="admin-editor">
         <div className="admin-editor-heading"><div><h2>{form.slug ? `Edit ${form.name}` : 'New project'}</h2><p>Fields with both language labels support EN / 中文.</p></div><button className="admin-primary" type="submit" disabled={busy}><Save size={14}/> {busy ? 'Saving…' : 'Save project'}</button></div>
         {projects.some(p => p.slug === form.slug) && <RugArchiveForm key={form.slug} slug={form.slug} onArchived={loadProjects}/>}
+        {projects.some(p => p.slug === form.slug) && <ProjectRiskForm key={form.slug} slug={form.slug} review={projects.find(p=>p.slug===form.slug)?.riskReviews?.[0]} onSaved={loadProjects}/>}
         <div className="admin-grid">
           <label>Project name<input value={form.name} onChange={(event) => update('name', event.target.value)} required/></label>
           <label>URL slug<input value={form.slug} onChange={(event) => update('slug', event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} placeholder="project-name" required/></label>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Check, ChevronDown, Coins, Compass, Copy, ExternalLink, LayoutDashboard, Menu, Moon, Sparkles, Sun, X } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
+import ProjectRiskPanel from '@/app/project-risk-panel';
 import ProjectAvatar from '@/app/project-avatar';
 import ProjectScoreRadar from '@/app/project-score-radar';
 import { emptyScorecard, getProjectScore, scoreDimensions } from '@/lib/project-scoring';
@@ -99,7 +100,9 @@ export default function ProjectDetailClient({ project, initialLanguage }: Props)
           <div className="project-detail-actions"><span className={`ecosystem-status ${project.status}`}>{project.status === 'beta' ? t('BETA', '测试版') : project.status === 'live' ? t('LIVE ON ARC', '已上线 ARC') : t('UPCOMING', '即将上线')}</span><a href={project.website} target="_blank" rel="noreferrer">{t('Website', '官网')} <ExternalLink size={13}/></a><a href={project.x} target="_blank" rel="noreferrer">X <ExternalLink size={13}/></a></div>
         </section>
 
-        <section className="project-detail-intro"><p>{zh ? project.description.zh : project.description.en}</p><div className="ecosystem-category-tags">{project.categories.map((item) => <span key={item}>{item === 'Prediction Markets' && zh ? '预测市场' : item === 'Tokens' && zh ? '代币项目' : item}</span>)}</div></section>
+        <section className="project-detail-intro"><h2>{t('Project introduction','项目介绍')}</h2><p>{zh ? project.description.zh : project.description.en}</p><div className="ecosystem-category-tags">{project.categories.map((item) => <span key={item}>{item === 'Prediction Markets' && zh ? '预测市场' : item === 'Tokens' && zh ? '代币项目' : item}</span>)}</div></section>
+
+        <ProjectRiskPanel reviews={project.riskReviews} language={language}/>
 
         {(() => {
           const scorecard = project.scorecard ?? emptyScorecard();

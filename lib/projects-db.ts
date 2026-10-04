@@ -7,7 +7,8 @@ const projectSelect = `
     products, tvl_usd AS "tvlUsd", fees_24h_usd AS "fees24hUsd", volume_24h_usd AS "volume24hUsd",
     token_address AS "tokenAddress", website_url AS website, x_url AS x, source_urls AS "sourceUrls",
     verified_on AS "verifiedOn", recommended, is_published AS "isPublished",
-    recommendation_reason_en AS "recommendationReasonEn", recommendation_reason_zh AS "recommendationReasonZh"
+    recommendation_reason_en AS "recommendationReasonEn", recommendation_reason_zh AS "recommendationReasonZh",
+    COALESCE((SELECT jsonb_agg(jsonb_build_object('id',r.id,'priority',r.priority,'evidenceStatus',r.evidence_status,'reasonEn',r.reason_en,'reasonZh',r.reason_zh,'sources',r.sources,'reviewedOn',r.reviewed_on::text) ORDER BY r.id DESC) FROM project_risk_reviews r WHERE r.slug=ecosystem_projects.slug),'[]'::jsonb) AS "riskReviews"
   FROM ecosystem_projects`;
 
 export async function listProjects(publishedOnly = true): Promise<EcosystemProject[]> {
@@ -19,7 +20,7 @@ export async function listProjects(publishedOnly = true): Promise<EcosystemProje
       u.summary_zh AS "summaryZh", u.source_url AS "sourceUrl", u.published_at AS "publishedAt"
     FROM ecosystem_project_updates u
     JOIN ecosystem_projects p ON p.id = u.project_id
-    WHERE u.is_published = true ${publishedOnly ? 'AND p.is_published = true AND NOT EXISTS (SELECT 1 FROM rug_projects r WHERE r.slug=p.slug)' : ''}
+    WHERE u.is_published = true AND u.update_kind = 'news' ${publishedOnly ? 'AND p.is_published = true AND NOT EXISTS (SELECT 1 FROM rug_projects r WHERE r.slug=p.slug)' : ''}
     ORDER BY p.slug, u.published_at DESC NULLS LAST, u.created_at DESC`),
     sql.query(`SELECT slug, scorecard, score_reviewed_at AS "scoreReviewedAt", scorecard_history AS "scoreHistory" FROM ecosystem_projects ${publishedOnly ? 'WHERE is_published = true AND NOT EXISTS (SELECT 1 FROM rug_projects r WHERE r.slug=ecosystem_projects.slug)' : ''}`).catch(() => []),
   ]);
@@ -57,6 +58,7 @@ function mapProject(row: Record<string, unknown>, updates: EcosystemProject['upd
     recommendationReason: row.recommendationReasonEn || row.recommendationReasonZh
       ? { en: String(row.recommendationReasonEn ?? ''), zh: String(row.recommendationReasonZh ?? '') }
       : null,
+    riskReviews: row.riskReviews as EcosystemProject['riskReviews'] ?? [],
     isPublished: Boolean(row.isPublished), updates, scorecard: scoreRow?.scorecard as EcosystemProject['scorecard'] ?? null,
     scoreReviewedAt: reviewedAt instanceof Date ? reviewedAt.toISOString() : reviewedAt == null ? null : String(reviewedAt),
     scoreHistory: Array.isArray(scoreRow?.scoreHistory) ? scoreRow.scoreHistory as EcosystemProject['scoreHistory'] : [],
@@ -71,7 +73,7 @@ export async function getProjectBySlug(slug: string, publishedOnly = true): Prom
       SELECT u.title_en AS "titleEn", u.title_zh AS "titleZh", u.summary_en AS "summaryEn",
         u.summary_zh AS "summaryZh", u.source_url AS "sourceUrl", u.published_at AS "publishedAt"
       FROM ecosystem_project_updates u JOIN ecosystem_projects p ON p.id = u.project_id
-      WHERE p.slug = $1 AND u.is_published = true ${publishedOnly ? 'AND p.is_published = true AND NOT EXISTS (SELECT 1 FROM rug_projects r WHERE r.slug=p.slug)' : ''}
+      WHERE p.slug = $1 AND u.is_published = true AND u.update_kind = 'news' ${publishedOnly ? 'AND p.is_published = true AND NOT EXISTS (SELECT 1 FROM rug_projects r WHERE r.slug=p.slug)' : ''}
       ORDER BY u.published_at DESC NULLS LAST, u.created_at DESC LIMIT 3`, [slug]),
     sql.query('SELECT scorecard, score_reviewed_at AS "scoreReviewedAt", scorecard_history AS "scoreHistory" FROM ecosystem_projects WHERE slug = $1', [slug]).catch(() => []),
   ]);
