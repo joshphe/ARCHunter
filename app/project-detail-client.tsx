@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Check, ChevronDown, Coins, Compass, Copy, ExternalLink, LayoutDashboard, Menu, Moon, Sparkles, Sun, X } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
 import ProjectRiskPanel from '@/app/project-risk-panel';
+import ProjectActivityPanel from '@/app/project-activity-panel';
 import ProjectAvatar from '@/app/project-avatar';
 import ProjectScoreRadar from '@/app/project-score-radar';
 import { emptyScorecard, getProjectScore, scoreDimensions } from '@/lib/project-scoring';
@@ -103,6 +104,7 @@ export default function ProjectDetailClient({ project, initialLanguage }: Props)
         <section className="project-detail-intro"><h2>{t('Project introduction','项目介绍')}</h2><p>{zh ? project.description.zh : project.description.en}</p><div className="ecosystem-category-tags">{project.categories.map((item) => <span key={item}>{item === 'Prediction Markets' && zh ? '预测市场' : item === 'Tokens' && zh ? '代币项目' : item}</span>)}</div></section>
 
         <ProjectRiskPanel reviews={project.riskReviews} language={language}/>
+        <ProjectActivityPanel key={project.slug} slug={project.slug} language={language}/>
 
         {(() => {
           const scorecard = project.scorecard ?? emptyScorecard();

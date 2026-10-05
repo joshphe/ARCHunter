@@ -53,3 +53,15 @@ Apply `db/migrations/005_project_risk_reviews.sql` before deploying this version
 Directory filters, contract search, sort and page are stored in the URL and restored within the browser session, including scroll position after opening a project. Market cap and protocol TVL have separate columns and sorting; no automatic market refresh is enabled.
 
 Validation: `node --test tests/project-risk.test.cjs`.
+
+## Project on-chain activity
+
+Project details include a manually triggered 7/30-day activity query. Business contracts are explicitly registered in `lib/project-activity-contracts.ts` with official attribution sources; currently Arclight's Arc vault and Foci's launch factory/router are covered. The other projects remain unconfigured for business usage. Token-contract calls are a separate opt-in scope, never a replacement for product usage.
+
+The provider uses Arc Mainnet Blockscout (chain 5042). Optional server-only `BLOCKSCOUT_API_KEY` uses the documented PRO endpoint at `api.blockscout.com/5042`; without it, the public explorer API is attempted. Public access may be restricted. Configure the key in the hosting environment and redeploy; never use a `NEXT_PUBLIC_` prefix. No wallet, signing, transaction or automatic polling is involved.
+
+Statistics count successful direct function calls, deduplicated by transaction hash across the listed contracts. Business scope excludes standard ERC-20 transfer/transferFrom/approve calls. Active addresses are transaction senders, not users. Multi-day returning ratio means senders active on at least two UTC dates in the selected rolling window. Internal calls, user operations, off-chain usage and undiscovered contracts are excluded. The most recent activity is the latest qualifying call observed within the last 30 days. Daily buckets use UTC and include partial boundary days. Seven-day comparison is against the preceding seven days and is omitted if the denominator is zero.
+
+Queries are bounded to 20 pages per contract, at most three registered contracts and 22 seconds of provider time. Truncated/failed scans return explicitly partial lower bounds with no returning ratio or comparison. Complete means pagination covered the time window in the provider's index, not completeness of project coverage or index freshness. All-provider failures yield unknown metrics, never zero. Results are cached on demand for up to five minutes (failed/partial results 30 seconds), with an explicit snapshot timestamp.
+
+Validation: `node --test tests/project-activity.test.cjs tests/project-risk.test.cjs`.
