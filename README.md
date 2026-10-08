@@ -73,4 +73,6 @@ PROJECT_BLOCKS gives each project a permanent cluster of two to four members, mi
 
 The bright island scene retains orthogonal streets and a straight canal. Logo pins use the directory avatar source with symbol fallback. Project names and valuations appear on hover or keyboard focus, and buildings/pins link to the project detail page. Building-form legend illustrations are normalized for readability; actual map footprints use the five doubling sizes.
 
+The map viewport supports pointer dragging in both directions (mouse, touch or pen), wheel/scrollbar navigation and keyboard scrolling. A movement threshold separates a click from a drag; completed drags suppress project navigation. Pointer capture keeps dragging active outside the viewport, and reset restores both zoom and scroll position.
+
 Run `node --test tests/ecosystem-map.test.cjs` to check cap boundaries, doubling ratios, exact tiling within blocks, non-overlap, road clearance, permanent cluster membership, deterministic allocation and maximum-tier capacity.

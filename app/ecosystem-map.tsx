@@ -3,7 +3,8 @@
 
 import Link from 'next/link';
 import CityBuilding from './city-building';
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
+import type { PointerEvent } from 'react';
 import { RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
 import { BUILDING_TIERS, PLOT_TIERS, layoutMap, mapScale, buildingHeight } from '@/lib/ecosystem-map-layout';
@@ -52,6 +53,39 @@ export default function EcosystemMap({projects,language}:Props) {
   const t=(en:string,cn:string)=>zh?cn:en;
   const [zoom,setZoom]=useState(.8);
   const [activeSlug,setActiveSlug]=useState<string|null>(null);
+  const [dragging,setDragging]=useState(false);
+  const viewportRef=useRef<HTMLDivElement>(null);
+  const gesture=useRef<{id:number;x:number;y:number;left:number;top:number;moved:boolean}|null>(null);
+  const suppressClick=useRef(false);
+  const startPan=(event:PointerEvent<HTMLDivElement>)=>{
+    if(!event.isPrimary||event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;
+    suppressClick.current=false;
+    const viewport=event.currentTarget;
+    gesture.current={id:event.pointerId,x:event.clientX,y:event.clientY,left:viewport.scrollLeft,top:viewport.scrollTop,moved:false};
+  };
+  const movePan=(event:PointerEvent<HTMLDivElement>)=>{
+    const pan=gesture.current;
+    if(!pan||pan.id!==event.pointerId)return;
+    const dx=event.clientX-pan.x,dy=event.clientY-pan.y;
+    if(!pan.moved&&Math.hypot(dx,dy)<6)return;
+    if(!pan.moved){
+      pan.moved=true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setDragging(true);
+      setActiveSlug(null);
+    }
+    event.preventDefault();
+    event.currentTarget.scrollLeft=pan.left-dx;
+    event.currentTarget.scrollTop=pan.top-dy;
+  };
+  const endPan=(event:PointerEvent<HTMLDivElement>)=>{
+    const pan=gesture.current;
+    if(!pan||pan.id!==event.pointerId)return;
+    suppressClick.current=pan.moved;
+    gesture.current=null;
+    setDragging(false);
+    if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);
+  };
   const sceneId=useId().replace(/:/g,'');
   const {buildings,unassigned,vacant,blocks,streets,cityWidth,cityDepth,span,origin,width,height}=useMemo(()=>layoutMap(projects),[projects]);
   const ground=(u:number,v:number)=>[origin.x+u-v,origin.y+(u+v)/2];
@@ -69,13 +103,17 @@ export default function EcosystemMap({projects,language}:Props) {
       <div className="ecosystem-map-tools">
         <button type="button" disabled={zoom>=1.8} onClick={()=>setZoom(v=>Math.min(1.8,+(v+.2).toFixed(1)))} aria-label={t('Zoom in','放大地图')}><ZoomIn size={15}/></button>
         <button type="button" disabled={zoom<=.8} onClick={()=>setZoom(v=>Math.max(.8,+(v-.2).toFixed(1)))} aria-label={t('Zoom out','缩小地图')}><ZoomOut size={15}/></button>
-        <button type="button" onClick={()=>setZoom(.8)} aria-label={t('Reset map zoom','重置地图缩放')}><RotateCcw size={14}/></button>
+        <button type="button" onClick={()=>{setZoom(.8);viewportRef.current?.scrollTo({left:0,top:0});}} aria-label={t('Reset map zoom','重置地图缩放')}><RotateCcw size={14}/></button>
       </div>
     </div>
     <div className="city-scene">
       <div className="city-scene-heading"><span>ARC / ECOSYSTEM</span><strong>{t('The onchain city','链上之城')}</strong><p>{t('Every building tells a story.','每一座建筑，都是一个项目。')}</p></div>
       <div className="city-scene-index"><b>{String(projects.length).padStart(2,'0')}</b><span>{t('PROJECTS','项目坐标')}</span><i/>{t(`${priced} with market cap`,`${priced} 个已有市值`)}</div>
-    <div className="ecosystem-map-viewport" tabIndex={0} role="region" aria-label={t('Scrollable city map','可滚动城市地图')}>
+    <div ref={viewportRef} className={`ecosystem-map-viewport${dragging?' is-dragging':''}`} tabIndex={0} role="region" aria-label={t('Scrollable city map · drag to pan','可滚动城市地图 · 拖拽平移')}
+      onPointerDown={startPan} onPointerMove={movePan} onPointerUp={endPan} onPointerCancel={endPan} onLostPointerCapture={endPan}
+      onPointerLeave={()=>{if(!gesture.current?.moved)gesture.current=null;}}
+      onDragStart={event=>event.preventDefault()}
+      onClickCapture={event=>{if(suppressClick.current&&event.detail!==0){event.preventDefault();event.stopPropagation();suppressClick.current=false;}}}>
       <svg className="arc-city" viewBox={`0 0 ${width} ${height}`} style={{width:`${zoom*100}%`,minWidth:680*zoom}} aria-label={t('Isometric project buildings','等距视角项目建筑')}>
         <defs>
           <linearGradient id={`${sceneId}-ground`} x1="0" y1="0" x2="0" y2="1"><stop stopColor="#d7efb6"/><stop offset="1" stopColor="#a9d892"/></linearGradient>
@@ -144,7 +182,7 @@ export default function EcosystemMap({projects,language}:Props) {
       </svg>
     </div>
     {activeProject?<div className="city-project-detail" aria-live="polite"><b>{activeProject.name}</b><span>{money(mapScale(activeProject.tokenMetrics?.marketCapUsd).cap,zh)} · {t('Plot','地块')} {PLOT_TIERS[mapScale(activeProject.tokenMetrics?.marketCapUsd).plotTier??0].size}</span><span>{t('Click the building for details ↗','点击建筑查看详情 ↗')}</span></div>:null}
-    <div className="city-scene-footer"><span><i/>{t('ISOMETRIC VIEW','等距视角')} <em>2.5D</em></span><span>{t('Select a building to explore ↗','点击建筑，探索项目 ↗')}</span></div>
+    <div className="city-scene-footer"><span><i/>{t('ISOMETRIC VIEW','等距视角')} <em>2.5D</em></span><span>{t('Drag to pan · Click a building to explore ↗','拖拽移动地图 · 点击建筑查看详情 ↗')}</span></div>
     </div>
     <div className="city-scale-guide">
       <div className="city-guide-heading"><b>{t('Building forms','建筑形态')}</b><span>{t('Normalized illustrations · USD cap bands include the lower bound','形态示意图 · 美元市值各档含下限、不含上限')}</span></div>
