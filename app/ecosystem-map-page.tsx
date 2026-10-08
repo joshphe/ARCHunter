@@ -14,12 +14,10 @@ export default function EcosystemMapPage({ language, projects }: Props) {
       <div>
         <div className="eyebrow"><span className="eyebrow-line"/>{t('ARC ECOSYSTEM AT A GLANCE', 'ARC 生态全景')}<span className="eyebrow-line"/></div>
         <h1>{t('Ecosystem', '生态')} <span>{t('Map', '地图')}</span></h1>
-        <p className="subtitle">{t('Explore Arc projects across separate city plots. Buildings scale by market cap; category pins keep each district easy to scan.', '探索 ARC 项目的独立地块：建筑按市值分级，彩色图钉标识项目类别。')}</p>
+        <p className="subtitle">{t('Explore Arc, one building at a time. A city of projects, shaped by market cap.', '沿街探索 ARC 生态，让项目市值成为看得见的城市轮廓。')}</p>
       </div>
       <div className="ecosystem-reviewed"><span className="ecosystem-reviewed-dot"/>{t('LIVE PROJECT DIRECTORY', '同步生态项目目录')}</div>
     </div>
-
-    <div className="ecosystem-results-bar"><span>{t('ECOSYSTEM MAP', '生态地图')}</span><b>{zh ? `${String(projects.length).padStart(2, '0')} 个项目` : `${projects.length} ${projects.length === 1 ? 'project' : 'projects'}`}</b><i/><span>{t('Select a project sign to open its profile', '点击项目招牌打开详情')}</span></div>
 
     {projects.length ? <EcosystemMap projects={projects} language={language}/> : <div className="ecosystem-empty"><b>{t('Loading project map…', '正在加载生态地图…')}</b><span>{t('Project buildings appear here when the directory loads.', '项目目录加载后，项目建筑会显示在这里。')}</span></div>}
 

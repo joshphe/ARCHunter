@@ -65,3 +65,12 @@ Statistics count successful direct function calls, deduplicated by transaction h
 Queries are bounded to 20 pages per contract, at most three registered contracts and 22 seconds of provider time. Truncated/failed scans return explicitly partial lower bounds with no returning ratio or comparison. Complete means pagination covered the time window in the provider's index, not completeness of project coverage or index freshness. All-provider failures yield unknown metrics, never zero. Results are cached on demand for up to five minutes (failed/partial results 30 seconds), with an explicit snapshot timestamp.
 
 Validation: `node --test tests/project-activity.test.cjs tests/project-risk.test.cjs`.
+# Ecosystem city map
+
+The eight building bands and five square footprint bands are defined in `lib/ecosystem-map-layout.ts`. USD boundaries include the lower bound and exclude the upper bound. Missing or invalid market caps remain unpriced, distinct from zero. Plot side lengths are 64, 128, 256, 512 and 1024 (1:2:4:8:16); each larger plot has four times the area. The opaque building podium has exactly the same footprint as its parcel.
+
+PROJECT_BLOCKS gives each project a permanent cluster of two to four members, mixing parcel sizes independently of category. Buddy allocation packs plots within each cluster. A 64-unit corridor separates the blocks, with orthogonal streets and planting strips; block bounds and connecting streets adapt to expansion. Directory ordering does not affect allocation or membership. Each block can accommodate four XXL plots. Keep PROJECT_PLOTS append-only, add a matching RESERVE_TIERS fallback, and assign new members to PROJECT_BLOCKS; unregistered projects remain in the pending list. No polling is added.
+
+The bright island scene retains orthogonal streets and a straight canal. Logo pins use the directory avatar source with symbol fallback. Project names and valuations appear on hover or keyboard focus, and buildings/pins link to the project detail page. Building-form legend illustrations are normalized for readability; actual map footprints use the five doubling sizes.
+
+Run `node --test tests/ecosystem-map.test.cjs` to check cap boundaries, doubling ratios, exact tiling within blocks, non-overlap, road clearance, permanent cluster membership, deterministic allocation and maximum-tier capacity.
