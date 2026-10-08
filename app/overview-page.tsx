@@ -41,10 +41,11 @@ export default function OverviewPage({ language, isDark, projects, onNavigate }:
 
   async function loadData(force = false) {
     setRefreshing(true);
+    const refreshQuery = force ? `?refresh=${Date.now()}` : '';
     const [overviewResult, launchpadResult, activityResult] = await Promise.allSettled([
-      fetch('/api/overview', force ? { cache: 'no-store' } : undefined).then((res) => { if (!res.ok) throw new Error('Failed'); return res.json() as Promise<OverviewData>; }),
-      fetch('/api/launchpads', force ? { cache: 'no-store' } : undefined).then((res) => { if (!res.ok) throw new Error('Failed'); return res.json() as Promise<LaunchpadData>; }),
-      fetch('/api/network-activity', force ? { cache: 'no-store' } : undefined).then((res) => { if (!res.ok) throw new Error('Failed'); return res.json() as Promise<NetworkActivityData>; }),
+      fetch(`/api/overview${refreshQuery}`, force ? { cache: 'no-store' } : undefined).then((res) => { if (!res.ok) throw new Error('Failed'); return res.json() as Promise<OverviewData>; }),
+      fetch(`/api/launchpads${refreshQuery}`, force ? { cache: 'no-store' } : undefined).then((res) => { if (!res.ok) throw new Error('Failed'); return res.json() as Promise<LaunchpadData>; }),
+      fetch(`/api/network-activity${refreshQuery}`, force ? { cache: 'no-store' } : undefined).then((res) => { if (!res.ok) throw new Error('Failed'); return res.json() as Promise<NetworkActivityData>; }),
     ]);
     if (overviewResult.status === 'fulfilled') { setData(overviewResult.value); setFailed(overviewResult.value.partial); }
     else setFailed(true);

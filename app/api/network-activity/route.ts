@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { ARC_LAUNCH_START_TIMESTAMP } from '@/lib/arc';
 
 type MetricKey = 'transactions' | 'activeAddresses' | 'contractsDeployed' | 'feesUsdc';
@@ -15,10 +15,10 @@ const chartMetrics: Array<{ id: string; key: MetricKey }> = [
   { id: 'transactionfee', key: 'feesUsdc' },
 ];
 
-async function fetchChart(id: string): Promise<ArcscanChart | null> {
+async function fetchChart(id: string, forceRefresh: boolean): Promise<ArcscanChart | null> {
   try {
     const response = await fetch(`https://api.arc-scan.org/v1/charts/${id}?granularity=d&days=90`, {
-      next: { revalidate: 300 },
+      ...(forceRefresh ? { cache: 'no-store' as const } : { next: { revalidate: 300 } }),
       headers: { accept: 'application/json' },
     });
     if (!response.ok) return null;
@@ -28,11 +28,12 @@ async function fetchChart(id: string): Promise<ArcscanChart | null> {
   }
 }
 
-export async function GET() {
-  const charts = await Promise.all(chartMetrics.map(async ({ id, key }) => ({ key, chart: await fetchChart(id) })));
+export async function GET(request: NextRequest) {
+  const forceRefresh = request.nextUrl.searchParams.has('refresh');
+  const charts = await Promise.all(chartMetrics.map(async ({ id, key }) => ({ key, chart: await fetchChart(id, forceRefresh) })));
   const availableCharts = charts.filter((item) => item.chart?.points?.length);
   if (!availableCharts.length) {
-    return NextResponse.json({ error: 'Arc network activity is temporarily unavailable.' }, { status: 503 });
+    return NextResponse.json({ error: 'Arc network activity is temporarily unavailable.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
   }
 
   const pointsByTime = new Map<number, Record<string, number | boolean>>();
@@ -67,5 +68,5 @@ export async function GET() {
     latestBlock: latestBlock === Number.MAX_SAFE_INTEGER ? null : latestBlock,
     partial: availableCharts.length !== chartMetrics.length,
     history,
-  }, { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } });
+  }, { headers: { 'Cache-Control': forceRefresh ? 'no-store' : 'public, s-maxage=300, stale-while-revalidate=600' } });
 }

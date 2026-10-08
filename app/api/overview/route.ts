@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { ARC_LAUNCH_START_TIMESTAMP } from '@/lib/arc';
 
 type ChartPoint = [number, number];
@@ -43,10 +43,10 @@ const protocolXHandles: Record<string, string> = {
   'fomo-wallet': 'fomo',
   'aave-v4': 'aave',
 };
-async function fetchLlama<T>(path: string, revalidate = 300): Promise<T | null> {
+async function fetchLlama<T>(path: string, forceRefresh: boolean): Promise<T | null> {
   try {
     const response = await fetch(`https://api.llama.fi${path}`, {
-      next: { revalidate },
+      ...(forceRefresh ? { cache: 'no-store' as const } : { next: { revalidate: 300 } }),
       headers: { accept: 'application/json' },
     });
     if (!response.ok) return null;
@@ -56,11 +56,12 @@ async function fetchLlama<T>(path: string, revalidate = 300): Promise<T | null> 
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const forceRefresh = request.nextUrl.searchParams.has('refresh');
   const [fees, dex, tvl] = await Promise.all([
-    fetchLlama<FeeOverview>('/overview/fees/Arc?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=true'),
-    fetchLlama<FeeOverview>('/overview/dexs/Arc?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=true'),
-    fetchLlama<TvlPoint[]>('/v2/historicalChainTvl/Arc'),
+    fetchLlama<FeeOverview>('/overview/fees/Arc?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=true', forceRefresh),
+    fetchLlama<FeeOverview>('/overview/dexs/Arc?excludeTotalDataChart=false&excludeTotalDataChartBreakdown=true', forceRefresh),
+    fetchLlama<TvlPoint[]>('/v2/historicalChainTvl/Arc', forceRefresh),
   ]);
 
   const history = new Map<number, { timestamp: number; tvl?: number; fees?: number; volume?: number }>();
@@ -110,5 +111,5 @@ export async function GET() {
     history: [...history.values()].sort((a, b) => a.timestamp - b.timestamp),
     topProtocols: protocolsWithX,
     partial: !fees || !dex || !tvl || typeof fees.total24h !== 'number' || typeof dex.total24h !== 'number' || !tvl?.length,
-  }, { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } });
+  }, { headers: { 'Cache-Control': forceRefresh ? 'no-store' : 'public, s-maxage=300, stale-while-revalidate=600' } });
 }

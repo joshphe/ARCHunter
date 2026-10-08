@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { ARC_LAUNCH_START_TIMESTAMP } from '@/lib/arc';
 
 const launchpads = [
@@ -21,12 +21,13 @@ type LlamaFeeSummary = {
   methodology?: { Fees?: string };
 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const forceRefresh = request.nextUrl.searchParams.has('refresh');
   const results = await Promise.all(
     launchpads.map(async (launchpad) => {
       try {
         const response = await fetch(`https://api.llama.fi/summary/fees/${launchpad.slug}`, {
-          next: { revalidate: 300 },
+          ...(forceRefresh ? { cache: 'no-store' as const } : { next: { revalidate: 300 } }),
           headers: { accept: 'application/json' },
         });
         if (!response.ok) throw new Error(`DefiLlama returned ${response.status}`);
@@ -61,6 +62,6 @@ export async function GET() {
   );
 
   return NextResponse.json({ updatedAt: new Date().toISOString(), source: 'DefiLlama', launchpads: results }, {
-    headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
+    headers: { 'Cache-Control': forceRefresh ? 'no-store' : 'public, s-maxage=300, stale-while-revalidate=600' },
   });
 }
