@@ -12,12 +12,25 @@ type District = 'markets' | 'launchpads' | 'infrastructure' | 'applications';
 type BuildingVisual = 'landmark' | 'midrise' | 'pavilion' | 'greenhouse';
 type Building = { project: EcosystemProject; district: District; x: number; y: number; visual: BuildingVisual; spriteWidth: number; spriteHeight: number; marketCap: number | null };
 
-const DISTRICTS: Array<{ id: District; centerX: number; centerY: number; color: string }> = [
-  { id: 'markets', centerX: 525, centerY: 345, color: '#58adff' },
-  { id: 'launchpads', centerX: 1010, centerY: 345, color: '#ff9958' },
-  { id: 'infrastructure', centerX: 470, centerY: 760, color: '#b190ff' },
-  { id: 'applications', centerX: 1036, centerY: 760, color: '#a7dd62' },
+const DISTRICTS: Array<{ id: District; color: string }> = [
+  { id: 'markets', color: '#58adff' },
+  { id: 'launchpads', color: '#ff9958' },
+  { id: 'infrastructure', color: '#b190ff' },
+  { id: 'applications', color: '#a7dd62' },
 ];
+const MAP_WIDTH = 1536;
+const MAP_HEIGHT = 1024;
+const DISTRICT_CENTERS: Record<District, { x: number; y: number }> = {
+  infrastructure: { x: 625, y: 300 },
+  markets: { x: 420, y: 545 },
+  launchpads: { x: 1080, y: 420 },
+  applications: { x: 960, y: 700 },
+};
+const ISLAND_OUTLINE = [
+  [344, 112], [1192, 88], [1352, 164], [1436, 336], [1414, 494], [1290, 650],
+  [1192, 780], [1040, 858], [840, 900], [690, 852], [512, 788], [350, 692],
+  [214, 574], [106, 446], [174, 288], [268, 176],
+] as const;
 const DISTRICT_NAMES: Record<District, { en: string; zh: string }> = {
   markets: { en: 'Markets & DeFi', zh: 'DeFi 与市场' },
   launchpads: { en: 'Launchpads & tokens', zh: '发射台与代币' },
@@ -32,47 +45,97 @@ const BUILDING_ASSETS: Record<BuildingVisual, { src: string; width: number; heig
 };
 
 function getDistrict(project: EcosystemProject): District {
-  const categories = project.categories.join(' ').toLowerCase();
-  if (/launchpad|token/.test(categories)) return 'launchpads';
-  if (/infrastructure|oracle|developer|tool|security|bridge|data/.test(categories)) return 'infrastructure';
-  if (/defi|finance|lending|exchange|trading|prediction|market/.test(categories)) return 'markets';
+  const profile = [project.name, project.tagline, project.categories.join(' '), project.description.en]
+    .join(' ').toLowerCase();
+  if (/launchpad|token launches|token launch|launches tokens/.test(profile)) return 'launchpads';
+  if (/infrastructure|oracle|developer|tooling|security|bridge|indexer|data layer/.test(profile)) return 'infrastructure';
+  if (/defi|finance|lending|exchange|trading|prediction market|swap|yield|liquidity/.test(profile)) return 'markets';
   return 'applications';
 }
 
 function getBuildingSize(marketCap: number | null) {
-  if (marketCap == null || marketCap <= 0) return { visual: 'greenhouse' as const, spriteWidth: 190 };
-  if (marketCap >= 100_000_000) return { visual: 'landmark' as const, spriteWidth: 225 };
-  if (marketCap >= 10_000_000) return { visual: 'midrise' as const, spriteWidth: 210 };
-  if (marketCap >= 1_000_000) return { visual: 'midrise' as const, spriteWidth: 190 };
-  return { visual: 'pavilion' as const, spriteWidth: 185 };
+  if (marketCap == null || marketCap <= 0) return { visual: 'greenhouse' as const, spriteWidth: 255 };
+  if (marketCap >= 100_000_000) return { visual: 'landmark' as const, spriteWidth: 360 };
+  if (marketCap >= 10_000_000) return { visual: 'landmark' as const, spriteWidth: 325 };
+  if (marketCap >= 1_000_000) return { visual: 'midrise' as const, spriteWidth: 285 };
+  return { visual: 'pavilion' as const, spriteWidth: 245 };
+}
+
+function slugSeed(slug: string) {
+  let seed = 2166136261;
+  for (const character of slug) seed = Math.imul(seed ^ character.charCodeAt(0), 16777619);
+  return seed >>> 0;
+}
+
+function isOnIsland(x: number, y: number, halfWidth: number, depth: number) {
+  const points = [
+    [x, y - depth / 2], [x - halfWidth, y - depth / 2], [x + halfWidth, y - depth / 2],
+    [x - halfWidth, y], [x + halfWidth, y],
+  ];
+  return points.every(([pointX, pointY]) => {
+    let inside = false;
+    for (let index = 0, previous = ISLAND_OUTLINE.length - 1; index < ISLAND_OUTLINE.length; previous = index, index += 1) {
+      const [x1, y1] = ISLAND_OUTLINE[index];
+      const [x2, y2] = ISLAND_OUTLINE[previous];
+      const crosses = (y1 > pointY) !== (y2 > pointY) && pointX < ((x2 - x1) * (pointY - y1)) / (y2 - y1) + x1;
+      if (crosses) inside = !inside;
+    }
+    return inside;
+  });
 }
 
 function layoutProjects(projects: EcosystemProject[]): Building[] {
-  const grouped = new Map<District, EcosystemProject[]>(DISTRICTS.map(({ id }) => [id, []]));
-  projects.forEach((project) => grouped.get(getDistrict(project))?.push(project));
+  const scale = projects.length > 10 ? 0.68 : projects.length > 6 ? 0.84 : 1;
+  const ordered = projects.map((project) => {
+    const marketCap = project.tokenMetrics?.marketCapUsd ?? null;
+    const size = getBuildingSize(marketCap);
+    return { project, district: getDistrict(project), marketCap, ...size };
+  }).sort((a, b) => b.spriteWidth - a.spriteWidth || a.project.slug.localeCompare(b.project.slug));
 
-  return DISTRICTS.flatMap((district) => {
-    const members = (grouped.get(district.id) ?? []).sort((a, b) => a.slug.localeCompare(b.slug));
-    const columns = Math.max(1, Math.min(3, Math.ceil(Math.sqrt(members.length))));
-    const rows = Math.ceil(members.length / columns);
-    const stepX = columns > 1 ? Math.min(230, 460 / (columns - 1)) : 0;
-    const stepY = rows > 1 ? Math.min(160, 260 / (rows - 1)) : 0;
-    return members.map((project, index) => {
-      const column = index % columns;
-      const row = Math.floor(index / columns);
-      const marketCap = project.tokenMetrics?.marketCapUsd ?? null;
-      const size = getBuildingSize(marketCap);
-      const asset = BUILDING_ASSETS[size.visual];
-      return {
-        project,
-        district: district.id,
-        x: district.centerX + (column - (columns - 1) / 2) * stepX,
-        y: district.centerY + (row - (rows - 1) / 2) * stepY,
-        ...size,
-        spriteHeight: size.spriteWidth * asset.height / asset.width,
-        marketCap,
-      };
-    });
+  const placed: Array<Building & { bounds: { left: number; right: number; top: number; bottom: number } }> = [];
+  return ordered.map(({ project, district, marketCap, visual, spriteWidth }) => {
+    const asset = BUILDING_ASSETS[visual];
+    const width = spriteWidth * scale;
+    const height = width * asset.height / asset.width;
+    const center = DISTRICT_CENTERS[district];
+    let random = slugSeed(project.slug) || 1;
+    const next = () => {
+      random = (Math.imul(random, 1664525) + 1013904223) >>> 0;
+      return random / 4294967296;
+    };
+    let position = { x: center.x, y: center.y };
+    let bestScore = Number.POSITIVE_INFINITY;
+
+    // Organic, repeatable scattering: prefer the project's district, then repel
+    // any candidate whose complete building-and-land sprite would overlap.
+    for (let attempt = 0; attempt < 6000; attempt += 1) {
+      const radius = 35 + Math.sqrt(next()) * (attempt < 500 ? 250 : 520);
+      const angle = next() * Math.PI * 2;
+      const x = attempt < 1400
+        ? Math.max(width / 2 + 18, Math.min(MAP_WIDTH - width / 2 - 18, center.x + Math.cos(angle) * radius))
+        : width / 2 + 18 + next() * (MAP_WIDTH - width - 36);
+      const y = attempt < 1400
+        ? Math.max(height + 22, Math.min(MAP_HEIGHT - 42, center.y + Math.sin(angle) * radius * 0.72))
+        : height + 22 + next() * (MAP_HEIGHT - height - 64);
+      if (!isOnIsland(x, y, width * 0.31, height * 0.22)) continue;
+      const bounds = { left: x - width / 2, right: x + width / 2, top: y - height, bottom: y };
+      const collision = placed.some((other) =>
+        bounds.left < other.bounds.right + 18 && bounds.right + 18 > other.bounds.left &&
+        bounds.top < other.bounds.bottom + 16 && bounds.bottom + 16 > other.bounds.top,
+      );
+      if (collision) continue;
+      const score = Math.hypot(x - center.x, (y - center.y) * 1.25) + next() * 20;
+      if (score < bestScore) {
+        bestScore = score;
+        position = { x, y };
+      }
+      if (attempt > 120 && bestScore < 145) break;
+    }
+
+    const bounds = { left: position.x - width / 2, right: position.x + width / 2, top: position.y - height, bottom: position.y };
+    const building = { project, district, ...position, visual, spriteWidth: width, spriteHeight: height, marketCap, bounds };
+    placed.push(building);
+    return building;
   }).sort((a, b) => a.y - b.y);
 }
 
@@ -83,11 +146,20 @@ function formatMarketCap(value: number | null, zh: boolean) {
   }).format(value);
 }
 
+function marketCapTier(value: number | null, zh: boolean) {
+  if (value == null || value <= 0) return zh ? '暂无已验证市值' : 'No verified market cap';
+  if (value >= 100_000_000) return zh ? '超大型 · ≥ $1 亿' : 'Mega · ≥ $100M';
+  if (value >= 10_000_000) return zh ? '大型 · $1,000 万–$1 亿' : 'Large · $10M–$100M';
+  if (value >= 1_000_000) return zh ? '中型 · $100 万–$1,000 万' : 'Mid · $1M–$10M';
+  return zh ? '小型 · < $100 万' : 'Small · < $1M';
+}
+
 export default function EcosystemMap({ projects, language }: Props) {
   const zh = language === 'zh';
   const t = (en: string, cn: string) => zh ? cn : en;
   const [zoom, setZoom] = useState(1);
   const buildings = useMemo(() => layoutProjects(projects), [projects]);
+  const mapHeight = MAP_HEIGHT;
 
   return <section className="ecosystem-map-card" aria-label={t('Arc ecosystem map', 'Arc 生态地图')}>
     <div className="ecosystem-map-toolbar">
@@ -100,8 +172,8 @@ export default function EcosystemMap({ projects, language }: Props) {
     </div>
 
     <div className="ecosystem-map-viewport">
-      <div className="ecosystem-map-stage" style={{ width: `${zoom * 100}%` }}>
-        <div className="ecosystem-map-terrain" role="img" aria-label={t('An isometric island with landscaped blocks, streets, parks and water.', '等距视角的生态岛，包含道路、绿地、公园与水岸。')}/>
+      <div className="ecosystem-map-stage" style={{ width: `${zoom * 100}%`, aspectRatio: `${MAP_WIDTH} / ${mapHeight}` }}>
+        <div className="ecosystem-map-terrain" role="img" aria-label={t('An isometric island with scenic roads, parks, plazas and waterfront.', '等距视角的生态岛，包含道路、公园、广场与水岸。')}/>
         <div className="ecosystem-map-buildings" aria-hidden="true">
           {buildings.map((building) => {
             const asset = BUILDING_ASSETS[building.visual];
@@ -111,7 +183,7 @@ export default function EcosystemMap({ projects, language }: Props) {
               role="presentation"
               style={{
                 left: `${(building.x / 1536) * 100}%`,
-                top: `${(building.y / 1024) * 100}%`,
+                top: `${(building.y / mapHeight) * 100}%`,
                 width: `${(building.spriteWidth / 1536) * 100}%`,
                 aspectRatio: `${asset.width} / ${asset.height}`,
                 backgroundImage: `url('${asset.src}')`,
@@ -121,14 +193,15 @@ export default function EcosystemMap({ projects, language }: Props) {
         </div>
         {buildings.map((building) => {
           const district = DISTRICTS.find(({ id }) => id === building.district)!;
-          const label = `${building.project.name} · ${formatMarketCap(building.marketCap, zh)}`;
-          const markerTop = building.y - building.spriteHeight - 25;
+          const tier = marketCapTier(building.marketCap, zh);
+          const label = `${building.project.name} · ${formatMarketCap(building.marketCap, zh)} · ${tier}`;
+          const markerTop = building.y - Math.min(building.spriteHeight, 180) - 25;
           return <Link
             key={`${building.project.slug}-marker`}
             href={`/projects/${encodeURIComponent(building.project.slug)}`}
             className="ecosystem-map-marker"
-            style={{ left: `${(building.x / 1536) * 100}%`, top: `${(markerTop / 1024) * 100}%`, '--marker-color': district.color } as CSSProperties & { '--marker-color': string }}
-            aria-label={`${building.project.name}, ${formatMarketCap(building.marketCap, zh)}`}
+            style={{ left: `${(building.x / 1536) * 100}%`, top: `${(markerTop / mapHeight) * 100}%`, '--marker-color': district.color } as CSSProperties & { '--marker-color': string }}
+            aria-label={`${building.project.name}, ${formatMarketCap(building.marketCap, zh)}, ${tier}`}
             title={label}
           >
             <ProjectAvatar handle={building.project.handle} symbol={building.project.symbol} className="ecosystem-map-avatar"/>
@@ -141,9 +214,15 @@ export default function EcosystemMap({ projects, language }: Props) {
     <div className="ecosystem-map-legend">
       <div className="ecosystem-map-districts">{DISTRICTS.map(({ id, color }) => <span key={id}><i style={{ background: color }}/>{zh ? DISTRICT_NAMES[id].zh : DISTRICT_NAMES[id].en}</span>)}</div>
       <div className="ecosystem-map-sizes" aria-label={t('Market cap building size legend', '市值与建筑规模图例')}>
-        <span><i className="mega"/>{t('≥ $100M', '≥ $1 亿')}</span><span><i className="large"/>{t('$10M–$100M', '$1,000 万–$1 亿')}</span><span><i className="medium"/>{t('$1M–$10M', '$100 万–$1,000 万')}</span><span><i className="small"/>{t('< $1M', '< $100 万')}</span><span><i className="unpriced"/>{t('No verified cap', '暂无已验证市值')}</span>
+        {([
+          { visual: 'landmark' as const, width: 29, height: 30, label: t('≥ $100M', '≥ $1 亿') },
+          { visual: 'landmark' as const, width: 25, height: 25, label: t('$10M–$100M', '$1,000 万–$1 亿') },
+          { visual: 'midrise' as const, width: 23, height: 19, label: t('$1M–$10M', '$100 万–$1,000 万') },
+          { visual: 'pavilion' as const, width: 19, height: 15, label: t('< $1M', '< $100 万') },
+          { visual: 'greenhouse' as const, width: 20, height: 15, label: t('No verified cap', '暂无已验证市值') },
+        ]).map(({ visual, width, height, label }) => <span key={label}><i className={`map-tier-${visual}`} style={{ width, height, backgroundImage: `url('${BUILDING_ASSETS[visual].src}')` }}/>{label}</span>)}
       </div>
     </div>
-    <div className="capital-footnote ecosystem-map-note">{t('Every project has its own landscaped plot. Building style and size reflect linked token market data; projects without a verified value use a greenhouse. Neighborhoods and positions are assigned automatically from project categories and directory entries.', '每个项目独占一块带景观的地皮。建筑形态和规模对应已关联代币市值；没有已验证市值的项目以温室表示。街区和位置会根据项目类别及目录内容自动排布。')}</div>
+    <div className="capital-footnote ecosystem-map-note">{t('Every project occupies a separate mapped plot. Building models and size bands are tied to reported token market cap; the colored pin shows project category. Projects without a verified value use a greenhouse.', '每个项目都对应地图上一块独立地皮。建筑模型与尺寸等级按代币市值划分；彩色图钉代表项目类别。暂无已验证市值的项目使用温室。')}</div>
   </section>;
 }

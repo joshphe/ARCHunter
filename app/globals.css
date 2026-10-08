@@ -428,11 +428,11 @@ html[data-theme='light'] .capital-utilization>div{background:#e7eadf}
 .ecosystem-map-tools{display:flex;gap:5px}
 .ecosystem-map-tools button{width:29px;height:29px;display:grid;place-items:center;border:1px solid #303640;border-radius:4px;background:#171b20;color:#a8b39f;cursor:pointer}
 .ecosystem-map-tools button:hover{border-color:#596d45;color:#c6ed97}
-.ecosystem-map-viewport{overflow:auto;border:1px solid #26333a;border-radius:5px;background:#0b3740}
+.ecosystem-map-viewport{overflow:auto;border:1px solid #26333a;border-radius:5px;background:#061221}
 .ecosystem-map-stage{position:relative;min-width:0;aspect-ratio:3/2;margin:0 auto;transition:width .2s ease}
-.ecosystem-map-terrain{position:absolute;inset:0;background:url('/images/ecosystem-map-terrain.jpg') center/100% 100% no-repeat}
+.ecosystem-map-terrain{position:absolute;inset:0;background:url('/images/ecosystem-map-terrain.webp') center/100% 100% no-repeat}
 .ecosystem-map-buildings{position:absolute;inset:0;pointer-events:none}
-.ecosystem-map-building-sprite{position:absolute;z-index:1;max-width:none;background-position:center bottom;background-repeat:no-repeat;background-size:contain;transform:translate(-50%,-100%);filter:drop-shadow(0 4px 3px #16332688);transition:filter .18s ease}
+.ecosystem-map-building-sprite{position:absolute;z-index:1;max-width:none;background-position:center bottom;background-repeat:no-repeat;background-size:contain;transform:translate(-50%,-100%);filter:drop-shadow(0 7px 8px #030a14b8) drop-shadow(0 0 8px #5de3ff32);transition:filter .18s ease}
 .ecosystem-map-marker{position:absolute;z-index:2;display:grid;justify-items:center;gap:3px;transform:translate(-50%,-50%);color:#f1f3ea;text-decoration:none}
 .ecosystem-map-marker::after{content:'';position:absolute;z-index:-1;top:21px;width:2px;height:12px;border-radius:2px;background:linear-gradient(90deg,#6b6251,#fff1c6 48%,#8c7a57);box-shadow:1px 1px 2px #10222288}
 .ecosystem-map-avatar{width:21px!important;height:21px!important;display:grid;place-items:center;overflow:hidden;border:2px solid #fff;border-radius:50% 50% 50% 4px;background:var(--marker-color);color:#fff;font:600 8px 'DM Sans',sans-serif;box-shadow:0 0 0 2px color-mix(in srgb,var(--marker-color),transparent 30%),0 3px 8px #132322aa;transform:rotate(-45deg);transition:transform .15s ease,box-shadow .15s ease}
@@ -449,7 +449,7 @@ html[data-theme='light'] .capital-utilization>div{background:#e7eadf}
 .ecosystem-map-sizes i.mega{height:18px;width:14px}
 .ecosystem-map-sizes i.large{height:15px}
 .ecosystem-map-sizes i.medium{height:12px}
-.ecosystem-map-sizes i.small{height:8px;width:11px}
+.ecosystem-map-sizes i.small{height:8px;width:11px}.ecosystem-map-sizes i[class^='map-tier-']{flex:none;border:0;border-radius:0;background-position:center bottom;background-repeat:no-repeat;background-size:contain;box-shadow:none;transform:none}
 .ecosystem-map-sizes i.unpriced{height:12px;background:repeating-linear-gradient(135deg,#90b2a8 0 2px,#3b5961 2px 4px)}
 .ecosystem-map-note{margin-top:11px}
 html[data-theme='light'] .ecosystem-map-card{border-color:#dfe3da;background:#fff}

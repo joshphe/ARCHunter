@@ -14,7 +14,7 @@ export default function EcosystemMapPage({ language, projects }: Props) {
       <div>
         <div className="eyebrow"><span className="eyebrow-line"/>{t('ARC ECOSYSTEM AT A GLANCE', 'ARC 生态全景')}<span className="eyebrow-line"/></div>
         <h1>{t('Ecosystem', '生态')} <span>{t('Map', '地图')}</span></h1>
-        <p className="subtitle">{t('Explore Arc projects as a living city. Every project gets its own plot, placed automatically from its profile.', '以城市全景探索 Arc 项目。每个项目独占一块地，地图会根据项目信息自动布局。')}</p>
+        <p className="subtitle">{t('Explore Arc projects across separate city plots. Buildings scale by market cap; category pins keep each district easy to scan.', '探索 ARC 项目的独立地块：建筑按市值分级，彩色图钉标识项目类别。')}</p>
       </div>
       <div className="ecosystem-reviewed"><span className="ecosystem-reviewed-dot"/>{t('LIVE PROJECT DIRECTORY', '同步生态项目目录')}</div>
     </div>
