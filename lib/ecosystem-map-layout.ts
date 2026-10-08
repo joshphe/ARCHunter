@@ -37,7 +37,9 @@ export const PROJECT_BLOCKS = [
   ['argus','kairo','bagfi'], ['arcflow','fuci','vialiq'],
   ['arclight','foci','kata-finance'], ['arcstocks','murmur','arcid'], ['faze','tolly'],
 ] as const;
-export const BLOCK_GAP = 64;
+export const BLOCK_GAP = 112;
+// Separate whole parcels, preserving each square's market-cap dimensions.
+export const PARCEL_SPACING = .25;
 export function layoutMap<T extends MapProject>(projects: T[]) {
   const registry = new Set<string>(PROJECT_PLOTS);
   const bySlug = new Map(projects.map(p => [p.slug,p]));
@@ -69,7 +71,9 @@ export function layoutMap<T extends MapProject>(projects: T[]) {
       const half=cell.side/2;
       return [cell,{...cell,u:cell.u+half},{...cell,v:cell.v+half},{...cell,u:cell.u+half,v:cell.v+half}].flatMap(c=>clipFree({...c,side:half}));
     };
-    return {block,width:w,depth:h,parcels,vacant:free.flatMap(clipFree)};
+    const space = <C extends Cell>(cell:C) => ({...cell,packedU:cell.u,packedV:cell.v,u:cell.u*(1+PARCEL_SPACING),v:cell.v*(1+PARCEL_SPACING)});
+    const spacedParcels=parcels.map(space),spacedVacant=free.flatMap(clipFree).map(space);
+    return {block,packedWidth:w,packedDepth:h,width:Math.max(...[...spacedParcels,...spacedVacant].map(p=>p.u+p.side)),depth:Math.max(...[...spacedParcels,...spacedVacant].map(p=>p.v+p.side)),parcels:spacedParcels,vacant:spacedVacant};
   });
   const east=local[0].width+BLOCK_GAP;
   const south=Math.max(local[0].depth,local[1].depth+BLOCK_GAP+local[2].depth)+BLOCK_GAP;

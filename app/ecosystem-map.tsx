@@ -94,6 +94,22 @@ export default function EcosystemMap({projects,language}:Props) {
   const river=`M${gp(cityWidth+64,-64)} L${gp(cityWidth+64,cityDepth+64)}`;
   const roads=[`M${gp(-36,-36)} L${gp(cityWidth+145,-36)} L${gp(cityWidth+145,cityDepth+36)} L${gp(-36,cityDepth+36)} Z`,...streets.map(points=>`M${points.map(p=>gp(p.u,p.v)).join(" L")}`)];
   const parks=Array.from({length:Math.max(4,Math.floor(cityDepth/80))},(_,i)=>ground(-52,16+i*80));
+  const walks=blocks.flatMap(block=>block.parcels.flatMap((a,i)=>block.parcels.slice(i+1).flatMap(b=>{
+    const paths:string[]=[];
+    const left=a.u<b.u?a:b,right=left===a?b:a;
+    const back=a.v<b.v?a:b,front=back===a?b:a;
+    const v0=Math.max(left.v,right.v)+6,v1=Math.min(left.v+left.side,right.v+right.side)-6;
+    if(left.packedU+left.side===right.packedU&&v1>v0){
+      const u=block.u+(left.u+left.side+right.u)/2;
+      paths.push(`M${gp(u,block.v+v0)} L${gp(u,block.v+v1)}`);
+    }
+    const u0=Math.max(back.u,front.u)+6,u1=Math.min(back.u+back.side,front.u+front.side)-6;
+    if(back.packedV+back.side===front.packedV&&u1>u0){
+      const v=block.v+(back.v+back.side+front.v)/2;
+      paths.push(`M${gp(block.u+u0,v)} L${gp(block.u+u1,v)}`);
+    }
+    return paths;
+  })));
   const activeProject=projects.find(p=>p.slug===activeSlug);
   const priced=projects.filter(project=>mapScale(project.tokenMetrics?.marketCapUsd).cap!==null).length;
 
@@ -141,7 +157,7 @@ export default function EcosystemMap({projects,language}:Props) {
             const length=Math.abs(a.u-b.u)+Math.abs(a.v-b.v),count=Math.max(1,Math.floor(length/90));
             return Array.from({length:count},(_,j)=>{
               const ratio=(j+.5)/count,vertical=a.u===b.u;
-              const u=a.u+(b.u-a.u)*ratio+(vertical?26:0),v=a.v+(b.v-a.v)*ratio+(vertical?0:26);
+              const u=a.u+(b.u-a.u)*ratio+(vertical?42:0),v=a.v+(b.v-a.v)*ratio+(vertical?0:42);
               // Landscaping stays outside the adjoining square parcels.
               const occupied=blocks.some(block=>u>block.u&&u<block.u+block.width&&v>block.v&&v<block.v+block.depth);
               if(occupied||u<0||v<0||u>cityWidth||v>cityDepth)return null;
@@ -149,6 +165,7 @@ export default function EcosystemMap({projects,language}:Props) {
             });
           })}
           <g className="city-road-edge">{roads.map((d,i)=><path key={i} d={d}/>)}</g>
+          <g className="city-courtyard-walks">{walks.map((d,i)=><path key={i} d={d}/>)}</g>
           <g className="city-avenue">{roads.map((d,i)=><path key={i} d={d}/>)}</g>
           <g className="city-avenue-center">{roads.map((d,i)=><path key={i} d={d}/>)}</g>
           <g className="city-bridge">{[-36,cityDepth+36,...streets.filter(points=>points[0].v===points[1].v&&points[1].u>cityWidth).map(points=>points[0].v)].map(v=><path key={v} d={`M${gp(cityWidth+18,v)} L${gp(cityWidth+112,v)}`}/>)}</g>

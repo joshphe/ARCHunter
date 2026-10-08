@@ -113,3 +113,4 @@ html[data-theme='light'] .city-plot-legend strong{color:#344832}
 .city-project-detail{position:absolute;left:22px;bottom:45px;z-index:2;display:grid;gap:8px;padding:16px 20px;border:1px solid #b4d8ca;border-radius:12px;background:#fffbeaef;box-shadow:0 6px 20px #24546b26;color:#285e65;min-width:210px;pointer-events:none}.city-project-detail b{font-size:16px}.city-project-detail span,.city-project-detail a{font-size:12px}.city-project-detail a{pointer-events:auto;color:#198096}
 
 .ecosystem-map-viewport{cursor:grab;touch-action:none;user-select:none;overscroll-behavior:contain}.ecosystem-map-viewport.is-dragging,.ecosystem-map-viewport.is-dragging *{cursor:grabbing!important}
+.city-courtyard-walks{fill:none;stroke:#f7f0da;stroke-width:5;stroke-linecap:square}

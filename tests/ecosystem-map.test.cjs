@@ -34,9 +34,9 @@ function verifyTiling(result){
   const cells=[...result.parcels,...result.vacant];
   for(const block of result.blocks){
     const members=cells.filter(c=>c.block===block.block);
-    assert.equal(members.reduce((area,c)=>area+c.side*c.side,0),block.width*block.depth);
+    assert.equal(members.reduce((area,c)=>area+c.side*c.side,0),block.packedWidth*block.packedDepth);
     for(const cell of members){
-      assert.equal((cell.u-block.u)%cell.side,0);assert.equal((cell.v-block.v)%cell.side,0);
+      assert.equal(cell.packedU%cell.side,0);assert.equal(cell.packedV%cell.side,0);
       assert.ok(cell.u>=block.u&&cell.v>=block.v&&cell.u+cell.side<=block.u+block.width&&cell.v+cell.side<=block.v+block.depth);
     }
   }
@@ -50,7 +50,7 @@ function verifyTiling(result){
     assert.equal(intersects,false,'Road and sidewalks must not cut into a plot');
   }
 }
-test('mixed parcels perfectly tile the developed neighborhood without gaps or overlap',()=>{
+test('underlying parcels tile each block before spacing, with no rendered overlap',()=>{
   for(let offset=0;offset<8;offset++)verifyTiling(layoutMap(PROJECT_PLOTS.map((slug,i)=>project(slug,[0,1e5,5e5,1e6,5e6,1e7,1e8,1e9][(i+offset)%8]))));
 });
 test('parcel arrangement is deterministic across directory order and unregistered projects',()=>{
@@ -75,4 +75,17 @@ test('every permanent cluster has two to four projects and membership survives c
   const before=layoutMap(PROJECT_PLOTS.map(slug=>project(slug,0)));
   const after=layoutMap(PROJECT_PLOTS.map(slug=>project(slug,1e9)));
   for(const p of before.buildings)assert.equal(after.buildings.find(b=>b.project.slug===p.project.slug).block,p.block);
+});
+
+test('neighboring buildings have a pedestrian gap without changing parcel dimensions',()=>{
+  for(const cap of [0,5e5,5e6,1e8,1e9]){
+    const result=layoutMap(PROJECT_PLOTS.map(slug=>project(slug,cap)));
+    for(let i=0;i<result.parcels.length;i++)for(let j=i+1;j<result.parcels.length;j++){
+      const a=result.parcels[i],b=result.parcels[j];
+      const gapU=Math.max(a.u,b.u)-Math.min(a.u+a.side,b.u+b.side);
+      const gapV=Math.max(a.v,b.v)-Math.min(a.v+a.side,b.v+b.side);
+      assert.ok(gapU>=16||gapV>=16,'Buildings must not share an occupied edge');
+    }
+    assert.ok(result.parcels.every(p=>p.side===mapScale(cap).side));
+  }
 });
