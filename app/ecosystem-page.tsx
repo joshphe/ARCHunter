@@ -6,9 +6,11 @@ import { ChevronLeft, ChevronRight, ExternalLink, Search, Send, TriangleAlert } 
 import type { EcosystemProject } from '@/lib/project-schema';
 import { riskLabels, evidenceLabels, riskDescriptions, evidenceDescriptions } from '@/lib/project-risk';
 import ProjectAvatar from '@/app/project-avatar';
+import ProjectDirectorySync from './project-directory-sync';
+import type { DirectorySyncProps } from './project-directory-sync';
 import { getProjectScore } from '@/lib/project-scoring';
 
-type Props = { language: 'en' | 'zh'; projects: EcosystemProject[] };
+type Props = { language: 'en' | 'zh'; projects: EcosystemProject[] } & DirectorySyncProps;
 const PROJECTS_PER_PAGE = 10;
 
 const categories = [
@@ -29,7 +31,7 @@ const categoryLabel = (category: string, zh: boolean) => {
   return category;
 };
 
-export default function EcosystemPage({ language, projects }: Props) {
+export default function EcosystemPage({ language, projects, ...syncProps }: Props) {
   const zh = language === 'zh';
   const t = (en: string, cn: string) => zh ? cn : en;
   const [query, setQuery] = useState('');
@@ -111,7 +113,7 @@ export default function EcosystemPage({ language, projects }: Props) {
         <h1>{t('Ecosystem', '生态')} <span>{t('Projects', '项目')}</span></h1>
         <p className="subtitle">{t('Browse projects building across Arc. Open a row to view the full profile.', '浏览 Arc 生态项目，点击列表行进入完整项目详情。')}</p>
       </div>
-      <div className="ecosystem-reviewed"><span className="ecosystem-reviewed-dot"/>{t('CURATED PROJECT INFO', '人工整理项目信息')}</div>
+      <ProjectDirectorySync language={language} {...syncProps}/>
     </div>
 
     <section className="ecosystem-toolbar" aria-label={t('Project search and filters', '项目搜索与筛选')}>
@@ -153,9 +155,9 @@ export default function EcosystemPage({ language, projects }: Props) {
         <span>{t(`${firstVisibleProject}–${lastVisibleProject} of ${filteredProjects.length}`, `显示 ${firstVisibleProject}–${lastVisibleProject} 项，共 ${filteredProjects.length} 项`)}</span>
         <div><button type="button" onClick={() => setPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} aria-label={t('Previous page', '上一页')}><ChevronLeft size={14}/></button><b>{currentPage} / {pageCount}</b><button type="button" onClick={() => setPage(Math.min(pageCount, currentPage + 1))} disabled={currentPage === pageCount} aria-label={t('Next page', '下一页')}><ChevronRight size={14}/></button></div>
       </nav>
-    </section> : <div className="ecosystem-empty"><Search size={19}/><b>{projects.length === 0 ? t('Loading project directory…', '正在加载项目目录…') : t('No projects match your search.', '没有找到匹配的项目。')}</b><span>{projects.length === 0 ? t('Fetching curated data.', '正在读取已整理的项目信息。') : t('Try a different name or category.', '试试其他项目名称或类别。')}</span></div>}
+    </section> : <div className="ecosystem-empty"><Search size={19}/><b>{projects.length === 0 ? (syncProps.syncError ? t('Could not sync the project directory', '项目目录同步失败') : t('Loading project directory…', '正在加载项目目录…')) : t('No projects match your search.', '没有找到匹配的项目。')}</b><span>{projects.length === 0 ? (syncProps.syncError ? t('Use Refresh to try again.', '请点击刷新项目重试。') : t('Fetching curated data.', '正在读取已整理的项目信息。')) : t('Try a different name or category.', '试试其他项目名称或类别。')}</span></div>}
 
-    <div className="ecosystem-data-note"><span>ⓘ</span><p>{t('Market cap measures token value; TVL measures assets in the protocol. They are shown and sorted separately. Market data loads when you enter this workspace.', '市值衡量代币价值，TVL 衡量协议锁定资产，两者独立展示和排序。行情在进入工作区时加载，不自动刷新。')}</p></div>
+    <div className="ecosystem-data-note"><span>ⓘ</span><p>{t('Market cap measures token value; TVL measures assets in the protocol. They are shown and sorted separately. The directory syncs on entry, when returning to this page, and every two minutes while visible. Market data uses a separate short cache.', '市值衡量代币价值，TVL 衡量协议锁定资产，两者独立展示和排序。目录在进入工作区、返回页面和可见时每两分钟同步；行情数据采用独立短缓存。')}</p></div>
     <footer><span>© 2026 ARC WATCH <i>·</i> {t('COMMUNITY BUILT', '社区共建')}</span><span><a href="https://unavatar.io" target="_blank" rel="noreferrer">{t('Avatars by Unavatar', '头像由 Unavatar 提供')}</a></span></footer>
   </div>;
 }

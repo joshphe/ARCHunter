@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import type { DragEvent, KeyboardEvent } from 'react';
 import ProjectTicker from './project-ticker';
 import { useSiteVisits } from './site-visits-provider';
-import type { EcosystemProject } from '@/lib/project-schema';
+import { useEcosystemProjects } from './use-ecosystem-projects';
 import { WORKSPACES, WORKSPACE_ORDER_KEY, parseWorkspaceOrder } from '@/lib/workspaces';
 import type { Workspace } from '@/lib/workspaces';
 import { ChevronDown, GripVertical, Menu, Moon, Sun, Users, X } from 'lucide-react';
@@ -19,9 +19,7 @@ const CapitalPage = dynamic(() => import('./capital-page'));
 
 export default function Home(){
  const [active,setActive]=useState('Overview'); const [mobileOpen,setMobileOpen]=useState(false);
- const [ecosystemProjects,setEcosystemProjects]=useState<EcosystemProject[]>([]);
- const [projectsLoaded,setProjectsLoaded]=useState(false);
- const [marketDataLoaded,setMarketDataLoaded]=useState(false);
+ const {projects:ecosystemProjects,source:projectSource,refreshing:projectsRefreshing,error:projectsSyncError,refresh:refreshProjects}=useEcosystemProjects(active);
  const totalVisits=useSiteVisits();
  const [workspaceOrder,setWorkspaceOrder]=useState<Workspace[]>(()=>WORKSPACES.map(({key})=>key));
  const [workspaceOrderReady,setWorkspaceOrderReady]=useState(false);
@@ -32,8 +30,6 @@ export default function Home(){
  useEffect(()=>{try{setWorkspaceOrder(parseWorkspaceOrder(localStorage.getItem(WORKSPACE_ORDER_KEY)))}catch{/* Keep the default order if browser storage is unavailable. */}finally{setWorkspaceOrderReady(true)}},[]);
  useEffect(()=>{if(!workspaceOrderReady)return;try{localStorage.setItem(WORKSPACE_ORDER_KEY,JSON.stringify(workspaceOrder))}catch{/* Keep workspace navigation usable when browser storage is disabled. */}},[workspaceOrder,workspaceOrderReady]);
  useEffect(()=>{const view=new URLSearchParams(window.location.search).get('view');if(view==='ecosystem')setActive('Ecosystem');if(view==='map')setActive('Map');if(view==='launchpad')setActive('Launchpad');if(view==='capital')setActive('Capital');if(view==='rug')setActive('Rug')},[]);
- useEffect(()=>{fetch('/api/ecosystem-projects').then(r=>r.ok?r.json():[]).then((projects:unknown)=>{if(Array.isArray(projects))setEcosystemProjects(projects as EcosystemProject[])}).catch(()=>setEcosystemProjects([])).finally(()=>setProjectsLoaded(true))},[]);
- useEffect(()=>{if(!['Ecosystem','Map'].includes(active)||!projectsLoaded||marketDataLoaded)return;fetch('/api/ecosystem-projects?includeMetrics=1').then(r=>{if(!r.ok)throw new Error('Could not load market data');return r.json()}).then((projects:unknown)=>{if(Array.isArray(projects)){setEcosystemProjects(projects as EcosystemProject[]);setMarketDataLoaded(true)}}).catch(()=>{})},[active,marketDataLoaded,projectsLoaded]);
  useEffect(()=>{document.documentElement.dataset.theme=isDark?'dark':'light';localStorage.setItem('arcwatch-theme',isDark?'dark':'light')},[isDark]); useEffect(()=>{document.documentElement.lang=language==='zh'?'zh-CN':'en'},[language]);
  const reorderWorkspace=(from:Workspace,to:Workspace)=>setWorkspaceOrder((current)=>{const next=[...current];const fromIndex=next.indexOf(from);const toIndex=next.indexOf(to);if(fromIndex<0||toIndex<0||fromIndex===toIndex)return current;next.splice(fromIndex,1);next.splice(toIndex,0,from);return next});
  const moveWorkspace=(key:Workspace,direction:-1|1)=>setWorkspaceOrder((current)=>{const index=current.indexOf(key);const destination=index+direction;if(index<0||destination<0||destination>=current.length)return current;const next=[...current];[next[index],next[destination]]=[next[destination],next[index]];return next});
@@ -53,6 +49,6 @@ export default function Home(){
   </aside>
   <section className="main-area"><header className="topbar"><button className="hamburger" onClick={()=>setMobileOpen(!mobileOpen)}><Menu size={19}/></button><div className="breadcrumbs"><span>{tr('Workspace','工作区')}</span><span className="slash">/</span><b>{tr(active,({Overview:'概览',Ecosystem:'生态',Map:'生态地图',Capital:'资金与流动性',Launchpad:'发射台',Rug:'Rug 档案'} as Record<string,string>)[active]||active)}</b></div><div className="top-actions"><div className="live-indicator"><span/> {tr('LIVE DATA','实时数据')}</div><button className="language-button" onClick={()=>{const next=language==='en'?'zh':'en';setLanguage(next);localStorage.setItem('arcwatch-language',next);document.cookie=`arcwatch-language=${next}; Path=/; Max-Age=31536000; SameSite=Lax`}} aria-label={language==='en'?'Switch to Chinese':'切换为英文'} title={language==='en'?'Switch to Chinese':'切换为英文'}>{language==='en'?'EN':'CN'}</button><button className="icon-button" aria-label={isDark?'切换到白天模式':'切换到夜间模式'} title={isDark?'白天模式':'夜间模式'} onClick={()=>setIsDark(!isDark)}>{isDark?<Sun size={17}/>:<Moon size={17}/>}</button></div></header>
   {active==='Overview'&&<ProjectTicker projects={ecosystemProjects} language={language} onSelectProject={(slug)=>{router.push(`/projects/${encodeURIComponent(slug)}`);setMobileOpen(false)}}/>}
-  {active==='Rug'?<RugPage language={language}/>:active==='Launchpad'?<LaunchpadPage language={language} isDark={isDark}/>:active==='Ecosystem'?<EcosystemPage language={language} projects={ecosystemProjects}/>:active==='Map'?<EcosystemMapPage language={language} projects={ecosystemProjects}/>:active==='Capital'?<CapitalPage language={language} isDark={isDark}/>:<OverviewPage language={language} isDark={isDark} projects={ecosystemProjects} onNavigate={()=>setActive('Launchpad')}/> } </section>
+  {active==='Rug'?<RugPage language={language}/>:active==='Launchpad'?<LaunchpadPage language={language} isDark={isDark}/>:active==='Ecosystem'?<EcosystemPage language={language} projects={ecosystemProjects} dataSource={projectSource} refreshing={projectsRefreshing} syncError={projectsSyncError} onRefresh={refreshProjects}/>:active==='Map'?<EcosystemMapPage language={language} projects={ecosystemProjects} dataSource={projectSource} refreshing={projectsRefreshing} syncError={projectsSyncError} onRefresh={refreshProjects}/>:active==='Capital'?<CapitalPage language={language} isDark={isDark}/>:<OverviewPage language={language} isDark={isDark} projects={ecosystemProjects} onNavigate={()=>setActive('Launchpad')}/> } </section>
   {mobileOpen&&<button className="mobile-scrim" onClick={()=>setMobileOpen(false)} aria-label={tr('Close menu','关闭菜单')}/>}</main>
 }
