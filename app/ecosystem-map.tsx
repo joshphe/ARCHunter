@@ -5,9 +5,9 @@ import Link from 'next/link';
 import CityBuilding from './city-building';
 import { useId, useMemo, useRef, useState } from 'react';
 import type { PointerEvent } from 'react';
-import { Maximize2, PanelRightClose, PanelRightOpen, Search, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { Crosshair, Maximize2, PanelRightClose, PanelRightOpen, Search, X, ZoomIn, ZoomOut } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
-import { BUILDING_TIERS, PLOT_TIERS, layoutMap, mapScale, buildingHeight } from '@/lib/ecosystem-map-layout';
+import { BUILDING_TIERS, PLOT_TIERS, layoutMap, mapScale, buildingHeight, buildingVariant } from '@/lib/ecosystem-map-layout';
 import ProjectAvatar from '@/app/project-avatar';
 
 type Props = { projects: EcosystemProject[]; language: 'en' | 'zh' };
@@ -19,19 +19,21 @@ function Tree({ x, y, small = false }: { x: number; y: number; small?: boolean }
     <path d="M0-50V-9L-17-18Z" className="city-tree-light"/>
   </g>;
 }
-function ProjectPin({ handle, symbol, height, side, tier }: { handle: string; symbol: string; height: number; side: number; tier: number | null }) {
+function ProjectBillboard({ handle, symbol, name, height, side }: { handle: string; symbol: string; name: string; height: number; side: number }) {
   const clip = useId().replace(/:/g, '');
   const [failed, setFailed] = useState(false);
   const username = handle.replace(/^@/, '').trim();
-  const tall = tier !== null && tier >= 4;
-  return <g className="city-logo-pin" transform={`translate(${tall ? side*.85 : 0} ${tall ? -height-12 : -height-side/2-36})`} aria-hidden="true">
-    <defs><clipPath id={`${clip}-avatar`}><circle r="20"/></clipPath></defs>
-    <path d="M-8 16L0 31L8 16" fill="#fff9e9" stroke="#237a91" strokeWidth="2"/>
-    <circle r="25" fill="#154c63" opacity=".16" cy="3"/>
-    <circle r="24" fill="#fff9e9" stroke="#237a91" strokeWidth="2"/>
-    <circle r="20" fill="#234e60"/>
-    <text textAnchor="middle" y="6" fill="white" fontSize="15" fontWeight="700">{symbol.slice(0,3)}</text>
-    {!failed && username ? <image href={`https://unavatar.io/x/${encodeURIComponent(username)}`} x="-20" y="-20" width="40" height="40" clipPath={`url(#${clip}-avatar)`} onError={()=>setFailed(true)}/> : null}
+  const scale = Math.min(2,Math.max(1,Math.sqrt(side/128)));
+  return <g className="city-billboard" transform={`translate(0 ${-height-side*.13-32*scale}) scale(${scale})`} aria-hidden="true">
+    <defs><clipPath id={`${clip}-avatar`}><rect x="-41" y="-11" width="22" height="22" rx="5"/></clipPath></defs>
+    <path className="city-billboard-support" d="M-25 14V36M25 14V36"/>
+    <rect className="city-billboard-frame" x="-48" y="-17" width="96" height="34" rx="7"/>
+    <rect className="city-billboard-logo" x="-41" y="-11" width="22" height="22" rx="5"/>
+    <text className="city-billboard-initials" x="-30" y="4" textAnchor="middle">{symbol.slice(0,3)}</text>
+    {!failed && username ? <image href={`https://unavatar.io/x/${encodeURIComponent(username)}`} x="-41" y="-11" width="22" height="22" clipPath={`url(#${clip}-avatar)`} onError={()=>setFailed(true)}/> : null}
+    <text className="city-billboard-name" x="-12" y="0">{name.length>10?`${name.slice(0,9)}…`:name}</text>
+    <text className="city-billboard-symbol" x="-12" y="10">{symbol.slice(0,9)}</text>
+    <path className="city-billboard-strip" d="M-38 16H38"/>
   </g>;
 }
 
@@ -105,7 +107,7 @@ export default function EcosystemMap({projects,language}:Props) {
     if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);
   };
   const sceneId=useId().replace(/:/g,'');
-  const {buildings,unassigned,vacant,blocks,streets,cityWidth,cityDepth,span,origin,width,height}=useMemo(()=>layoutMap(projects),[projects]);
+  const {buildings,vacant,blocks,streets,cityWidth,cityDepth,span,origin,width,height}=useMemo(()=>layoutMap(projects),[projects]);
   const categories=useMemo(()=>[...new Set(projects.flatMap(project=>project.categories))].sort((a,b)=>a.localeCompare(b)),[projects]);
   const matches=useMemo(()=>projects.filter(project=>{
     const normalized=query.trim().toLowerCase();
@@ -118,10 +120,7 @@ export default function EcosystemMap({projects,language}:Props) {
   }),[projects,query,categoryFilter,capFilter]);
   const matchedSlugs=useMemo(()=>new Set(matches.map(project=>project.slug)),[matches]);
   const selectedProject=projects.find(project=>project.slug===selectedSlug)??null;
-  const selectProject=(slug:string)=>{
-    setSelectedSlug(slug);
-    setGuideCollapsed(false);
-    setGuideOpen(false);
+  const focusProject=(slug:string)=>{
     requestAnimationFrame(()=>{
       const viewport=viewportRef.current;
       const target=viewport?.querySelector<SVGGraphicsElement>(`[data-project="${slug}"]`);
@@ -129,6 +128,12 @@ export default function EcosystemMap({projects,language}:Props) {
       const view=viewport.getBoundingClientRect(),item=target.getBoundingClientRect();
       viewport.scrollTo({left:viewport.scrollLeft+item.left+item.width/2-view.left-view.width/2,top:viewport.scrollTop+item.top+item.height/2-view.top-view.height/2,behavior:'smooth'});
     });
+  };
+  const selectProject=(slug:string)=>{
+    setSelectedSlug(slug);
+    setGuideCollapsed(false);
+    setGuideOpen(false);
+    focusProject(slug);
   };
   const ground=(u:number,v:number)=>[origin.x+u-v,origin.y+(u+v)/2];
   const gp=(u:number,v:number)=>ground(u,v).join(',');
@@ -169,7 +174,7 @@ export default function EcosystemMap({projects,language}:Props) {
     <div className="ecosystem-map-toolbar">
       <div><span className="section-kicker">THE ARC ATLAS</span><b>{t('A living city, shaped by its projects.','一座由项目生长而成的城市。')}</b></div>
       <div className="ecosystem-map-tools">
-        <button type="button" disabled={zoom>=1.8} onClick={()=>setZoom(v=>Math.min(1.8,+(v+.2).toFixed(1)))} aria-label={t('Zoom in','放大地图')}><ZoomIn size={15}/></button>
+        <button type="button" disabled={zoom>=3.2} onClick={()=>setZoom(v=>Math.min(3.2,+(v+.2).toFixed(1)))} aria-label={t('Zoom in','放大地图')}><ZoomIn size={15}/></button>
         <button type="button" disabled={zoom<=.8} onClick={()=>setZoom(v=>Math.max(.8,+(v-.2).toFixed(1)))} aria-label={t('Zoom out','缩小地图')}><ZoomOut size={15}/></button>
         <button type="button" onClick={()=>{setZoom(1);viewportRef.current?.scrollTo({left:0,top:0});}} aria-label={t('Fit entire map','适配全图')} title={t('Fit entire map','适配全图')}><Maximize2 size={14}/></button>
       </div>
@@ -184,7 +189,7 @@ export default function EcosystemMap({projects,language}:Props) {
       onClickCapture={event=>{if(suppressClick.current&&event.detail!==0){event.preventDefault();event.stopPropagation();suppressClick.current=false;}}}>
       <svg className="arc-city" viewBox={`0 0 ${width} ${height}`} style={{width:`${zoom*100}%`,minWidth:0}} aria-label={t('Isometric project buildings','等距视角项目建筑')}>
         <defs>
-          <linearGradient id={`${sceneId}-ground`} x1="0" y1="0" x2="0" y2="1"><stop stopColor="#d7efb6"/><stop offset="1" stopColor="#a9d892"/></linearGradient>
+          <linearGradient id={`${sceneId}-ground`} x1="0" y1="0" x2="0" y2="1"><stop className="city-ground-stop-light" stopColor="#d7efb6"/><stop className="city-ground-stop-dark" offset="1" stopColor="#a9d892"/></linearGradient>
           <pattern id={`${sceneId}-paving`} width="90" height="45" patternUnits="userSpaceOnUse"><path d="M0 22.5L45 0L90 22.5L45 45Z" fill="none" stroke="#eff9c6" strokeOpacity=".38" strokeWidth="1"/></pattern>
           <radialGradient id={`${sceneId}-shadow`}><stop stopColor="#000" stopOpacity=".34"/><stop offset="1" stopColor="#000" stopOpacity="0"/></radialGradient>
           <pattern id={`${sceneId}-waves`} width="85" height="35" patternUnits="userSpaceOnUse"><path d="M5 13q9-5 18 0t18 0M59 29q7-4 14 0" fill="none" stroke="#e6ffff" strokeOpacity=".2" strokeWidth="1.4"/></pattern>
@@ -221,6 +226,15 @@ export default function EcosystemMap({projects,language}:Props) {
           <g className="city-avenue">{roads.map((d,i)=><path key={i} d={d}/>)}</g>
           <g className="city-avenue-center">{roads.map((d,i)=><path key={i} d={d}/>)}</g>
           <g className="city-bridge">{[-36,cityDepth+36,...streets.filter(points=>points[0].v===points[1].v&&points[1].u>cityWidth).map(points=>points[0].v)].map(v=><path key={v} d={`M${gp(cityWidth+18,v)} L${gp(cityWidth+112,v)}`}/>)}</g>
+          {streets.flatMap((points,i)=>{
+            const [a,b]=points,length=Math.abs(a.u-b.u)+Math.abs(a.v-b.v),count=Math.max(1,Math.floor(length/140));
+            return Array.from({length:count},(_,j)=>{
+              const ratio=(j+.5)/count,vertical=a.u===b.u;
+              const u=a.u+(b.u-a.u)*ratio+(vertical?15:0),v=a.v+(b.v-a.v)*ratio+(vertical?0:15);
+              const [x,y]=ground(u,v);
+              return <g key={`${i}-${j}`} transform={`translate(${x} ${y})`} className="city-streetlamp"><path d="M0 0V-23L6-26"/><ellipse className="city-streetlamp-glow" cx="6" cy="-6" rx="13" ry="6"/><circle cx="6" cy="-26" r="3"/></g>;
+            });
+          })}
           {parks.map(([x,y],i)=><Tree key={i} x={x} y={y} small/>)}
           {Array.from({length:Math.max(4,Math.floor(span/80))},(_,i)=>{const[x,y]=ground(16+i*cityWidth/Math.max(4,Math.floor(cityDepth/80)),cityDepth+52);return <Tree key={i} x={x} y={y} small/>;})}
           <g transform={`translate(${gp(cityWidth+142,cityDepth*.55).replace(',', ' ')}) scale(.48)`} className="city-plaza">
@@ -234,19 +248,19 @@ export default function EcosystemMap({projects,language}:Props) {
           <Boat x={ground(cityWidth*.5,cityDepth+190)[0]} y={ground(cityWidth*.5,cityDepth+190)[1]}/>
           <Boat x={ground(-120,cityDepth*.7)[0]} y={ground(-120,cityDepth*.7)[1]}/>
         </g>
-        {buildings.map(({project,slot,x,y})=>{
+        {buildings.map(({project,x,y})=>{
           const {cap,buildingTier,plotTier,side}=mapScale(project.tokenMetrics?.marketCapUsd);
           const label=`${project.name} · ${money(cap,zh)} · ${buildingTier===null?t('Awaiting market cap','待补充市值'):`${BUILDING_TIERS[buildingTier].name[zh?1:0]} / ${BUILDING_TIERS[buildingTier].label} · ${t('Plot','地块')} ${PLOT_TIERS[plotTier!].size}`}`;
           return <g key={project.slug} transform={`translate(${x} ${y})`}><a href={`/projects/${encodeURIComponent(project.slug)}`} className={projectClass(project.slug)} onClick={event=>{event.preventDefault();selectProject(project.slug);}} onMouseEnter={()=>setActiveSlug(project.slug)} onMouseLeave={()=>setActiveSlug(null)} onFocus={()=>{setActiveSlug(project.slug);selectProject(project.slug);}} onBlur={()=>setActiveSlug(null)} aria-label={label} data-project={project.slug} data-building-tier={buildingTier??'unknown'} data-plot-tier={plotTier??'unknown'}>
             <title>{label}</title>
             <path className="city-cast-shadow" d={`M${-side},0 L0,${side/2} L${side+40},${side/2+25} L${side+65},18 L${side},0 Z`}/>
             <ellipse className="city-shadow" cx="4" cy="5" rx={side+4} ry={side*.5+3}/>
-            {buildingTier===null?<g className="city-vacant"><polygon points={`0,${-side/2} ${side},0 0,${side/2} ${-side},0`}/><text x="0" y="5" textAnchor="middle">?</text></g>:<CityBuilding tier={buildingTier} side={side}/>}
+            {buildingTier===null?<g className="city-vacant"><polygon points={`0,${-side/2} ${side},0 0,${side/2} ${-side},0`}/><text x="0" y="5" textAnchor="middle">?</text></g>:<CityBuilding tier={buildingTier} side={side} variant={buildingVariant(project.slug)}/>}
           </a></g>;
         })}
         {buildings.map(({project,x,y})=>{
           const {side,buildingTier}=mapScale(project.tokenMetrics?.marketCapUsd);
-          return <g key={project.slug} transform={`translate(${x} ${y})`}><a href={`/projects/${encodeURIComponent(project.slug)}`} className={projectClass(project.slug)} tabIndex={-1} aria-label={project.name} onClick={event=>{event.preventDefault();selectProject(project.slug);}} onMouseEnter={()=>setActiveSlug(project.slug)} onMouseLeave={()=>setActiveSlug(null)}><title>{`${project.name} · ${money(mapScale(project.tokenMetrics?.marketCapUsd).cap,zh)}`}</title><ProjectPin handle={project.handle} symbol={project.symbol} height={buildingTier===null?22:buildingHeight(buildingTier,side)} side={side} tier={buildingTier}/></a></g>;
+          return <g key={project.slug} transform={`translate(${x} ${y})`}><a href={`/projects/${encodeURIComponent(project.slug)}`} className={projectClass(project.slug)} tabIndex={-1} aria-label={project.name} onClick={event=>{event.preventDefault();selectProject(project.slug);}} onMouseEnter={()=>setActiveSlug(project.slug)} onMouseLeave={()=>setActiveSlug(null)}><title>{`${project.name} · ${money(mapScale(project.tokenMetrics?.marketCapUsd).cap,zh)}`}</title><ProjectBillboard handle={project.handle} symbol={project.symbol} name={project.name} height={buildingTier===null?0:buildingHeight(buildingTier,side)} side={side}/></a></g>;
         })}
       </svg>
     </div>
@@ -275,20 +289,19 @@ export default function EcosystemMap({projects,language}:Props) {
         <p>{zh?selectedProject.taglineZh||selectedProject.tagline:selectedProject.tagline}</p>
         <div className="city-selected-metrics"><span>{t('MARKET CAP','市值')} <b>{money(selectedCap.cap,zh)}</b></span><span>{t('BUILDING / PLOT','建筑 / 地块')} <b>{selectedBuildingTier?`${selectedBuildingTier.label} · `:''}{selectedCap.plotTier===null?'—':PLOT_TIERS[selectedCap.plotTier].size}</b></span></div>
         <div className="city-selected-source">{selectedProject.tokenMetrics?<><span>{metricSource(selectedProject.tokenMetrics.source,zh)}</span><span>{t('Updated','更新于')} {metricDate(selectedProject.tokenMetrics.updatedAt,zh)}</span>{selectedProject.tokenMetrics.sourceUrl?<a href={selectedProject.tokenMetrics.sourceUrl} target="_blank" rel="noreferrer">↗</a>:null}</>:<span>{t('Market cap has not been verified','暂无已验证的市值数据')}</span>}</div>
-        <Link className="city-profile-link" href={profileHref!}>{t('Open project profile','打开项目详情')} ↗</Link>
+        <div className="city-project-actions"><button type="button" className="city-locate-button" onClick={()=>focusProject(selectedProject.slug)}><Crosshair size={12}/>{t('Locate','定位建筑')}</button><Link className="city-profile-link" href={profileHref!}>{t('Open profile','项目详情')} ↗</Link></div>
       </div>:null}
 
       <details className="city-building-guide" open={guideOpen} onToggle={event=>setGuideOpen(event.currentTarget.open)}>
         <summary className="city-guide-heading"><b>{t('Building & plot scale','建筑与地块图例')}</b><span>{t('Illustrations · USD cap bands include the lower bound','示意图 · 美元市值分档含下限')}</span></summary>
         <div className="city-building-legend">{BUILDING_TIERS.map((tier,i)=><div key={tier.min}>
-          <span className="city-tier-index">{String(i+1).padStart(2,'0')}</span><svg viewBox="-90 -180 180 250" aria-hidden="true"><CityBuilding tier={i} side={64}/></svg>
+          <span className="city-tier-index">{String(i+1).padStart(2,'0')}</span><svg viewBox="-70 -186 140 226" aria-hidden="true"><CityBuilding tier={i} side={64}/></svg>
           <b>{tier.label}</b><span>{tier.name[zh?1:0]}</span>
         </div>)}</div>
         <details className="city-plot-details"><summary>{t('Plot area grows with market cap','地块面积随市值档位增长')}</summary><div className="city-plot-legend">{PLOT_TIERS.map(tier=><span key={tier.min}><svg width="38" height="24" viewBox="-1050 -550 2100 1100" aria-hidden="true"><polygon points={`0,${-tier.side/2} ${tier.side},0 0,${tier.side/2} ${-tier.side},0`}/></svg><strong>{tier.size}</strong> {tier.label}</span>)}</div></details>
       </details>
 
-      {unassigned.length?<div className="city-annex"><b>{t('New projects · plots pending','新项目 · 待分配固定地块')}</b>{unassigned.map(project=><button key={project.slug} type="button" onClick={()=>selectProject(project.slug)}>{project.name}</button>)}</div>:null}
-      <details className="city-map-method"><summary>{t('Data, layout & caveats','数据口径与地图说明')}</summary><p>{t('Market cap comes from the selected project’s displayed source and update time. A ? means no verified cap, not zero. Building size is not a quality or safety rating. Neighborhoods are visual groupings and roads do not imply on-chain connections.','市值来源和更新时间会显示在选中项目卡片中。? 表示暂无已验证市值，并非零市值。建筑大小不代表项目质量或安全评级；街区仅作视觉分组，道路不代表链上连接关系。')}</p></details>
+      <details className="city-map-method"><summary>{t('Data, layout & caveats','数据口径与地图说明')}</summary><p>{t('Market cap comes from the selected project’s displayed source and update time. A ? means no verified cap, not zero. New projects receive a parcel automatically; visual variants are fixed by project ID. Building size is not a quality or safety rating. Neighborhoods are visual groupings and roads do not imply on-chain connections.','市值来源和更新时间会显示在选中项目卡片中。? 表示暂无已验证市值，并非零市值。新增项目自动分配地块，外观变体按项目 ID 固定。建筑大小不代表项目质量或安全评级；街区仅作视觉分组，道路不代表链上连接关系。')}</p></details>
       </>:null}
     </div>
   </section>;

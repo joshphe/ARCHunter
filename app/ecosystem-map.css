@@ -243,3 +243,80 @@ html[data-theme='light'] .city-plot-details{border-color:#cbd6c2;color:#667863}
 @media(max-height:720px) and (min-width:761px){.ecosystem-map-workspace{padding-top:10px;padding-bottom:8px}.ecosystem-map-workspace .page-heading{margin-bottom:8px}.ecosystem-map-workspace .page-heading h1{font-size:25px}.ecosystem-map-toolbar{padding:8px 14px}.city-scene-footer{padding-bottom:8px}}
 
 .city-scale-guide:focus-visible{outline:2px solid #92b575;outline-offset:-2px}
+
+/* A complete parcel travels with its building, in one isometric coordinate space. */
+.city-parcel-foundation{fill:#b5baa4;stroke:#ece9d1;stroke-width:.6}
+.city-parcel-lawn{fill:#b7db97;stroke:#edf2d6;stroke-width:1.4}
+.city-parcel-boundary{fill:none;stroke:#e5efcf;stroke-width:1.1;transition:stroke .18s,stroke-width .18s}
+.city-parcel-forecourt{fill:#dbe3d1;stroke:#f6f2de;stroke-width:.6}
+.city-parcel-path{fill:none;stroke:#f1ebd5;stroke-width:6}
+.city-parcel-hedge{fill:#569660;stroke:#b4d192;stroke-width:.6}
+.city-parcel-tree-shadow{fill:#234134;opacity:.22}
+.city-parcel-tree-trunk{fill:none;stroke:#936c4a;stroke-width:1.1}
+.city-parcel-tree{fill:#3a8558}.city-parcel-tree-highlight{fill:#84b766}
+.city-parcel-bench{fill:none;stroke:#98785a;stroke-width:2.5;stroke-linecap:round}
+.city-parcel-light-post{fill:none;stroke:#638081;stroke-width:.7}
+.city-parcel-light{fill:#fff9c8}
+.city-building{filter:drop-shadow(3px 5px 2px #0e233138)}
+.city-lit-window{fill:#ffe3a0;opacity:.16}
+.city-mullion{fill:none;stroke:#bdd5df;stroke-width:.45;opacity:.6}
+.city-floor-line{stroke:#b5cbd4;stroke-width:.8;opacity:.6}
+.city-house-sill{fill:none;stroke:#faf0d4;stroke-width:2}
+.city-entrance-canopy{fill:#e3edf0;stroke:#fff9e4;stroke-width:.8}
+.city-balcony{fill:none;stroke:#e6ece5;stroke-width:2}
+.city-crown-light{fill:none;stroke:#b7f2fb;stroke-width:1.8}
+.city-skybridge{fill:#81abc4;stroke:#d2e9ed;stroke-width:1.2}
+.city-variant-1.city-tier-0{--roof:#88aa8b}.city-variant-2.city-tier-0{--roof:#96aad1}
+.city-variant-1.city-tier-1{--roof:#cdab75}.city-variant-2.city-tier-1{--roof:#7eaaa0}
+.city-billboard{filter:drop-shadow(0 3px 3px #09283b40)}
+.city-billboard-support{fill:none;stroke:#69808b;stroke-width:2}
+.city-billboard-frame{fill:#f8fbf2;stroke:#5a8290;stroke-width:1.4}
+.city-billboard-logo{fill:#284d61}.city-billboard-initials{fill:#fff;font:bold 8px 'DM Sans',sans-serif}
+.city-billboard-name{fill:#23475a;font:600 9px 'DM Sans',sans-serif}
+.city-billboard-symbol{fill:#64828c;font:500 6px 'DM Sans',sans-serif;letter-spacing:.8px}
+.city-billboard-strip{fill:none;stroke:#97c870;stroke-width:2}
+.city-project:hover .city-building,.city-project:focus-visible .city-building,.city-project.is-selected .city-building{filter:drop-shadow(3px 5px 3px #19374750)}
+.city-project:hover .city-parcel-boundary,.city-project:focus-visible .city-parcel-boundary,.city-project.is-selected .city-parcel-boundary{stroke:#f1ffb9;stroke-width:2.6;filter:drop-shadow(0 0 3px #ddff82)}
+.city-project.is-selected .city-parcel-lawn{fill:#c7e6a4;stroke:#f1ffb9;stroke-width:2}
+.city-project.is-selected .city-architecture{filter:brightness(1.1)}
+.city-project:hover .city-billboard-frame,.city-project:focus-visible .city-billboard-frame,.city-project.is-selected .city-billboard-frame{stroke:#83bd47;stroke-width:2;fill:#faffec}
+.city-project.is-selected .city-billboard-strip{stroke:#72b238;stroke-width:3}
+.city-project-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.city-locate-button{display:flex;align-items:center;justify-content:center;gap:5px;min-height:28px;border:1px solid #90b66b70;border-radius:7px;background:transparent;color:#c7e7a5;font-size:10px;cursor:pointer}
+.city-locate-button:hover{background:#a4ce7118}.city-locate-button:focus-visible,.city-profile-link:focus-visible{outline:2px solid #a4ce71;outline-offset:2px}
+html[data-theme='light'] .city-locate-button{border-color:#a6bf8d;color:#4e7041}
+.city-building-legend svg{max-height:86px;min-height:65px}
+.city-building-legend>div{padding:6px 4px 8px}
+.city-building-legend b{font-size:9px}.city-building-legend span{font-size:8px}
+
+/* Warm windows and cool glass make the same city readable after dark. */
+html[data-theme='dark'] .city-scene{background:radial-gradient(ellipse at 48% 30%,#163a57 0,#0c2844 50%,#071b31 100%)}
+html[data-theme='dark'] .city-scene-heading>span,html[data-theme='dark'] .city-scene-heading p,html[data-theme='dark'] .city-scene-index,html[data-theme='dark'] .city-scene-footer,html[data-theme='dark'] .city-scene-footer em{color:#8fb8ce}
+html[data-theme='dark'] .city-scene-heading strong,html[data-theme='dark'] .city-scene-index b{color:#d0e9f0}
+html[data-theme='dark'] .city-ground-stop-light{stop-color:#738a61}html[data-theme='dark'] .city-ground-stop-dark{stop-color:#4c7054}
+html[data-theme='dark'] .city-island-edge{fill:#7e897d;stroke:#748a80}
+html[data-theme='dark'] .city-quay{stroke:#adc2bc}
+html[data-theme='dark'] .city-road-edge{stroke:#a2b8ae}html[data-theme='dark'] .city-avenue{stroke:#354c61}
+html[data-theme='dark'] .city-avenue-center{stroke:#d5d4af;stroke-opacity:.45}
+html[data-theme='dark'] .city-park-lawns{fill:#689565;stroke:#95b78b}
+html[data-theme='dark'] .city-river-bank{stroke:#8fa69c}html[data-theme='dark'] .city-river{stroke:#17486a}
+html[data-theme='dark'] .city-river-current{stroke:#7bb0cd;stroke-opacity:.3}
+html[data-theme='dark'] .city-tree-light{fill:#75a66b}html[data-theme='dark'] .city-tree-crown{fill:#347456}
+html[data-theme='dark'] .city-parcel-lawn{fill:#7d9d69;stroke:#b4c9a2}
+html[data-theme='dark'] .city-parcel-forecourt{fill:#a6b7a3;stroke:#c9d2b8}
+html[data-theme='dark'] .city-parcel-foundation{fill:#6d817c;stroke:#abc0b4}
+html[data-theme='dark'] .city-parcel-path{stroke:#c9d0b9}
+html[data-theme='dark'] .city-parcel-light{fill:#ffe2a1;filter:drop-shadow(0 0 2px #ffdf7b)}
+html[data-theme='dark'] .city-glass-stop-light{stop-color:#82b5dd}html[data-theme='dark'] .city-glass-stop-mid{stop-color:#3876ac}html[data-theme='dark'] .city-glass-stop-dark{stop-color:#244666}
+html[data-theme='dark'] .city-lit-window{opacity:.78;fill:#ffdf93}
+html[data-theme='dark'] .city-house-window{fill:#efd18e;stroke:#f5e5bc}
+html[data-theme='dark'] .city-crown-light{stroke:#9be6ff;filter:drop-shadow(0 0 2px #72d6ff)}
+html[data-theme='dark'] .city-billboard-frame{fill:#142e46;stroke:#93bed3}
+html[data-theme='dark'] .city-billboard-name{fill:#e8f2f4}html[data-theme='dark'] .city-billboard-symbol{fill:#9bbdc9}
+html[data-theme='dark'] .city-project.is-selected .city-billboard-frame,html[data-theme='dark'] .city-project:hover .city-billboard-frame{fill:#223d46;stroke:#d9f59f}
+html[data-theme='dark'] .city-project.is-selected .city-parcel-lawn{fill:#8dac72;stroke:#d9f59f}
+@media(prefers-reduced-motion:reduce){.city-parcel-boundary{transition:none}}
+
+.city-streetlamp-glow{fill:#ffe3a0;opacity:0}
+html[data-theme='dark'] .city-streetlamp-glow{opacity:.16}
+html[data-theme='dark'] .city-streetlamp circle{fill:#ffdc98;stroke:#cfd6b9;filter:drop-shadow(0 0 3px #ffe2a1)}

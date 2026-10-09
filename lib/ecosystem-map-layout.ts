@@ -30,7 +30,13 @@ export const NEIGHBORHOOD_ORIGIN = { u: 0, v: 0 } as const;
 const RESERVE_TIERS = [1,0,1,1,2,1,0,0,1,0,0,0,1,0] as const;
 type Cell = { u: number; v: number; side: number };
 type MapProject = { slug: string; tokenMetrics?: { marketCapUsd?: number | null } | null };
-export const buildingHeight = (tier: number, side: number) => BUILDING_TIERS[tier].height * side / BASE_PLOT_SIDE;
+const ROOF_HEIGHTS = [13,13,7,8,7,5,6,24] as const;
+export const buildingHeight = (tier: number, side: number) => (BUILDING_TIERS[tier].height + ROOF_HEIGHTS[tier]) * side / BASE_PLOT_SIDE;
+export function buildingVariant(slug: string) {
+  let hash = 0;
+  for (const char of slug) hash = (Math.imul(hash,31) + char.charCodeAt(0)) >>> 0;
+  return hash % 3;
+}
 
 // Permanent membership mixes parcel sizes; categories never determine districts.
 export const PROJECT_BLOCKS = [
@@ -43,11 +49,14 @@ export const PARCEL_SPACING = .25;
 export function layoutMap<T extends MapProject>(projects: T[]) {
   const registry = new Set<string>(PROJECT_PLOTS);
   const bySlug = new Map(projects.map(p => [p.slug,p]));
-  const unassigned = projects.filter(p => !registry.has(p.slug)).sort((a,b) => a.slug.localeCompare(b.slug));
-  const local = PROJECT_BLOCKS.map((slugs,block) => {
+  const additions = projects.filter(p => !registry.has(p.slug)).sort((a,b) => a.slug.localeCompare(b.slug));
+  const slots: string[] = [...PROJECT_PLOTS,...additions.map(p=>p.slug)];
+  const memberships: string[][] = PROJECT_BLOCKS.map(slugs=>[...slugs]);
+  for(let i=0;i<additions.length;i+=3)memberships.push(additions.slice(i,i+3).map(p=>p.slug));
+  const local = memberships.map((slugs,block) => {
     const entries = slugs.map(slug => {
-      const slot=PROJECT_PLOTS.indexOf(slug), project=bySlug.get(slug);
-      return {slug,slot,project,side:project?mapScale(project.tokenMetrics?.marketCapUsd).side:PLOT_TIERS[RESERVE_TIERS[slot]].side};
+      const slot=slots.indexOf(slug), project=bySlug.get(slug);
+      return {slug,slot,project,side:project?mapScale(project.tokenMetrics?.marketCapUsd).side:PLOT_TIERS[RESERVE_TIERS[slot]??0].side};
     }).sort((a,b)=>b.side-a.side||a.slot-b.slot);
     const free: Cell[]=[{u:0,v:0,side:2048}];
     const parcels=entries.map(entry=>{
@@ -78,11 +87,19 @@ export function layoutMap<T extends MapProject>(projects: T[]) {
   const east=local[0].width+BLOCK_GAP;
   const south=Math.max(local[0].depth,local[1].depth+BLOCK_GAP+local[2].depth)+BLOCK_GAP;
   const anchors=[{u:0,v:0},{u:east,v:0},{u:east,v:local[1].depth+BLOCK_GAP},{u:0,v:south},{u:local[3].width+BLOCK_GAP,v:south}];
+  // New projects grow new streets beyond the original neighborhoods.
+  const originalDepth=Math.max(...local.slice(0,5).map((b,i)=>anchors[i].v+b.depth));
+  let nextRow=originalDepth+BLOCK_GAP;
+  for(let i=5;i<local.length;i+=2){
+    anchors.push({u:0,v:nextRow});
+    if(local[i+1])anchors.push({u:local[i].width+BLOCK_GAP,v:nextRow});
+    nextRow+=Math.max(local[i].depth,local[i+1]?.depth??0)+BLOCK_GAP;
+  }
   const blocks=local.map((b,i)=>({...b,...anchors[i]}));
   const parcels=blocks.flatMap(b=>b.parcels.map(p=>({...p,u:p.u+b.u,v:p.v+b.v})));
   const vacant=blocks.flatMap(b=>b.vacant.map(c=>({...c,u:c.u+b.u,v:c.v+b.v,block:b.block})));
   const cityWidth=Math.max(...blocks.map(b=>b.u+b.width)),cityDepth=Math.max(...blocks.map(b=>b.v+b.depth));
-  const top=Math.max(180,...parcels.map(p=>p.project?buildingHeight(mapScale(p.project.tokenMetrics?.marketCapUsd).buildingTier??0,p.side)+p.side/2+90-(p.u+p.v+p.side)/2:0));
+  const top=Math.max(180,...parcels.map(p=>p.project?buildingHeight(mapScale(p.project.tokenMetrics?.marketCapUsd).buildingTier??0,p.side)+p.side/2+160-(p.u+p.v+p.side)/2:0));
   const origin={x:cityDepth+160,y:top};
   const buildings=parcels.flatMap(p=>p.project?[{project:p.project,slot:p.slot,side:p.side,u:p.u,v:p.v,block:p.block,x:origin.x+p.u-p.v,y:origin.y+(p.u+p.v+p.side)/2}]:[]).sort((a,b)=>a.y-b.y||a.x-b.x);
   const avenue=east-BLOCK_GAP/2,boulevard=south-BLOCK_GAP/2;
@@ -90,7 +107,12 @@ export function layoutMap<T extends MapProject>(projects: T[]) {
     [{u:avenue,v:-36},{u:avenue,v:boulevard}],
     [{u:-36,v:boulevard},{u:cityWidth+145,v:boulevard}],
     [{u:avenue,v:local[1].depth+BLOCK_GAP/2},{u:cityWidth+145,v:local[1].depth+BLOCK_GAP/2}],
-    [{u:local[3].width+BLOCK_GAP/2,v:boulevard},{u:local[3].width+BLOCK_GAP/2,v:cityDepth+36}],
+    [{u:local[3].width+BLOCK_GAP/2,v:boulevard},{u:local[3].width+BLOCK_GAP/2,v:originalDepth+36}],
   ];
-  return {buildings,unassigned,parcels,vacant,blocks,streets,cityWidth,cityDepth,span:Math.max(cityWidth,cityDepth),origin,width:cityWidth+cityDepth+440,height:top+(cityWidth+cityDepth)/2+220};
+  for(let i=5;i<blocks.length;i+=2){
+    const row=blocks[i];
+    streets.push([{u:-36,v:row.v-BLOCK_GAP/2},{u:cityWidth+145,v:row.v-BLOCK_GAP/2}]);
+    if(blocks[i+1])streets.push([{u:row.width+BLOCK_GAP/2,v:row.v-BLOCK_GAP/2},{u:row.width+BLOCK_GAP/2,v:row.v+Math.max(row.depth,blocks[i+1].depth)+36}]);
+  }
+  return {buildings,parcels,vacant,blocks,streets,cityWidth,cityDepth,span:Math.max(cityWidth,cityDepth),origin,width:cityWidth+cityDepth+440,height:top+(cityWidth+cityDepth)/2+220};
 }
