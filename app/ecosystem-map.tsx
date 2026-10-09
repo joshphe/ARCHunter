@@ -5,7 +5,7 @@ import Link from 'next/link';
 import CityBuilding from './city-building';
 import { useId, useMemo, useRef, useState } from 'react';
 import type { PointerEvent } from 'react';
-import { Maximize2, Search, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { Maximize2, PanelRightClose, PanelRightOpen, Search, X, ZoomIn, ZoomOut } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
 import { BUILDING_TIERS, PLOT_TIERS, layoutMap, mapScale, buildingHeight } from '@/lib/ecosystem-map-layout';
 import ProjectAvatar from '@/app/project-avatar';
@@ -70,6 +70,7 @@ export default function EcosystemMap({projects,language}:Props) {
   const [capFilter,setCapFilter]=useState<CapFilter>('all');
   const [searchFocused,setSearchFocused]=useState(false);
   const [guideOpen,setGuideOpen]=useState(true);
+  const [guideCollapsed,setGuideCollapsed]=useState(false);
   const [dragging,setDragging]=useState(false);
   const viewportRef=useRef<HTMLDivElement>(null);
   const gesture=useRef<{id:number;x:number;y:number;left:number;top:number;moved:boolean}|null>(null);
@@ -119,6 +120,7 @@ export default function EcosystemMap({projects,language}:Props) {
   const selectedProject=projects.find(project=>project.slug===selectedSlug)??null;
   const selectProject=(slug:string)=>{
     setSelectedSlug(slug);
+    setGuideCollapsed(false);
     setGuideOpen(false);
     requestAnimationFrame(()=>{
       const viewport=viewportRef.current;
@@ -163,7 +165,7 @@ export default function EcosystemMap({projects,language}:Props) {
   const selectedStatus=selectedProject?.status==='live'?t('LIVE','已上线'):selectedProject?.status==='beta'?t('BETA','测试中'):t('UPCOMING','即将推出');
   const profileHref=selectedProject?`/projects/${encodeURIComponent(selectedProject.slug)}`:undefined;
 
-  return <section className="ecosystem-map-card" aria-label={t('Arc ecosystem map','Arc 生态地图')}>
+  return <section className={`ecosystem-map-card${guideCollapsed?' is-guide-collapsed':''}`} aria-label={t('Arc ecosystem map','Arc 生态地图')}>
     <div className="ecosystem-map-toolbar">
       <div><span className="section-kicker">THE ARC ATLAS</span><b>{t('A living city, shaped by its projects.','一座由项目生长而成的城市。')}</b></div>
       <div className="ecosystem-map-tools">
@@ -251,7 +253,12 @@ export default function EcosystemMap({projects,language}:Props) {
     {activeProject?<div className="city-project-detail" aria-live="polite"><b>{activeProject.name}</b><span>{money(mapScale(activeProject.tokenMetrics?.marketCapUsd).cap,zh)} · {t('Plot','地块')} {PLOT_TIERS[mapScale(activeProject.tokenMetrics?.marketCapUsd).plotTier??0].size}</span><span>{t('Select the plot to see its profile →','选中地块后可在侧栏打开项目详情 →')}</span></div>:null}
     <div className="city-scene-footer"><span><i/>{t('ISOMETRIC VIEW','等距视角')} <em>2.5D</em></span><span>{t('Drag to pan · Select a building · Open its profile in the side panel','拖拽平移 · 点击建筑选中 · 从侧栏打开项目详情')}</span></div>
     </div>
-    <div className="city-scale-guide">
+    <div className="city-scale-guide" tabIndex={guideCollapsed?-1:0} role="region" aria-label={t('Project details and map guide','项目详情与地图图例')}>
+      <button className="city-guide-collapse" type="button" onClick={()=>setGuideCollapsed(value=>!value)} aria-expanded={!guideCollapsed} aria-label={guideCollapsed?t('Expand details panel','展开详情栏'):t('Collapse details panel','向右收起详情栏')} title={guideCollapsed?t('Expand details panel','展开详情栏'):t('Collapse details panel','向右收起详情栏')}>
+        {guideCollapsed?<PanelRightOpen size={15}/>:<PanelRightClose size={15}/>}
+        {guideCollapsed?<span>{t('DETAILS','详情')}</span>:null}
+      </button>
+      {!guideCollapsed?<>
       <div className="city-map-filters">
         <div className="city-search-wrap"><Search size={14}/><input value={query} onChange={event=>setQuery(event.target.value)} onFocus={()=>setSearchFocused(true)} onBlur={()=>window.setTimeout(()=>setSearchFocused(false),120)} onKeyDown={event=>{if(event.key==='Enter'&&matches[0]){event.preventDefault();selectProject(matches[0].slug);setQuery(matches[0].name);setSearchFocused(false);}}} placeholder={t('Find a project…','搜索项目…')} aria-label={t('Search projects','搜索项目')}/>{query?<button type="button" onMouseDown={event=>event.preventDefault()} onClick={()=>{setQuery('');setSearchFocused(true);}} aria-label={t('Clear search','清空搜索')}><X size={13}/></button>:null}
           {query.trim()&&searchFocused&&matches.length?<div className="city-search-results" role="listbox">{matches.slice(0,5).map(project=><button key={project.slug} type="button" role="option" aria-selected={selectedSlug===project.slug} onMouseDown={event=>event.preventDefault()} onClick={()=>{selectProject(project.slug);setQuery(project.name);setSearchFocused(false);}}><span>{project.symbol}</span><b>{project.name}</b></button>)}</div>:null}
@@ -282,6 +289,7 @@ export default function EcosystemMap({projects,language}:Props) {
 
       {unassigned.length?<div className="city-annex"><b>{t('New projects · plots pending','新项目 · 待分配固定地块')}</b>{unassigned.map(project=><button key={project.slug} type="button" onClick={()=>selectProject(project.slug)}>{project.name}</button>)}</div>:null}
       <details className="city-map-method"><summary>{t('Data, layout & caveats','数据口径与地图说明')}</summary><p>{t('Market cap comes from the selected project’s displayed source and update time. A ? means no verified cap, not zero. Building size is not a quality or safety rating. Neighborhoods are visual groupings and roads do not imply on-chain connections.','市值来源和更新时间会显示在选中项目卡片中。? 表示暂无已验证市值，并非零市值。建筑大小不代表项目质量或安全评级；街区仅作视觉分组，道路不代表链上连接关系。')}</p></details>
+      </>:null}
     </div>
   </section>;
 }
