@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Check, ChevronDown, Coins, Compass, Copy, ExternalLink, LayoutDashboard, Menu, Moon, Sparkles, Sun, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, Copy, ExternalLink, Menu, Moon, Sun, X } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
 import ProjectRiskPanel from '@/app/project-risk-panel';
 import ProjectActivityPanel from '@/app/project-activity-panel';
 import ProjectAvatar from '@/app/project-avatar';
 import ProjectScoreRadar from '@/app/project-score-radar';
 import { emptyScorecard, getProjectScore, scoreDimensions } from '@/lib/project-scoring';
+import { WORKSPACES, WORKSPACE_ORDER_KEY, parseWorkspaceOrder } from '@/lib/workspaces';
+import type { Workspace } from '@/lib/workspaces';
 import type { TokenMetrics } from '@/lib/token-metrics';
 
 type Props = { project: EcosystemProject; initialLanguage: 'en' | 'zh' };
@@ -29,9 +31,13 @@ export default function ProjectDetailClient({ project, initialLanguage }: Props)
   const [isDark, setIsDark] = useState(true);
   const [copied, setCopied] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [workspaceOrder, setWorkspaceOrder] = useState<Workspace[]>(() => WORKSPACES.map(({ key }) => key));
   const zh = language === 'zh';
   const t = (en: string, cn: string) => zh ? cn : en;
 
+  useEffect(() => {
+    try { setWorkspaceOrder(parseWorkspaceOrder(localStorage.getItem(WORKSPACE_ORDER_KEY))); } catch { /* Use the default order when storage is unavailable. */ }
+  }, []);
   useEffect(() => {
     const savedTheme = localStorage.getItem('arcwatch-theme');
     setIsDark(savedTheme !== 'light');
@@ -84,12 +90,12 @@ export default function ProjectDetailClient({ project, initialLanguage }: Props)
       <div className="brand"><div className="brand-mark"><span/></div><span>arc<span className="brand-light">watch</span></span><button className="mobile-close" onClick={() => setMobileOpen(false)} aria-label={t('Close menu', '关闭菜单')}><X size={18}/></button></div>
       <div className="network"><span className="network-dot"/> {t('ARC Network', 'ARC 网络')} <ChevronDown size={14}/><span className="network-main">MAINNET</span></div>
       <div className="nav-label">{t('WORKSPACE', '工作区')}</div>
-      <nav>
-        <Link className="nav-item" href="/"><LayoutDashboard size={17}/><span>{t('Overview', '概览')}</span></Link>
-        <Link className="nav-item selected" href="/?view=ecosystem"><Compass size={17}/><span>{t('Ecosystem', '生态')}</span></Link>
-        <Link className="nav-item" href="/?view=capital"><Coins size={17}/><span>{t('Capital', '资金与流动性')}</span></Link>
-        <Link className="nav-item" href="/?view=launchpad"><Sparkles size={17}/><span>{t('Launchpad', '发射台')}</span></Link>
-        <Link className="nav-item" href="/?view=rug"><Compass size={17}/><span>{t('Rug archive', 'Rug 档案')}</span></Link>
+      <nav aria-label={t('Workspaces', '工作区')}>
+        {workspaceOrder.map(key => {
+          const workspace = WORKSPACES.find(item => item.key === key)!;
+          const Icon = workspace.Icon;
+          return <Link key={key} className={`nav-item${key === 'Ecosystem' ? ' selected' : ''}`} href={workspace.href}><Icon size={17}/><span>{t(key, workspace.label)}</span></Link>;
+        })}
       </nav>
     </aside>
     <section className="main-area">

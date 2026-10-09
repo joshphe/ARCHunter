@@ -6,7 +6,9 @@ import type { DragEvent, KeyboardEvent } from 'react';
 import ProjectTicker from './project-ticker';
 import { useSiteVisits } from './site-visits-provider';
 import type { EcosystemProject } from '@/lib/project-schema';
-import { ChevronDown, Coins, Compass, GripVertical, LayoutDashboard, Map as MapIcon, Menu, Moon, ShieldAlert, Sparkles, Sun, Users, X } from 'lucide-react';
+import { WORKSPACES, WORKSPACE_ORDER_KEY, parseWorkspaceOrder } from '@/lib/workspaces';
+import type { Workspace } from '@/lib/workspaces';
+import { ChevronDown, GripVertical, Menu, Moon, Sun, Users, X } from 'lucide-react';
 
 const OverviewPage = dynamic(() => import('./overview-page'));
 const EcosystemPage = dynamic(() => import('./ecosystem-page'));
@@ -14,16 +16,6 @@ const EcosystemMapPage = dynamic(() => import('./ecosystem-map-page'));
 const LaunchpadPage = dynamic(() => import('./launchpad-page'));
 const RugPage = dynamic(() => import('./rug-page'));
 const CapitalPage = dynamic(() => import('./capital-page'));
-const WORKSPACES = [
- { key: 'Overview', label: '概览', Icon: LayoutDashboard },
- { key: 'Ecosystem', label: '生态', Icon: Compass },
- { key: 'Map', label: '生态地图', Icon: MapIcon },
- { key: 'Capital', label: '资金与流动性', Icon: Coins },
- { key: 'Launchpad', label: '发射台', Icon: Sparkles },
- { key: 'Rug', label: 'Rug 档案', Icon: ShieldAlert },
-] as const;
-type Workspace = typeof WORKSPACES[number]['key'];
-const WORKSPACE_ORDER_KEY = 'arcwatch-workspace-order';
 
 export default function Home(){
  const [active,setActive]=useState('Overview'); const [mobileOpen,setMobileOpen]=useState(false);
@@ -37,7 +29,7 @@ export default function Home(){
  const [dropTarget,setDropTarget]=useState<Workspace|null>(null);
  const [isDark,setIsDark]=useState(true); const [language,setLanguage]=useState<'en'|'zh'>('en'); const tr=(en:string,zh:string)=>language==='zh'?zh:en; const router=useRouter();
  useEffect(()=>{const saved=localStorage.getItem('arcwatch-theme');if(saved==='light')setIsDark(false);const savedLanguage=localStorage.getItem('arcwatch-language');const initialLanguage=savedLanguage==='zh'?'zh':'en';setLanguage(initialLanguage);document.cookie=`arcwatch-language=${initialLanguage}; Path=/; Max-Age=31536000; SameSite=Lax`},[]);
- useEffect(()=>{try{const saved=localStorage.getItem(WORKSPACE_ORDER_KEY);if(saved){const parsed=JSON.parse(saved) as unknown;if(Array.isArray(parsed)){const validOrder=parsed.filter((key):key is Workspace=>typeof key==='string'&&WORKSPACES.some((workspace)=>workspace.key===key));const uniqueOrder=[...new Set(validOrder)];setWorkspaceOrder([...uniqueOrder,...WORKSPACES.map(({key})=>key).filter((key)=>!uniqueOrder.includes(key))])}}}catch{/* Keep the default order if browser storage is unavailable or invalid. */}finally{setWorkspaceOrderReady(true)}},[]);
+ useEffect(()=>{try{setWorkspaceOrder(parseWorkspaceOrder(localStorage.getItem(WORKSPACE_ORDER_KEY)))}catch{/* Keep the default order if browser storage is unavailable. */}finally{setWorkspaceOrderReady(true)}},[]);
  useEffect(()=>{if(!workspaceOrderReady)return;try{localStorage.setItem(WORKSPACE_ORDER_KEY,JSON.stringify(workspaceOrder))}catch{/* Keep workspace navigation usable when browser storage is disabled. */}},[workspaceOrder,workspaceOrderReady]);
  useEffect(()=>{const view=new URLSearchParams(window.location.search).get('view');if(view==='ecosystem')setActive('Ecosystem');if(view==='map')setActive('Map');if(view==='launchpad')setActive('Launchpad');if(view==='capital')setActive('Capital');if(view==='rug')setActive('Rug')},[]);
  useEffect(()=>{fetch('/api/ecosystem-projects').then(r=>r.ok?r.json():[]).then((projects:unknown)=>{if(Array.isArray(projects))setEcosystemProjects(projects as EcosystemProject[])}).catch(()=>setEcosystemProjects([])).finally(()=>setProjectsLoaded(true))},[]);
@@ -54,7 +46,7 @@ export default function Home(){
    <div className="network"><span className="network-dot"/> {tr('ARC Network','ARC 网络')} <ChevronDown size={14}/><span className="network-main">MAINNET</span></div>
    <div className="nav-label">{tr('WORKSPACE','工作区')}</div>
    <nav aria-label={tr('Workspaces','工作区')} aria-describedby="workspace-sort-help">{workspaceOrder.map((key)=>{const workspace=WORKSPACES.find((item)=>item.key===key)!;const Icon=workspace.Icon;return <div key={key} className={`workspace-nav-row ${dropTarget===key?'drop-target':''} ${draggedWorkspace===key?'is-dragging':''}`} draggable onDragStart={(event)=>handleWorkspaceDragStart(event,key)} onDragOver={(event)=>{event.preventDefault();setDropTarget(key)}} onDrop={(event)=>handleWorkspaceDrop(event,key)} onDragEnd={()=>{setDraggedWorkspace(null);setDropTarget(null)}} title={tr('Drag to reorder · Alt + ↑ / ↓ to move with keyboard','拖动排序 · 按 Alt + ↑ / ↓ 可用键盘调整')}>
-    <button className={`nav-item ${active===key?'selected':''}`} aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown" onKeyDown={(event)=>handleWorkspaceKeyDown(event,key)} onClick={()=>{setActive(key);window.history.replaceState(null,'',`/?view=${key.toLowerCase()}`);setMobileOpen(false)}}><Icon size={17}/><span>{tr(key,workspace.label)}</span>{key==='Ecosystem'&&<span className="nav-count">{String(ecosystemProjects.length).padStart(2,'0')}</span>}<GripVertical className="workspace-drag-icon" size={13} aria-hidden="true"/></button>
+    <button className={`nav-item ${active===key?'selected':''}`} aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown" onKeyDown={(event)=>handleWorkspaceKeyDown(event,key)} onClick={()=>{setActive(key);window.history.replaceState(null,'',`/?view=${key.toLowerCase()}`);setMobileOpen(false)}}><Icon size={17}/><span>{tr(key,workspace.label)}</span><GripVertical className="workspace-drag-icon" size={13} aria-hidden="true"/></button>
    </div>})}</nav><span id="workspace-sort-help" className="sr-only">{tr('Drag a workspace to reorder it, or focus it and press Alt plus the up or down arrow. Your order is saved in this browser.','拖动工作区即可排序，也可聚焦后按 Alt 加上方向键调整。排序会保存在此浏览器。')}</span>
    <div className="sidebar-visitor-count"><span className="sidebar-visitor-icon"><Users size={14}/></span><div className="sidebar-visitor-copy"><span>{tr('TOTAL VISITS','累计访问')}</span><b>{totalVisits===null?'—':new Intl.NumberFormat(language==='zh'?'zh-CN':'en-US').format(totalVisits)}</b></div></div>
 

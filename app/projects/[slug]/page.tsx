@@ -28,7 +28,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProjectPage({ params }: Props) {
   const { slug } = await params;
-  if (slug === 'vort' || await isRugProject(decodeURIComponent(slug))) redirect(`/?view=rug#${encodeURIComponent(slug)}`);
+  // The bundled directory remains usable when local database access is not configured.
+  if (slug === 'vort' || (process.env.DATABASE_URL && await isRugProject(decodeURIComponent(slug)))) redirect(`/?view=rug#${encodeURIComponent(slug)}`);
   const project = await getProject(decodeURIComponent(slug));
   if (!project) notFound();
   const cookieStore = await cookies();
