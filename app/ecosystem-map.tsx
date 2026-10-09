@@ -5,9 +5,10 @@ import Link from 'next/link';
 import CityBuilding from './city-building';
 import { useId, useMemo, useRef, useState } from 'react';
 import type { PointerEvent } from 'react';
-import { RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { Maximize2, Search, X, ZoomIn, ZoomOut } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
 import { BUILDING_TIERS, PLOT_TIERS, layoutMap, mapScale, buildingHeight } from '@/lib/ecosystem-map-layout';
+import ProjectAvatar from '@/app/project-avatar';
 
 type Props = { projects: EcosystemProject[]; language: 'en' | 'zh' };
 function Tree({ x, y, small = false }: { x: number; y: number; small?: boolean }) {
@@ -47,12 +48,28 @@ function Boat({ x, y, large = false }: { x: number; y: number; large?: boolean }
 function money(value:number|null,zh:boolean) {
   return value===null?(zh?'市值待定':'Cap unavailable'):new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',notation:'compact',maximumFractionDigits:2}).format(value);
 }
+function metricSource(source:string|undefined,zh:boolean) {
+  if(source==='okx')return 'OKX';
+  if(source==='dexscreener+okx')return 'DEX Screener + OKX';
+  return source==='dexscreener'?'DEX Screener':(zh?'暂无来源':'Source unavailable');
+}
+function metricDate(value:string|undefined,zh:boolean) {
+  if(!value||!Number.isFinite(new Date(value).getTime()))return zh?'暂无更新时间':'Update time unavailable';
+  return new Intl.DateTimeFormat(zh?'zh-CN':'en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(value));
+}
+type CapFilter='all'|'unpriced'|'0'|'1'|'2'|'3'|'4';
 
 export default function EcosystemMap({projects,language}:Props) {
   const zh=language==='zh';
   const t=(en:string,cn:string)=>zh?cn:en;
-  const [zoom,setZoom]=useState(.8);
+  const [zoom,setZoom]=useState(1);
   const [activeSlug,setActiveSlug]=useState<string|null>(null);
+  const [selectedSlug,setSelectedSlug]=useState<string|null>(null);
+  const [query,setQuery]=useState('');
+  const [categoryFilter,setCategoryFilter]=useState('all');
+  const [capFilter,setCapFilter]=useState<CapFilter>('all');
+  const [searchFocused,setSearchFocused]=useState(false);
+  const [guideOpen,setGuideOpen]=useState(true);
   const [dragging,setDragging]=useState(false);
   const viewportRef=useRef<HTMLDivElement>(null);
   const gesture=useRef<{id:number;x:number;y:number;left:number;top:number;moved:boolean}|null>(null);
@@ -88,6 +105,29 @@ export default function EcosystemMap({projects,language}:Props) {
   };
   const sceneId=useId().replace(/:/g,'');
   const {buildings,unassigned,vacant,blocks,streets,cityWidth,cityDepth,span,origin,width,height}=useMemo(()=>layoutMap(projects),[projects]);
+  const categories=useMemo(()=>[...new Set(projects.flatMap(project=>project.categories))].sort((a,b)=>a.localeCompare(b)),[projects]);
+  const matches=useMemo(()=>projects.filter(project=>{
+    const normalized=query.trim().toLowerCase();
+    const searchable=[project.name,project.symbol,project.handle,project.tagline,project.taglineZh,...project.categories].join(' ').toLowerCase();
+    const textMatch=!normalized||searchable.includes(normalized);
+    const categoryMatch=categoryFilter==='all'||project.categories.includes(categoryFilter);
+    const {cap,plotTier}=mapScale(project.tokenMetrics?.marketCapUsd);
+    const capMatch=capFilter==='all'||(capFilter==='unpriced'?cap===null:String(plotTier)===capFilter);
+    return textMatch&&categoryMatch&&capMatch;
+  }),[projects,query,categoryFilter,capFilter]);
+  const matchedSlugs=useMemo(()=>new Set(matches.map(project=>project.slug)),[matches]);
+  const selectedProject=projects.find(project=>project.slug===selectedSlug)??null;
+  const selectProject=(slug:string)=>{
+    setSelectedSlug(slug);
+    setGuideOpen(false);
+    requestAnimationFrame(()=>{
+      const viewport=viewportRef.current;
+      const target=viewport?.querySelector<SVGGraphicsElement>(`[data-project="${slug}"]`);
+      if(!viewport||!target)return;
+      const view=viewport.getBoundingClientRect(),item=target.getBoundingClientRect();
+      viewport.scrollTo({left:viewport.scrollLeft+item.left+item.width/2-view.left-view.width/2,top:viewport.scrollTop+item.top+item.height/2-view.top-view.height/2,behavior:'smooth'});
+    });
+  };
   const ground=(u:number,v:number)=>[origin.x+u-v,origin.y+(u+v)/2];
   const gp=(u:number,v:number)=>ground(u,v).join(',');
   const island=[gp(-64,-64),gp(cityWidth+180,-64),gp(cityWidth+180,cityDepth+64),gp(-64,cityDepth+64)].join(' ');
@@ -112,6 +152,16 @@ export default function EcosystemMap({projects,language}:Props) {
   })));
   const activeProject=projects.find(p=>p.slug===activeSlug);
   const priced=projects.filter(project=>mapScale(project.tokenMetrics?.marketCapUsd).cap!==null).length;
+  const filtersActive=Boolean(query.trim())||categoryFilter!=='all'||capFilter!=='all';
+  const projectClass=(slug:string)=>`city-project${selectedSlug===slug?' is-selected':''}${filtersActive&&!matchedSlugs.has(slug)?' is-filtered-out':''}`;
+  const capFilterOptions=[
+    {value:'0',label:PLOT_TIERS[0].label},{value:'1',label:PLOT_TIERS[1].label},{value:'2',label:PLOT_TIERS[2].label},
+    {value:'3',label:PLOT_TIERS[3].label},{value:'4',label:PLOT_TIERS[4].label},
+  ] as const;
+  const selectedCap=mapScale(selectedProject?.tokenMetrics?.marketCapUsd);
+  const selectedBuildingTier=selectedCap.buildingTier===null?null:BUILDING_TIERS[selectedCap.buildingTier];
+  const selectedStatus=selectedProject?.status==='live'?t('LIVE','已上线'):selectedProject?.status==='beta'?t('BETA','测试中'):t('UPCOMING','即将推出');
+  const profileHref=selectedProject?`/projects/${encodeURIComponent(selectedProject.slug)}`:undefined;
 
   return <section className="ecosystem-map-card" aria-label={t('Arc ecosystem map','Arc 生态地图')}>
     <div className="ecosystem-map-toolbar">
@@ -119,7 +169,7 @@ export default function EcosystemMap({projects,language}:Props) {
       <div className="ecosystem-map-tools">
         <button type="button" disabled={zoom>=1.8} onClick={()=>setZoom(v=>Math.min(1.8,+(v+.2).toFixed(1)))} aria-label={t('Zoom in','放大地图')}><ZoomIn size={15}/></button>
         <button type="button" disabled={zoom<=.8} onClick={()=>setZoom(v=>Math.max(.8,+(v-.2).toFixed(1)))} aria-label={t('Zoom out','缩小地图')}><ZoomOut size={15}/></button>
-        <button type="button" onClick={()=>{setZoom(.8);viewportRef.current?.scrollTo({left:0,top:0});}} aria-label={t('Reset map zoom','重置地图缩放')}><RotateCcw size={14}/></button>
+        <button type="button" onClick={()=>{setZoom(1);viewportRef.current?.scrollTo({left:0,top:0});}} aria-label={t('Fit entire map','适配全图')} title={t('Fit entire map','适配全图')}><Maximize2 size={14}/></button>
       </div>
     </div>
     <div className="city-scene">
@@ -130,7 +180,7 @@ export default function EcosystemMap({projects,language}:Props) {
       onPointerLeave={()=>{if(!gesture.current?.moved)gesture.current=null;}}
       onDragStart={event=>event.preventDefault()}
       onClickCapture={event=>{if(suppressClick.current&&event.detail!==0){event.preventDefault();event.stopPropagation();suppressClick.current=false;}}}>
-      <svg className="arc-city" viewBox={`0 0 ${width} ${height}`} style={{width:`${zoom*100}%`,minWidth:680*zoom}} aria-label={t('Isometric project buildings','等距视角项目建筑')}>
+      <svg className="arc-city" viewBox={`0 0 ${width} ${height}`} style={{width:`${zoom*100}%`,minWidth:0}} aria-label={t('Isometric project buildings','等距视角项目建筑')}>
         <defs>
           <linearGradient id={`${sceneId}-ground`} x1="0" y1="0" x2="0" y2="1"><stop stopColor="#d7efb6"/><stop offset="1" stopColor="#a9d892"/></linearGradient>
           <pattern id={`${sceneId}-paving`} width="90" height="45" patternUnits="userSpaceOnUse"><path d="M0 22.5L45 0L90 22.5L45 45Z" fill="none" stroke="#eff9c6" strokeOpacity=".38" strokeWidth="1"/></pattern>
@@ -185,7 +235,7 @@ export default function EcosystemMap({projects,language}:Props) {
         {buildings.map(({project,slot,x,y})=>{
           const {cap,buildingTier,plotTier,side}=mapScale(project.tokenMetrics?.marketCapUsd);
           const label=`${project.name} · ${money(cap,zh)} · ${buildingTier===null?t('Awaiting market cap','待补充市值'):`${BUILDING_TIERS[buildingTier].name[zh?1:0]} / ${BUILDING_TIERS[buildingTier].label} · ${t('Plot','地块')} ${PLOT_TIERS[plotTier!].size}`}`;
-          return <g key={project.slug} transform={`translate(${x} ${y})`}><a href={`/projects/${encodeURIComponent(project.slug)}`} className="city-project" onMouseEnter={()=>setActiveSlug(project.slug)} onMouseLeave={()=>setActiveSlug(null)} onFocus={()=>setActiveSlug(project.slug)} onBlur={()=>setActiveSlug(null)} aria-label={label} data-project={project.slug} data-building-tier={buildingTier??'unknown'} data-plot-tier={plotTier??'unknown'}>
+          return <g key={project.slug} transform={`translate(${x} ${y})`}><a href={`/projects/${encodeURIComponent(project.slug)}`} className={projectClass(project.slug)} onClick={event=>{event.preventDefault();selectProject(project.slug);}} onMouseEnter={()=>setActiveSlug(project.slug)} onMouseLeave={()=>setActiveSlug(null)} onFocus={()=>{setActiveSlug(project.slug);selectProject(project.slug);}} onBlur={()=>setActiveSlug(null)} aria-label={label} data-project={project.slug} data-building-tier={buildingTier??'unknown'} data-plot-tier={plotTier??'unknown'}>
             <title>{label}</title>
             <path className="city-cast-shadow" d={`M${-side},0 L0,${side/2} L${side+40},${side/2+25} L${side+65},18 L${side},0 Z`}/>
             <ellipse className="city-shadow" cx="4" cy="5" rx={side+4} ry={side*.5+3}/>
@@ -194,22 +244,44 @@ export default function EcosystemMap({projects,language}:Props) {
         })}
         {buildings.map(({project,x,y})=>{
           const {side,buildingTier}=mapScale(project.tokenMetrics?.marketCapUsd);
-          return <g key={project.slug} transform={`translate(${x} ${y})`}><a href={`/projects/${encodeURIComponent(project.slug)}`} className="city-project" tabIndex={-1} aria-label={project.name} onMouseEnter={()=>setActiveSlug(project.slug)} onMouseLeave={()=>setActiveSlug(null)}><title>{`${project.name} · ${money(mapScale(project.tokenMetrics?.marketCapUsd).cap,zh)}`}</title><ProjectPin handle={project.handle} symbol={project.symbol} height={buildingTier===null?22:buildingHeight(buildingTier,side)} side={side} tier={buildingTier}/></a></g>;
+          return <g key={project.slug} transform={`translate(${x} ${y})`}><a href={`/projects/${encodeURIComponent(project.slug)}`} className={projectClass(project.slug)} tabIndex={-1} aria-label={project.name} onClick={event=>{event.preventDefault();selectProject(project.slug);}} onMouseEnter={()=>setActiveSlug(project.slug)} onMouseLeave={()=>setActiveSlug(null)}><title>{`${project.name} · ${money(mapScale(project.tokenMetrics?.marketCapUsd).cap,zh)}`}</title><ProjectPin handle={project.handle} symbol={project.symbol} height={buildingTier===null?22:buildingHeight(buildingTier,side)} side={side} tier={buildingTier}/></a></g>;
         })}
       </svg>
     </div>
-    {activeProject?<div className="city-project-detail" aria-live="polite"><b>{activeProject.name}</b><span>{money(mapScale(activeProject.tokenMetrics?.marketCapUsd).cap,zh)} · {t('Plot','地块')} {PLOT_TIERS[mapScale(activeProject.tokenMetrics?.marketCapUsd).plotTier??0].size}</span><span>{t('Click the building for details ↗','点击建筑查看详情 ↗')}</span></div>:null}
-    <div className="city-scene-footer"><span><i/>{t('ISOMETRIC VIEW','等距视角')} <em>2.5D</em></span><span>{t('Drag to pan · Click a building to explore ↗','拖拽移动地图 · 点击建筑查看详情 ↗')}</span></div>
+    {activeProject?<div className="city-project-detail" aria-live="polite"><b>{activeProject.name}</b><span>{money(mapScale(activeProject.tokenMetrics?.marketCapUsd).cap,zh)} · {t('Plot','地块')} {PLOT_TIERS[mapScale(activeProject.tokenMetrics?.marketCapUsd).plotTier??0].size}</span><span>{t('Select the plot to see its profile →','选中地块后可在侧栏打开项目详情 →')}</span></div>:null}
+    <div className="city-scene-footer"><span><i/>{t('ISOMETRIC VIEW','等距视角')} <em>2.5D</em></span><span>{t('Drag to pan · Select a building · Open its profile in the side panel','拖拽平移 · 点击建筑选中 · 从侧栏打开项目详情')}</span></div>
     </div>
     <div className="city-scale-guide">
-      <div className="city-guide-heading"><b>{t('Building forms','建筑形态')}</b><span>{t('Normalized illustrations · USD cap bands include the lower bound','形态示意图 · 美元市值各档含下限、不含上限')}</span></div>
-      <div className="city-building-legend">{BUILDING_TIERS.map((tier,i)=><div key={tier.min}>
-        <span className="city-tier-index">{String(i+1).padStart(2,'0')}</span><svg viewBox="-90 -180 180 250" aria-hidden="true"><CityBuilding tier={i} side={64}/></svg>
-        <b>{tier.label}</b><span>{tier.name[zh?1:0]}</span>
-      </div>)}</div>
-      <div className="city-plot-legend"><b>{t('Square footprints · 1 : 2 : 4 : 8 : 16','正方形地块 · 1 : 2 : 4 : 8 : 16')}</b>{PLOT_TIERS.map(tier=><span key={tier.min}><svg width="38" height="24" viewBox="-1050 -550 2100 1100" aria-hidden="true"><polygon points={`0,${-tier.side/2} ${tier.side},0 0,${tier.side/2} ${-tier.side},0`}/></svg><strong>{tier.size}</strong> {tier.label}</span>)}</div>
+      <div className="city-map-filters">
+        <div className="city-search-wrap"><Search size={14}/><input value={query} onChange={event=>setQuery(event.target.value)} onFocus={()=>setSearchFocused(true)} onBlur={()=>window.setTimeout(()=>setSearchFocused(false),120)} onKeyDown={event=>{if(event.key==='Enter'&&matches[0]){event.preventDefault();selectProject(matches[0].slug);setQuery(matches[0].name);setSearchFocused(false);}}} placeholder={t('Find a project…','搜索项目…')} aria-label={t('Search projects','搜索项目')}/>{query?<button type="button" onMouseDown={event=>event.preventDefault()} onClick={()=>{setQuery('');setSearchFocused(true);}} aria-label={t('Clear search','清空搜索')}><X size={13}/></button>:null}
+          {query.trim()&&searchFocused&&matches.length?<div className="city-search-results" role="listbox">{matches.slice(0,5).map(project=><button key={project.slug} type="button" role="option" aria-selected={selectedSlug===project.slug} onMouseDown={event=>event.preventDefault()} onClick={()=>{selectProject(project.slug);setQuery(project.name);setSearchFocused(false);}}><span>{project.symbol}</span><b>{project.name}</b></button>)}</div>:null}
+        </div>
+        <div className="city-filter-selects">
+          <label><span className="sr-only">{t('Category','类别')}</span><select value={categoryFilter} onChange={event=>setCategoryFilter(event.target.value)} aria-label={t('Filter by category','按类别筛选')}><option value="all">{t('All categories','全部类别')}</option>{categories.map(category=><option key={category} value={category}>{category}</option>)}</select></label>
+          <label><span className="sr-only">{t('Market cap','市值')}</span><select value={capFilter} onChange={event=>setCapFilter(event.target.value as CapFilter)} aria-label={t('Filter by market cap','按市值筛选')}><option value="all">{t('All caps','全部市值')}</option>{capFilterOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}<option value="unpriced">{t('Unverified','暂无市值')}</option></select></label>
+        </div>
+        <div className="city-filter-count"><span>{t('MATCHING PROJECTS','匹配项目')}</span><b>{matches.length} / {projects.length}</b></div>
+      </div>
+
+      {selectedProject?<div className="city-selected-project" aria-live="polite">
+        <div className="city-selected-head"><ProjectAvatar handle={selectedProject.handle} symbol={selectedProject.symbol} className="city-selected-avatar"/><div><b>{selectedProject.name}</b><span>{selectedProject.categories[0]||t('ARC ecosystem','ARC 生态')} · {selectedStatus}</span></div><button type="button" onClick={()=>{setSelectedSlug(null);setGuideOpen(true);}} aria-label={t('Clear selected project','清除选中项目')}><X size={14}/></button></div>
+        <p>{zh?selectedProject.taglineZh||selectedProject.tagline:selectedProject.tagline}</p>
+        <div className="city-selected-metrics"><span>{t('MARKET CAP','市值')} <b>{money(selectedCap.cap,zh)}</b></span><span>{t('BUILDING / PLOT','建筑 / 地块')} <b>{selectedBuildingTier?`${selectedBuildingTier.label} · `:''}{selectedCap.plotTier===null?'—':PLOT_TIERS[selectedCap.plotTier].size}</b></span></div>
+        <div className="city-selected-source">{selectedProject.tokenMetrics?<><span>{metricSource(selectedProject.tokenMetrics.source,zh)}</span><span>{t('Updated','更新于')} {metricDate(selectedProject.tokenMetrics.updatedAt,zh)}</span>{selectedProject.tokenMetrics.sourceUrl?<a href={selectedProject.tokenMetrics.sourceUrl} target="_blank" rel="noreferrer">↗</a>:null}</>:<span>{t('Market cap has not been verified','暂无已验证的市值数据')}</span>}</div>
+        <Link className="city-profile-link" href={profileHref!}>{t('Open project profile','打开项目详情')} ↗</Link>
+      </div>:null}
+
+      <details className="city-building-guide" open={guideOpen} onToggle={event=>setGuideOpen(event.currentTarget.open)}>
+        <summary className="city-guide-heading"><b>{t('Building & plot scale','建筑与地块图例')}</b><span>{t('Illustrations · USD cap bands include the lower bound','示意图 · 美元市值分档含下限')}</span></summary>
+        <div className="city-building-legend">{BUILDING_TIERS.map((tier,i)=><div key={tier.min}>
+          <span className="city-tier-index">{String(i+1).padStart(2,'0')}</span><svg viewBox="-90 -180 180 250" aria-hidden="true"><CityBuilding tier={i} side={64}/></svg>
+          <b>{tier.label}</b><span>{tier.name[zh?1:0]}</span>
+        </div>)}</div>
+        <details className="city-plot-details"><summary>{t('Plot area grows with market cap','地块面积随市值档位增长')}</summary><div className="city-plot-legend">{PLOT_TIERS.map(tier=><span key={tier.min}><svg width="38" height="24" viewBox="-1050 -550 2100 1100" aria-hidden="true"><polygon points={`0,${-tier.side/2} ${tier.side},0 0,${tier.side/2} ${-tier.side},0`}/></svg><strong>{tier.size}</strong> {tier.label}</span>)}</div></details>
+      </details>
+
+      {unassigned.length?<div className="city-annex"><b>{t('New projects · plots pending','新项目 · 待分配固定地块')}</b>{unassigned.map(project=><button key={project.slug} type="button" onClick={()=>selectProject(project.slug)}>{project.name}</button>)}</div>:null}
+      <details className="city-map-method"><summary>{t('Data, layout & caveats','数据口径与地图说明')}</summary><p>{t('Market cap comes from the selected project’s displayed source and update time. A ? means no verified cap, not zero. Building size is not a quality or safety rating. Neighborhoods are visual groupings and roads do not imply on-chain connections.','市值来源和更新时间会显示在选中项目卡片中。? 表示暂无已验证市值，并非零市值。建筑大小不代表项目质量或安全评级；街区仅作视觉分组，道路不代表链上连接关系。')}</p></details>
     </div>
-    {unassigned.length?<div className="city-annex"><b>{t('New projects · plots pending','新项目 · 待分配固定地块')}</b>{unassigned.map(project=><Link key={project.slug} href={`/projects/${encodeURIComponent(project.slug)}`}>{project.name}</Link>)}</div>:null}
-    <p className="capital-footnote ecosystem-map-note">{t('Projects stay in permanent clusters of two to four. Parcel sides double at each band; parcels repack inside their cluster, with streets and green strips separating the clusters. Building bases cover their entire square parcels. A ? marks an unpriced project, not a zero valuation. Building size does not indicate safety or quality.','项目固定分组，每组 2–4 栋，组间由道路与绿带分隔。地块边长按 1:2 倍增，市值跨档时在组内重新拼接，街区扩建时保留道路间隔。建筑底座与正方形地块完全同尺寸，四块小地皮可拼成一块相邻大档地皮。? 表示暂无市值，并非零市值；建筑大小不代表项目安全性或质量。')}</p>
   </section>;
 }
