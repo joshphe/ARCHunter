@@ -6,8 +6,8 @@ export const BUILDING_TIERS = [
   { min: 500_000, label: '$500K–1M', height: 44, name: ['Office','小型办公楼'] },
   { min: 1_000_000, label: '$1M–5M', height: 60, name: ['Mid-rise','中层楼宇'] },
   { min: 5_000_000, label: '$5M–10M', height: 78, name: ['Tower','高层大厦'] },
-  { min: 10_000_000, label: '$10M–100M', height: 96, name: ['Terraced tower','阶梯式高楼'] },
-  { min: 100_000_000, label: '$100M–1B', height: 116, name: ['Twin towers','双塔建筑'] },
+  { min: 10_000_000, label: '$10M–100M', height: 96, name: ['High-rise complex','高层建筑群'] },
+  { min: 100_000_000, label: '$100M–1B', height: 116, name: ['Metropolitan landmark','城市级地标'] },
   { min: 1_000_000_000, label: '≥ $1B', height: 138, name: ['Landmark','地标建筑'] },
 ] as const;
 export const PLOT_TIERS = [
@@ -30,12 +30,18 @@ export const NEIGHBORHOOD_ORIGIN = { u: 0, v: 0 } as const;
 const RESERVE_TIERS = [1,0,1,1,2,1,0,0,1,0,0,0,1,0] as const;
 type Cell = { u: number; v: number; side: number };
 type MapProject = { slug: string; tokenMetrics?: { marketCapUsd?: number | null } | null };
-const ROOF_HEIGHTS = [13,13,7,8,7,5,6,24] as const;
+const ROOF_HEIGHTS = [24,24,24,24,24,24,24,24] as const;
 export const buildingHeight = (tier: number, side: number) => (BUILDING_TIERS[tier].height + ROOF_HEIGHTS[tier]) * side / BASE_PLOT_SIDE;
+export const BUILDING_FAMILIES = [
+  ['Terraced','阶梯大厦'],['Gabled','坡屋顶楼宇'],['Courtyard','庭院楼'],
+  ['Glass rotunda','圆形玻璃塔'],['Twin towers','双塔'],['Domed hall','穹顶展馆'],['Sawtooth','锯齿屋顶'],
+] as const;
 export function buildingVariant(slug: string) {
+  const styles: Record<string,number> = {argus:0,kairo:2,arcid:3,arcflow:3,arclight:2,arcstocks:4,bagfi:1,foci:5,faze:6,fuci:6,'kata-finance':4,murmur:5,tolly:5,vialiq:1};
+  if(styles[slug]!==undefined)return styles[slug];
   let hash = 0;
   for (const char of slug) hash = (Math.imul(hash,31) + char.charCodeAt(0)) >>> 0;
-  return hash % 3;
+  return hash % 7;
 }
 
 // Permanent membership mixes parcel sizes; categories never determine districts.

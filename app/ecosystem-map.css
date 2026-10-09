@@ -320,3 +320,27 @@ html[data-theme='dark'] .city-project.is-selected .city-parcel-lawn{fill:#8dac72
 .city-streetlamp-glow{fill:#ffe3a0;opacity:0}
 html[data-theme='dark'] .city-streetlamp-glow{opacity:.16}
 html[data-theme='dark'] .city-streetlamp circle{fill:#ffdc98;stroke:#cfd6b9;filter:drop-shadow(0 0 3px #ffe2a1)}
+/* Permanent architecture families: silhouette and materials survive cap upgrades. */
+.city-material-brick{--left:#d2aa88;--right:#a57864;--roof:#85aaa8}.city-material-stone{--left:#eee8d6;--right:#b9c6b2;--roof:#e2ead6}.city-material-metal{--left:#b4c7d1;--right:#769aa9;--roof:#e5edf1}.city-material-civic{--left:#f3ead1;--right:#c4b99f;--roof:#8dbbc1}.city-material-industrial{--left:#d5d9df;--right:#a1adb9;--roof:#b6c2c9}
+.city-courtyard-pool{fill:#62b7c8;stroke:#f2f2dc;stroke-width:2}.city-round-wall{fill:var(--glass-left);stroke:#b6d4df;stroke-width:1}.city-round-floor{fill:none;stroke:#cee5ea;stroke-width:1;opacity:.8}.city-round-roof{fill:#b5d0da;stroke:#e8f5f3;stroke-width:2}.city-round-skylight{fill:#77a8bc;stroke:#e9f4ee;stroke-width:1}.city-round-glint{fill:none;stroke:#e0faff;stroke-width:3;opacity:.45}.city-colonnade{fill:none;stroke:#fff5da;stroke-width:4}.city-dome{fill:#62a3b2;stroke:#e8ece0;stroke-width:1.5}.city-dome-rib{fill:none;stroke:#bddade;stroke-width:1}.city-saw-roof{fill:#879eab;stroke:#e3e9e5;stroke-width:1}.city-saw-glass{fill:#91c8d6;stroke:#e8eee6;stroke-width:.8}
+html[data-theme='dark'] .city-round-glint{stroke:#a9eaff;opacity:.6}html[data-theme='dark'] .city-courtyard-pool{fill:#3b819c}html[data-theme='dark'] .city-dome{fill:#43758e}html[data-theme='dark'] .city-saw-glass{fill:#d2c291}
+
+/* Contemporary architectural visualization: restrained stone, smoked glass and metal. */
+.city-building{--roof:#b7c1c0;--left:#d7dedb;--right:#85979a;filter:drop-shadow(3px 6px 2px #10232d55)}
+.city-face-left{fill:var(--concrete-left);stroke:#bdc8c7;stroke-width:.35}.city-face-right{fill:var(--concrete-right);stroke:#768d95;stroke-width:.35}
+.city-glass-stop-light{stop-color:#abd6df}.city-glass-stop-mid{stop-color:#659cb6}.city-glass-stop-dark{stop-color:#315776}
+.city-floor-line{stroke:#aabec3;stroke-width:.6;opacity:.65}.city-mullion{stroke:#a0b6bc;stroke-width:.55;opacity:.8}.city-facade-glint{stroke:#e6f0f0;stroke-width:3.5;opacity:.17}
+.city-corner{stroke:#c1cccc;stroke-width:.65}.city-roof{fill:#bac4c2;stroke:#d5ddda;stroke-width:.65}.city-roof-inset{fill:#8d9e9f;stroke:#6c8086;stroke-width:.5}.city-roof-rim{stroke:#dce3df;stroke-width:.8}
+.city-roof-garden{fill:#94cf87;stroke:#a3b099;stroke-width:.6}.city-roof-planter{stroke:#48ab78;stroke-width:2.5}.city-solar{fill:#233d50;stroke:#81929c;stroke-width:.4}.city-lit-window{opacity:.15;fill:#d7c7a1}
+.city-recessed-window{fill:#304d5d;stroke:#bcc9c8;stroke-width:.55}.city-service-unit{fill:#b9c4c4;stroke:#697c84;stroke-width:.5}.city-service-shadow{fill:#263c46;opacity:.25}.city-service-grille{stroke:#566d76;stroke-width:.5}
+.city-pitched-roof{fill:#596b77;stroke:#a6b3b8;stroke-width:.65}.city-pitched-roof-back{fill:#344954}.city-tier-1 .city-pitched-roof-back{fill:#344954}.city-gable{fill:#c4ceca}.city-roof-seam{stroke:#b0bdc2;stroke-width:.55;stroke-opacity:.55}
+.city-round-wall{fill:var(--round-glass);stroke:#718b98;stroke-width:.6}.city-round-floor{stroke:#b6cbd0;stroke-width:.6;opacity:.6}.city-round-roof{fill:#aab9bd;stroke:#dbe3e1;stroke-width:.8}.city-round-skylight{fill:#486b7e;stroke:#c0d0d2;stroke-width:.65}.city-round-glint{stroke:#e4eff0;stroke-width:1.5;opacity:.45}
+.city-dome{fill:var(--dome-metal);stroke:#a5b9bf;stroke-width:.7}.city-dome-rib{stroke:#c6d3d6;stroke-width:.65;opacity:.8}.city-colonnade{stroke:#c9d2cd;stroke-width:2.8}.city-courtyard-pool{fill:#62b7c8;stroke:#cbd5cf;stroke-width:1.2}
+.city-saw-roof{fill:#617784;stroke:#becbcc;stroke-width:.65}.city-saw-glass{fill:#557b8d;stroke:#a9c0c5;stroke-width:.6}.city-skybridge{fill:#577887;stroke:#c0cdcd;stroke-width:.7}.city-entrance-canopy{fill:#9daeb3;stroke:#cfdbd9;stroke-width:.65}
+html[data-theme='dark'] .city-lit-window{opacity:.65;fill:#e4c894}html[data-theme='dark'] .city-dome{fill:var(--dome-metal)}html[data-theme='dark'] .city-saw-glass{fill:#657f90}
+
+.city-family-1{--concrete-light:#e0dfd4;--concrete-mid:#b4b6ad;--concrete-shade:#a1a79d;--concrete-dark:#72807a}.city-family-5{--concrete-light:#e1e4e1;--concrete-mid:#bdc6c2;--concrete-shade:#a6b5b2;--concrete-dark:#768a8b}.city-family-6{--concrete-light:#b8c2c6;--concrete-mid:#8b9ea6;--concrete-shade:#778e99;--concrete-dark:#4d6878}
+city-parcel-tree-shadow{opacity:.24}.city-crown-light{stroke:#d6e6e7;stroke-width:.7;filter:none}
+html[data-theme='dark'] .city-ground-stop-light{stop-color:#738a61}html[data-theme='dark'] .city-ground-stop-dark{stop-color:#4c7054}
+
+.city-selection-hint{margin:20px 0;color:#90aaa3;font-size:12px;line-height:1.7}

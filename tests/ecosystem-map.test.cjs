@@ -58,8 +58,9 @@ test('parcel arrangement is deterministic across directory order and unregistere
   const coordinates=result=>result.buildings.map(({project,...b})=>b);
   assert.deepEqual(coordinates(layoutMap(projects)),coordinates(layoutMap([...projects].reverse())));
   const withNew=layoutMap([...projects,project('new-project',1e10)]);
-  assert.deepEqual(coordinates(layoutMap(projects)),coordinates(withNew));
-  assert.equal(withNew.unassigned[0].slug,'new-project');
+  const world=result=>result.buildings.filter(b=>b.project.slug!=='new-project').map(b=>({slug:b.project.slug,u:b.u,v:b.v,side:b.side,block:b.block}));
+  assert.deepEqual(world(layoutMap(projects)),world(withNew));
+  assert.ok(withNew.buildings.some(b=>b.project.slug==='new-project'));
 });
 test('crossing cap bands repacks inside the fixed neighborhood and all XXL parcels fit',()=>{
   const before={...NEIGHBORHOOD_ORIGIN};
@@ -87,5 +88,29 @@ test('neighboring buildings have a pedestrian gap without changing parcel dimens
       assert.ok(gapU>=16||gapV>=16,'Buildings must not share an occupied edge');
     }
     assert.ok(result.parcels.every(p=>p.side===mapScale(cap).side));
+  }
+});
+
+test('project architecture is stable and all seven silhouettes are assigned',()=>{
+  const {buildingVariant,BUILDING_FAMILIES}=m.exports;
+  assert.equal(BUILDING_FAMILIES.length,7);
+  assert.equal(new Set(PROJECT_PLOTS.map(buildingVariant)).size,7);
+  assert.equal(buildingVariant('kairo'),2);
+  assert.equal(buildingVariant('argus'),0);
+  assert.ok(buildingVariant('future-project')>=0&&buildingVariant('future-project')<7);
+});
+test('all architectural families render at every scale with distinct geometry',()=>{
+  const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
+  const buildingModule={exports:{}};
+  const code=ts.transpileModule(fs.readFileSync('app/city-building.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+  new Function('require','exports','module',code)(name=>name==='@/lib/ecosystem-map-layout'?m.exports:require(name),buildingModule.exports,buildingModule);
+  for(let tier=0;tier<8;tier++){
+    const shapes=[];
+    for(let family=0;family<7;family++){
+      const html=renderToStaticMarkup(React.createElement('svg',null,React.createElement(buildingModule.exports.default,{tier,side:64,variant:family})));
+      assert.ok(!html.includes('NaN')&&!html.includes('undefined'));
+      shapes.push([...html.matchAll(/(?:points|d)="([^"]+)"/g)].map(p=>p[1]).join('|'));
+    }
+    assert.equal(new Set(shapes).size,7,'Every family must have different geometry, not just a different color');
   }
 });

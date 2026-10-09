@@ -71,7 +71,6 @@ export default function EcosystemMap({projects,language}:Props) {
   const [categoryFilter,setCategoryFilter]=useState('all');
   const [capFilter,setCapFilter]=useState<CapFilter>('all');
   const [searchFocused,setSearchFocused]=useState(false);
-  const [guideOpen,setGuideOpen]=useState(true);
   const [guideCollapsed,setGuideCollapsed]=useState(false);
   const [dragging,setDragging]=useState(false);
   const viewportRef=useRef<HTMLDivElement>(null);
@@ -132,7 +131,6 @@ export default function EcosystemMap({projects,language}:Props) {
   const selectProject=(slug:string)=>{
     setSelectedSlug(slug);
     setGuideCollapsed(false);
-    setGuideOpen(false);
     focusProject(slug);
   };
   const ground=(u:number,v:number)=>[origin.x+u-v,origin.y+(u+v)/2];
@@ -267,7 +265,7 @@ export default function EcosystemMap({projects,language}:Props) {
     {activeProject?<div className="city-project-detail" aria-live="polite"><b>{activeProject.name}</b><span>{money(mapScale(activeProject.tokenMetrics?.marketCapUsd).cap,zh)} · {t('Plot','地块')} {PLOT_TIERS[mapScale(activeProject.tokenMetrics?.marketCapUsd).plotTier??0].size}</span><span>{t('Select the plot to see its profile →','选中地块后可在侧栏打开项目详情 →')}</span></div>:null}
     <div className="city-scene-footer"><span><i/>{t('ISOMETRIC VIEW','等距视角')} <em>2.5D</em></span><span>{t('Drag to pan · Select a building · Open its profile in the side panel','拖拽平移 · 点击建筑选中 · 从侧栏打开项目详情')}</span></div>
     </div>
-    <div className="city-scale-guide" tabIndex={guideCollapsed?-1:0} role="region" aria-label={t('Project details and map guide','项目详情与地图图例')}>
+    <div className="city-scale-guide" tabIndex={guideCollapsed?-1:0} role="region" aria-label={t('Project details','项目详情')}>
       <button className="city-guide-collapse" type="button" onClick={()=>setGuideCollapsed(value=>!value)} aria-expanded={!guideCollapsed} aria-label={guideCollapsed?t('Expand details panel','展开详情栏'):t('Collapse details panel','向右收起详情栏')} title={guideCollapsed?t('Expand details panel','展开详情栏'):t('Collapse details panel','向右收起详情栏')}>
         {guideCollapsed?<PanelRightOpen size={15}/>:<PanelRightClose size={15}/>}
         {guideCollapsed?<span>{t('DETAILS','详情')}</span>:null}
@@ -285,23 +283,13 @@ export default function EcosystemMap({projects,language}:Props) {
       </div>
 
       {selectedProject?<div className="city-selected-project" aria-live="polite">
-        <div className="city-selected-head"><ProjectAvatar handle={selectedProject.handle} symbol={selectedProject.symbol} className="city-selected-avatar"/><div><b>{selectedProject.name}</b><span>{selectedProject.categories[0]||t('ARC ecosystem','ARC 生态')} · {selectedStatus}</span></div><button type="button" onClick={()=>{setSelectedSlug(null);setGuideOpen(true);}} aria-label={t('Clear selected project','清除选中项目')}><X size={14}/></button></div>
+        <div className="city-selected-head"><ProjectAvatar handle={selectedProject.handle} symbol={selectedProject.symbol} className="city-selected-avatar"/><div><b>{selectedProject.name}</b><span>{selectedProject.categories[0]||t('ARC ecosystem','ARC 生态')} · {selectedStatus}</span></div><button type="button" onClick={()=>{setSelectedSlug(null);}} aria-label={t('Clear selected project','清除选中项目')}><X size={14}/></button></div>
         <p>{zh?selectedProject.taglineZh||selectedProject.tagline:selectedProject.tagline}</p>
         <div className="city-selected-metrics"><span>{t('MARKET CAP','市值')} <b>{money(selectedCap.cap,zh)}</b></span><span>{t('BUILDING / PLOT','建筑 / 地块')} <b>{selectedBuildingTier?`${selectedBuildingTier.label} · `:''}{selectedCap.plotTier===null?'—':PLOT_TIERS[selectedCap.plotTier].size}</b></span></div>
         <div className="city-selected-source">{selectedProject.tokenMetrics?<><span>{metricSource(selectedProject.tokenMetrics.source,zh)}</span><span>{t('Updated','更新于')} {metricDate(selectedProject.tokenMetrics.updatedAt,zh)}</span>{selectedProject.tokenMetrics.sourceUrl?<a href={selectedProject.tokenMetrics.sourceUrl} target="_blank" rel="noreferrer">↗</a>:null}</>:<span>{t('Market cap has not been verified','暂无已验证的市值数据')}</span>}</div>
         <div className="city-project-actions"><button type="button" className="city-locate-button" onClick={()=>focusProject(selectedProject.slug)}><Crosshair size={12}/>{t('Locate','定位建筑')}</button><Link className="city-profile-link" href={profileHref!}>{t('Open profile','项目详情')} ↗</Link></div>
-      </div>:null}
+      </div>:<p className="city-selection-hint">{t('Select a building to view the project.','点击地图中的建筑，查看项目详情。')}</p>}
 
-      <details className="city-building-guide" open={guideOpen} onToggle={event=>setGuideOpen(event.currentTarget.open)}>
-        <summary className="city-guide-heading"><b>{t('Building & plot scale','建筑与地块图例')}</b><span>{t('Illustrations · USD cap bands include the lower bound','示意图 · 美元市值分档含下限')}</span></summary>
-        <div className="city-building-legend">{BUILDING_TIERS.map((tier,i)=><div key={tier.min}>
-          <span className="city-tier-index">{String(i+1).padStart(2,'0')}</span><svg viewBox="-70 -186 140 226" aria-hidden="true"><CityBuilding tier={i} side={64}/></svg>
-          <b>{tier.label}</b><span>{tier.name[zh?1:0]}</span>
-        </div>)}</div>
-        <details className="city-plot-details"><summary>{t('Plot area grows with market cap','地块面积随市值档位增长')}</summary><div className="city-plot-legend">{PLOT_TIERS.map(tier=><span key={tier.min}><svg width="38" height="24" viewBox="-1050 -550 2100 1100" aria-hidden="true"><polygon points={`0,${-tier.side/2} ${tier.side},0 0,${tier.side/2} ${-tier.side},0`}/></svg><strong>{tier.size}</strong> {tier.label}</span>)}</div></details>
-      </details>
-
-      <details className="city-map-method"><summary>{t('Data, layout & caveats','数据口径与地图说明')}</summary><p>{t('Market cap comes from the selected project’s displayed source and update time. A ? means no verified cap, not zero. New projects receive a parcel automatically; visual variants are fixed by project ID. Building size is not a quality or safety rating. Neighborhoods are visual groupings and roads do not imply on-chain connections.','市值来源和更新时间会显示在选中项目卡片中。? 表示暂无已验证市值，并非零市值。新增项目自动分配地块，外观变体按项目 ID 固定。建筑大小不代表项目质量或安全评级；街区仅作视觉分组，道路不代表链上连接关系。')}</p></details>
       </>:null}
     </div>
   </section>;
