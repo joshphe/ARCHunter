@@ -103,7 +103,7 @@ export default function ProjectDetailClient({ project, initialLanguage }: Props)
       <div className="project-route-content">
       <Link className="project-back-link" href="/?view=ecosystem"><ArrowLeft size={15}/>{t('Back to project directory', '返回项目目录')}</Link>
         <section className="project-detail-hero">
-          <div className="project-detail-heading"><ProjectAvatar handle={project.handle} symbol={project.symbol} large/><div><span>{project.handle}</span><h1>{project.name}</h1><p>{zh ? project.taglineZh || project.tagline : project.tagline}</p></div></div>
+          <div className="project-detail-heading"><ProjectAvatar handle={project.handle} symbol={project.symbol} logoUrl={project.logoUrl} large/><div><span>{project.handle}</span><h1>{project.name}</h1><p>{zh ? project.taglineZh || project.tagline : project.tagline}</p></div></div>
           <div className="project-detail-actions"><span className={`ecosystem-status ${project.status}`}>{project.status === 'beta' ? t('BETA', '测试版') : project.status === 'live' ? t('LIVE ON ARC', '已上线 ARC') : t('UPCOMING', '即将上线')}</span><a href={project.website} target="_blank" rel="noreferrer">{t('Website', '官网')} <ExternalLink size={13}/></a><a href={project.x} target="_blank" rel="noreferrer">X <ExternalLink size={13}/></a></div>
         </section>
 

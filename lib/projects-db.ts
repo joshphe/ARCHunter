@@ -2,7 +2,7 @@ import type { EcosystemProject } from '@/lib/project-schema';
 import { getSql } from '@/lib/db';
 
 const projectSelect = `
-  SELECT slug, name, symbol, handle, tagline_en AS "taglineEn", tagline_zh AS "taglineZh",
+  SELECT slug, name, symbol, handle, logo_url AS "logoUrl", tagline_en AS "taglineEn", tagline_zh AS "taglineZh",
     description_en AS "descriptionEn", description_zh AS "descriptionZh", categories, status,
     products, tvl_usd AS "tvlUsd", fees_24h_usd AS "fees24hUsd", volume_24h_usd AS "volume24hUsd",
     token_address AS "tokenAddress", website_url AS website, x_url AS x, source_urls AS "sourceUrls",
@@ -43,7 +43,7 @@ export async function listProjects(publishedOnly = true): Promise<EcosystemProje
 function mapProject(row: Record<string, unknown>, updates: EcosystemProject['updates'], scoreRow?: Record<string, unknown>): EcosystemProject {
   const reviewedAt = scoreRow?.scoreReviewedAt;
   return {
-    slug: String(row.slug), name: String(row.name), symbol: String(row.symbol), handle: String(row.handle),
+    slug: String(row.slug), name: String(row.name), symbol: String(row.symbol), handle: String(row.handle), logoUrl: row.logoUrl == null ? null : String(row.logoUrl),
     tagline: String(row.taglineEn), taglineZh: String(row.taglineZh ?? ''),
     description: { en: String(row.descriptionEn), zh: String(row.descriptionZh ?? '') },
     categories: row.categories as string[], status: row.status as EcosystemProject['status'],
@@ -99,14 +99,14 @@ export async function saveProject(project: import('@/lib/project-schema').Projec
   const description = project.description;
   await sql.query(
     `INSERT INTO ecosystem_projects (
-      slug, name, symbol, handle, tagline_en, tagline_zh, description_en, description_zh,
+      slug, name, symbol, handle, logo_url, tagline_en, tagline_zh, description_en, description_zh,
       categories, status, products, website_url, x_url, token_address, tvl_usd,
       fees_24h_usd, volume_24h_usd, source_urls, verified_on, recommended,
       recommendation_reason_en, recommendation_reason_zh, is_published, updated_at
     ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,now()
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,now()
     ) ON CONFLICT (slug) DO UPDATE SET
-      name=EXCLUDED.name, symbol=EXCLUDED.symbol, handle=EXCLUDED.handle, tagline_en=EXCLUDED.tagline_en,
+      name=EXCLUDED.name, symbol=EXCLUDED.symbol, handle=EXCLUDED.handle, logo_url=EXCLUDED.logo_url, tagline_en=EXCLUDED.tagline_en,
       tagline_zh=EXCLUDED.tagline_zh, description_en=EXCLUDED.description_en, description_zh=EXCLUDED.description_zh,
       categories=EXCLUDED.categories, status=EXCLUDED.status, products=EXCLUDED.products,
       website_url=EXCLUDED.website_url, x_url=EXCLUDED.x_url, token_address=EXCLUDED.token_address,
@@ -116,7 +116,7 @@ export async function saveProject(project: import('@/lib/project-schema').Projec
       recommendation_reason_zh=EXCLUDED.recommendation_reason_zh, is_published=EXCLUDED.is_published,
       updated_at=now()` ,
     [
-      project.slug, project.name, project.symbol, project.handle, project.tagline, project.taglineZh ?? '',
+      project.slug, project.name, project.symbol, project.handle, project.logoUrl ?? null, project.tagline, project.taglineZh ?? '',
       description.en, description.zh, project.categories, project.status, JSON.stringify(project.products),
       project.website, project.x, project.tokenAddress, project.tvl, project.fees24h, project.volume24h,
       project.sourceUrls ?? [], project.verifiedOn ?? new Date().toISOString().slice(0, 10),

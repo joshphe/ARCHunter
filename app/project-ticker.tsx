@@ -23,7 +23,7 @@ export default function ProjectTicker({ projects, language, onSelectProject }: P
       <div className="project-ticker-track" style={{ '--ticker-duration': `${Math.max(28, items.length * 5)}s` } as React.CSSProperties}>
         {[0, 1].map((copy) => <div className="project-ticker-group" key={copy} aria-hidden={copy === 1}>
           {items.map((project) => <button className="project-ticker-card" key={`${copy}-${project.slug}`} type="button" tabIndex={copy === 1 ? -1 : 0} onClick={() => onSelectProject(project.slug)} aria-label={zh ? `查看 ${project.name} 项目信息` : `View ${project.name} project details`}>
-            <ProjectAvatar handle={project.handle} symbol={project.symbol} className="project-ticker-avatar"/>
+            <ProjectAvatar handle={project.handle} symbol={project.symbol} logoUrl={project.logoUrl} className="project-ticker-avatar"/>
             <div className="project-ticker-copy">
               <div className="project-ticker-name"><b>{project.name}</b><span className={`project-ticker-status ${project.status}`}>{statusLabel(project.status)}</span></div>
               <span title={zh ? project.taglineZh || project.tagline : project.tagline}>{zh ? project.taglineZh || project.tagline : project.tagline}</span>

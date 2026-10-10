@@ -13,6 +13,7 @@ export type EcosystemProject = {
   name: string;
   symbol: string;
   handle: string;
+  logoUrl?: string | null;
   tagline: string;
   taglineZh: string;
   description: { en: string; zh: string };
@@ -39,6 +40,7 @@ export type EcosystemProject = {
 };
 
 export type ProjectInput = Omit<EcosystemProject, 'sourceUrls' | 'verifiedOn' | 'recommended' | 'recommendationReason' | 'taglineZh' | 'isPublished' | 'updates' | 'tokenMetrics'> & {
+  logoUrl?: string | null;
   taglineZh?: string;
   isPublished?: boolean;
   sourceUrls?: string[];
@@ -73,6 +75,7 @@ export function validateProjectInput(value: unknown): { ok: true; project: Proje
   if (!['beta', 'live', 'upcoming'].includes(String(project.status))) return { ok: false, error: 'Invalid project status.' };
   if (!Array.isArray(project.products) || project.products.some((item) => !item || typeof item.en !== 'string' || typeof item.zh !== 'string')) return { ok: false, error: 'Products must include English and Chinese labels.' };
   if (!isHttpUrl(project.website) || !isHttpUrl(project.x)) return { ok: false, error: 'Website and X must be valid HTTP(S) URLs.' };
+  if (project.logoUrl != null && !isHttpUrl(project.logoUrl)) return { ok: false, error: 'Project logo must be a valid HTTP(S) URL.' };
   if (project.tokenAddress != null && (typeof project.tokenAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(project.tokenAddress))) return { ok: false, error: 'Token contract must be a valid EVM address.' };
   if (project.sourceUrls != null && (!Array.isArray(project.sourceUrls) || project.sourceUrls.some((url) => !isHttpUrl(url)))) return { ok: false, error: 'Source URLs must be valid HTTP(S) URLs.' };
   for (const field of ['tvl', 'fees24h', 'volume24h'] as const) {

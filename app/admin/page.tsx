@@ -10,7 +10,7 @@ import RugArchiveForm from './rug-archive-form';
 type EditableProject = EcosystemProject & { taglineZh: string; isPublished: boolean };
 
 const blankProject = (): EditableProject => ({
-  slug: '', name: '', symbol: '', handle: '', tagline: '', taglineZh: '',
+  slug: '', name: '', symbol: '', handle: '', logoUrl: null, tagline: '', taglineZh: '',
   description: { en: '', zh: '' }, categories: ['DeFi'], status: 'upcoming', products: [],
   tvl: null, fees24h: null, volume24h: null, tokenAddress: null, tokenMetrics: null, website: '', x: '',
   sourceUrls: [], verifiedOn: new Date().toISOString().slice(0, 10), recommended: false,
@@ -175,6 +175,7 @@ export default function AdminPage() {
           <label>X handle<input value={form.handle} onChange={(event) => update('handle', event.target.value)} required/></label>
           <label>Website URL<input type="url" value={form.website} onChange={(event) => update('website', event.target.value)} required/></label>
           <label>X URL<input type="url" value={form.x} onChange={(event) => update('x', event.target.value)} required/></label>
+          <label className="admin-wide">Official logo URL<input type="url" value={form.logoUrl ?? ''} onChange={(event) => update('logoUrl', event.target.value || null)} placeholder="Direct image URL from the official X profile"/></label>
           <label>Token contract<input value={form.tokenAddress ?? ''} onChange={(event) => update('tokenAddress', event.target.value || null)} placeholder="Optional EVM contract"/></label>
           <label>Categories<input value={categoryText} onChange={(event) => setCategoryText(event.target.value)} placeholder="DeFi, Prediction Markets" required/></label>
           <label>Project status<select value={form.status} onChange={(event) => update('status', event.target.value as EditableProject['status'])}><option value="live">Live</option><option value="beta">Beta</option><option value="upcoming">Upcoming</option></select></label>
