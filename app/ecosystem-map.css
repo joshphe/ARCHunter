@@ -384,3 +384,28 @@ html[data-theme='light'] .ecosystem-map-workspace .city-scene-footer>span{backgr
   .ecosystem-map-workspace .city-scene-footer>span:last-child{display:none}
   html[data-theme='light'] .ecosystem-map-workspace .ecosystem-map-card:not(.is-guide-collapsed) .city-scale-guide{background:#f0f2e9;border-color:#ccd4c3}
 }
+
+/* Public destinations across the canal; no project badges or market-cap tiers. */
+.city-civic-promenade{fill:none;stroke:#d1d9cd;stroke-width:15;stroke-linecap:round;stroke-linejoin:round;paint-order:stroke;filter:drop-shadow(0 5px 0 #5b7f8255)}
+.city-landmark{--landmark-accent:#aedb83;filter:drop-shadow(3px 7px 3px #18383e33)}
+.city-landmark-foundation{fill:#8ca5a2;stroke:#67898b;stroke-width:.7}
+.city-landmark-ground{fill:#acc98e;stroke:#dee7cb;stroke-width:2}
+.city-landmark-paving{fill:#dce0ce;stroke:#f0f1d9;stroke-width:1}
+.city-landmark-paving-lines{fill:none;stroke:#adbbae;stroke-width:.5;opacity:.5}
+.city-forecourt-seams{fill:none;stroke:#a3b3a7;stroke-width:.4;opacity:.5}
+.city-parcel-bench-legs{fill:none;stroke:#617572;stroke-width:.8}
+.city-flower-bed{fill:#6b9b74;stroke:#b9c6ad;stroke-width:.4}
+.city-parcel-blossom{fill:#e9c1a0}
+.city-entry-steps{fill:none;stroke:#e0e5d8;stroke-width:1.1}
+.city-entry-bollards{fill:none;stroke:#617e87;stroke-width:.85}
+.city-landmark-shadow{fill:#294e5d;opacity:.18}
+.city-stadium-rib{fill:none;stroke:#d6e3df;stroke-width:1.5;opacity:.65}
+.city-landmark-accent{fill:none;stroke:var(--landmark-accent);stroke-width:2}
+.city-landmark-light{fill:#eef3d1;stroke:#96b3b2;stroke-width:.7}
+.city-stadium-wordmark{fill:#edf8e2;font-size:11px;letter-spacing:5px;font-weight:800}
+.city-landmark-walk{fill:none;stroke:#f7ecce;stroke-width:5;stroke-linecap:round}
+.city-landmark-flag{fill:#b1d686;stroke:#759484;stroke-width:.6}
+html[data-theme='dark'] .city-landmark-ground{fill:#718b61;stroke:#9bad91}
+html[data-theme='dark'] .city-landmark-paving{fill:#a0b0a1;stroke:#b5c4af}
+html[data-theme='dark'] .city-civic-promenade{stroke:#a0b2ab}
+html[data-theme='dark'] .city-landmark-light{fill:#ffedb4;filter:drop-shadow(0 0 2px #ffda8c)}

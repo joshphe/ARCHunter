@@ -29,6 +29,7 @@ export const BASE_PLOT_SIDE = 64;
 export const NEIGHBORHOOD_ORIGIN = { u: 0, v: 0 } as const;
 const RESERVE_TIERS = [1,0,1,1,2,1,0,0,1,0,0,0,1,0] as const;
 type Cell = { u: number; v: number; side: number };
+export type CityLandmarkKind = 'stadium' | 'playland' | 'museum' | 'monument' | 'garden';
 type MapProject = { slug: string; tokenMetrics?: { marketCapUsd?: number | null } | null };
 const ROOF_HEIGHTS = [24,24,24,24,24,24,24,24] as const;
 export const buildingHeight = (tier: number, side: number) => (BUILDING_TIERS[tier].height + ROOF_HEIGHTS[tier]) * side / BASE_PLOT_SIDE;
@@ -105,9 +106,6 @@ export function layoutMap<T extends MapProject>(projects: T[]) {
   const parcels=blocks.flatMap(b=>b.parcels.map(p=>({...p,u:p.u+b.u,v:p.v+b.v})));
   const vacant=blocks.flatMap(b=>b.vacant.map(c=>({...c,u:c.u+b.u,v:c.v+b.v,block:b.block})));
   const cityWidth=Math.max(...blocks.map(b=>b.u+b.width)),cityDepth=Math.max(...blocks.map(b=>b.v+b.depth));
-  const top=Math.max(180,...parcels.map(p=>p.project?buildingHeight(mapScale(p.project.tokenMetrics?.marketCapUsd).buildingTier??0,p.side)+p.side/2+160-(p.u+p.v+p.side)/2:0));
-  const origin={x:cityDepth+160,y:top};
-  const buildings=parcels.flatMap(p=>p.project?[{project:p.project,slot:p.slot,side:p.side,u:p.u,v:p.v,block:p.block,x:origin.x+p.u-p.v,y:origin.y+(p.u+p.v+p.side)/2}]:[]).sort((a,b)=>a.y-b.y||a.x-b.x);
   const avenue=east-BLOCK_GAP/2,boulevard=south-BLOCK_GAP/2;
   const streets=[
     [{u:avenue,v:-36},{u:avenue,v:boulevard}],
@@ -120,5 +118,48 @@ export function layoutMap<T extends MapProject>(projects: T[]) {
     streets.push([{u:-36,v:row.v-BLOCK_GAP/2},{u:cityWidth+145,v:row.v-BLOCK_GAP/2}]);
     if(blocks[i+1])streets.push([{u:row.width+BLOCK_GAP/2,v:row.v-BLOCK_GAP/2},{u:row.width+BLOCK_GAP/2,v:row.v+Math.max(row.depth,blocks[i+1].depth)+36}]);
   }
-  return {buildings,parcels,vacant,blocks,streets,cityWidth,cityDepth,span:Math.max(cityWidth,cityDepth),origin,width:cityWidth+cityDepth+440,height:top+(cityWidth+cityDepth)/2+220};
+  // Public waterfront destinations sit across the canal, outside every project parcel.
+  // Their size is decorative and independent of token market capitalization.
+  const civicSide=Math.min(224,Math.max(144,cityDepth/5));
+  const waterfront=([
+    {kind:'stadium',v:cityDepth*.23-civicSide/2},
+    {kind:'playland',v:cityDepth*.72-civicSide/2},
+  ] as const).map(item=>({...item,u:cityWidth+220,side:civicSide,placement:'waterfront' as const}));
+  // In-city landmarks reuse actual unoccupied park cells, never a project reservation.
+  // Spread destinations across neighborhoods and recompute when membership changes.
+  const usedBlocks=new Set<number>();
+  const parkCells=[...vacant].filter(cell=>cell.side>=64).sort((a,b)=>b.side-a.side||a.block-b.block||a.v-b.v||a.u-b.u);
+  // Find a civic plaza in a gap between developed neighborhoods. A bounded
+  // sampling grid avoids scanning every parcel-sized cell in a large city.
+  let plaza:Cell|null=null;
+  const step=Math.max(16,Math.ceil(Math.max(cityWidth,cityDepth)/32/16)*16);
+  for(const side of [160,128,96]){
+    let bestDistance=Infinity;
+    for(let u=24;u+side<=cityWidth-24;u+=step)for(let v=24;v+side<=cityDepth-24;v+=step){
+      if(blocks.some(b=>u<b.u+b.width+12&&u+side>b.u-12&&v<b.v+b.depth+12&&v+side>b.v-12))continue;
+      if(streets.some(([a,b])=>a.u===b.u
+        ?a.u+28>u&&a.u-28<u+side&&Math.max(a.v,b.v)>v&&Math.min(a.v,b.v)<v+side
+        :a.v+28>v&&a.v-28<v+side&&Math.max(a.u,b.u)>u&&Math.min(a.u,b.u)<u+side))continue;
+      const distance=Math.hypot(u+side/2-cityWidth*.4,v+side/2-cityDepth*.55);
+      if(distance<bestDistance){bestDistance=distance;plaza={u,v,side};}
+    }
+    if(plaza)break;
+  }
+  const publicPlaza=plaza?[{...plaza,kind:'museum' as const,placement:'city' as const}]:[];
+  const civicKinds:CityLandmarkKind[]=publicPlaza.length?['monument','garden']:['museum','monument','garden'];
+  const civicCells=parkCells.filter(cell=>{
+    if(usedBlocks.has(cell.block)||usedBlocks.size>=civicKinds.length)return false;
+    usedBlocks.add(cell.block);return true;
+  });
+  const inland=civicCells.map((cell,i)=>{
+    const side=Math.min(cell.side,160);
+    return {kind:civicKinds[i],u:cell.u+(cell.side-side)/2,v:cell.v+(cell.side-side)/2,side,placement:'city' as const};
+  });
+  const landmarks=[...waterfront,...publicPlaza,...inland];
+  const landmarkParks=new Set(civicCells);
+  const landscapeVacant=vacant.filter(cell=>!landmarkParks.has(cell));
+  const top=Math.max(180,...parcels.map(p=>p.project?buildingHeight(mapScale(p.project.tokenMetrics?.marketCapUsd).buildingTier??0,p.side)+p.side/2+160-(p.u+p.v+p.side)/2:0));
+  const origin={x:cityDepth+160,y:top};
+  const buildings=parcels.flatMap(p=>p.project?[{project:p.project,slot:p.slot,side:p.side,u:p.u,v:p.v,block:p.block,x:origin.x+p.u-p.v,y:origin.y+(p.u+p.v+p.side)/2}]:[]).sort((a,b)=>a.y-b.y||a.x-b.x);
+  return {buildings,parcels,vacant,landscapeVacant,blocks,streets,landmarks,cityWidth,cityDepth,span:Math.max(cityWidth,cityDepth),origin,width:cityWidth+cityDepth+440+civicSide+150,height:top+(cityWidth+cityDepth)/2+220+civicSide/2+110};
 }

@@ -64,12 +64,15 @@ function Parcel({ variant }: { variant: number }) {
     <polygon className="city-parcel-lawn" points={square(0,0,64)}/>
     <polygon className="city-parcel-boundary" points={square(0,0,61,1)}/>
     <polygon className="city-parcel-forecourt" points={square(2,5,45,.5)}/>
+    <g className="city-forecourt-seams">{[-12,-4,4,12].map(offset=><path key={offset} d={`M${point(offset,24,.7)}L${point(offset,30,.7)} M${point(24,offset,.7)}L${point(30,offset,.7)}`}/>)}</g>
     <path className="city-parcel-path" d={`M${point(13,18,.8)} L${point(13,32,.8)} M${point(18,13,.8)} L${point(32,13,.8)}`}/>
     <polygon className="city-parcel-hedge" points={square(-24,-22,10,1)}/>
     <PlotTree u={-25} v={-23} round={variant===1}/>
     <PlotTree u={25} v={-24}/>
     <PlotTree u={-26} v={18} round/>
     <path className="city-parcel-bench" d={`M${point(-17,25,2)} L${point(-6,25,2)}`}/>
+    <path className="city-parcel-bench-legs" d={`M${point(-15,25,2)}L${point(-15,25)} M${point(-8,25,2)}L${point(-8,25)}`}/>
+    {[-17,-11,-5].map(u=><g key={u} transform={`translate(${point(u,-27,1)})`}><ellipse className="city-flower-bed" rx="3.8" ry="2"/><circle className="city-parcel-blossom" cx="-1" cy="-1.6" r=".9"/><circle className="city-parcel-blossom" cx="1.5" cy="-.5" r=".8"/></g>)}
     {[9,18].map(u=><g key={u} transform={`translate(${point(u,29,1)})`}><path className="city-parcel-light-post" d="M0 0V-6"/><circle className="city-parcel-light" cy="-6" r="1.5"/></g>)}
   </g>;
 }
@@ -126,6 +129,10 @@ function CityBuilding({tier,side:footprint,variant=0}: {tier:number;side:number;
       <path className="city-entrance" d={`M${point(8,20,0)} L${point(8,20,8)} L${point(14,20,8)} L${point(14,20,0)} Z`}/>
       {tier>=2?<polygon className="city-entrance-canopy" points={square(11,21,12,9)}/>:null}
       </>}
+    </g>
+    <g className="city-building-entry-details">
+      <path className="city-entry-steps" d={`M${point(6,24,.9)}L${point(16,24,.9)} M${point(5,27,.6)}L${point(17,27,.6)}`}/>
+      <path className="city-entry-bollards" d={`M${point(4,23)}L${point(4,23,3)} M${point(18,23)}L${point(18,23,3)}`}/>
     </g>
   </g>;
 }

@@ -3,6 +3,7 @@
 
 import Link from 'next/link';
 import CityBuilding from './city-building';
+import CityLandmark from './city-landmark';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { PointerEvent } from 'react';
 import { Crosshair, Maximize2, PanelRightClose, PanelRightOpen, Search, X, ZoomIn, ZoomOut } from 'lucide-react';
@@ -119,7 +120,12 @@ export default function EcosystemMap({projects,language}:Props) {
     if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);
   };
   const sceneId=useId().replace(/:/g,'');
-  const {buildings,vacant,blocks,streets,cityWidth,cityDepth,span,origin,width,height}=useMemo(()=>layoutMap(projects),[projects]);
+  const {buildings,landscapeVacant,blocks,streets,landmarks,cityWidth,cityDepth,span,origin,width,height}=useMemo(()=>layoutMap(projects),[projects]);
+  const waterfrontLandmarks=landmarks.filter(landmark=>landmark.placement==='waterfront');
+  const sceneObjects=useMemo(()=>[
+    ...buildings.map(building=>({x:building.x,y:building.y,building,landmark:null})),
+    ...landmarks.map(landmark=>({x:origin.x+landmark.u-landmark.v,y:origin.y+(landmark.u+landmark.v+landmark.side)/2,landmark,building:null})),
+  ].sort((a,b)=>a.y-b.y||a.x-b.x),[buildings,landmarks,origin]);
   const fittedWidth=viewportSize?Math.min(viewportSize.width,viewportSize.height*width/height):null;
   const categories=useMemo(()=>[...new Set(projects.flatMap(project=>project.categories))].sort((a,b)=>a.localeCompare(b)),[projects]);
   const matches=useMemo(()=>projects.filter(project=>{
@@ -214,7 +220,7 @@ export default function EcosystemMap({projects,language}:Props) {
           <path className="city-river-bank" d={river}/>
           <path className="city-river" d={river}/>
           <path className="city-river-current" d={river}/>
-          {vacant.map((cell,i)=><g key={i}>
+          {landscapeVacant.map((cell,i)=><g key={i}>
             <polygon className="city-park-lawns" points={[gp(cell.u,cell.v),gp(cell.u+cell.side,cell.v),gp(cell.u+cell.side,cell.v+cell.side),gp(cell.u,cell.v+cell.side)].join(' ')}/>
             {[.25,.65].map(r=>{const[x,y]=ground(cell.u+cell.side*r,cell.v+cell.side*.5);return <Tree key={r} x={x} y={y} small/>;})}
           </g>)}
@@ -256,8 +262,21 @@ export default function EcosystemMap({projects,language}:Props) {
           <g className="city-marina"><path d={`M${gp(cityWidth*.8,cityDepth+64)} L${gp(cityWidth*.8,cityDepth+125)} L${gp(cityWidth*.35,cityDepth+125)}`}/>{[.4,.55,.7].map(r=><path key={r} d={`M${gp(cityWidth*r,cityDepth+125)} L${gp(cityWidth*r,cityDepth+170)}`}/>)}</g>
           <Boat x={ground(cityWidth*.5,cityDepth+190)[0]} y={ground(cityWidth*.5,cityDepth+190)[1]}/>
           <Boat x={ground(-120,cityDepth*.7)[0]} y={ground(-120,cityDepth*.7)[1]}/>
+          <g className="city-civic-promenade">
+            <path d={`M${gp(landmarks[0].u+landmarks[0].side/2,landmarks[0].v+landmarks[0].side/2)} L${gp(landmarks[1].u+landmarks[1].side/2,landmarks[1].v+landmarks[1].side/2)}`}/>
+            {waterfrontLandmarks.map(landmark=>{
+              const v=landmark.v+landmark.side/2;
+              return <path key={landmark.kind} d={`M${gp(cityWidth+142,v)} L${gp(landmark.u+landmark.side/2,v)}`}/>;
+            })}
+          </g>
         </g>
-        {buildings.map(({project,x,y})=>{
+        {sceneObjects.map(item=>{
+          const {x,y}=item;
+          if(item.landmark){
+            const landmark=item.landmark;
+            return <g key={`landmark-${landmark.kind}`} transform={`translate(${x} ${y})`} data-landmark={landmark.kind}><CityLandmark kind={landmark.kind} side={landmark.side} language={language}/></g>;
+          }
+          const {project}=item.building!;
           const {cap,buildingTier,plotTier,side}=mapScale(project.tokenMetrics?.marketCapUsd);
           const label=`${project.name} · ${money(cap,zh)} · ${buildingTier===null?t('Awaiting market cap','待补充市值'):`${BUILDING_TIERS[buildingTier].name[zh?1:0]} / ${BUILDING_TIERS[buildingTier].label} · ${t('Plot','地块')} ${PLOT_TIERS[plotTier!].size}`}`;
           return <g key={project.slug} transform={`translate(${x} ${y})`}><a href={`/projects/${encodeURIComponent(project.slug)}`} className={projectClass(project.slug)} onClick={event=>{event.preventDefault();selectProject(project.slug);}} onMouseEnter={()=>setActiveSlug(project.slug)} onMouseLeave={()=>setActiveSlug(null)} onFocus={()=>{setActiveSlug(project.slug);selectProject(project.slug);}} onBlur={()=>setActiveSlug(null)} aria-label={label} data-project={project.slug} data-building-tier={buildingTier??'unknown'} data-plot-tier={plotTier??'unknown'}>
