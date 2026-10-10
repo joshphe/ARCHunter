@@ -5,6 +5,8 @@ import { Area, AreaChart, Brush, CartesianGrid, ResponsiveContainer, Tooltip, XA
 import { ArrowDownRight, ArrowUpRight, ExternalLink, Flame, Radio, RefreshCw, Trophy } from 'lucide-react';
 import { ARC_LAUNCH_START_TIMESTAMP } from '@/lib/arc';
 import ProjectAvatar from '@/app/project-avatar';
+import type { EcosystemProject } from '@/lib/project-schema';
+import { projectLogoForHandle } from '@/lib/project-logo';
 
 type Launchpad = {
   slug: string; name: string; logo: string; xHandle: string; color: string; available: boolean;
@@ -12,12 +14,12 @@ type Launchpad = {
   change24h: number | null; history: [number, number][]; methodology: string | null; sourceUrl: string;
 };
 type ApiResponse = { updatedAt: string; launchpads: Launchpad[] };
-type Props = { language: 'en' | 'zh'; isDark: boolean };
+type Props = { language: 'en' | 'zh'; isDark: boolean; projects: EcosystemProject[] };
 
 const money = (value: number | null) => value === null ? '—' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: value < 100 ? 2 : 0 }).format(value);
 const pct = (value: number | null) => value === null ? '—' : `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
 
-export default function LaunchpadPage({ language, isDark }: Props) {
+export default function LaunchpadPage({ language, isDark, projects }: Props) {
   const zh = language === 'zh';
   const t = (en: string, cn: string) => zh ? cn : en;
   const [data, setData] = useState<ApiResponse | null>(null);
@@ -169,7 +171,7 @@ export default function LaunchpadPage({ language, isDark }: Props) {
       <div className="launchpad-table-scroll"><table className="launchpad-table"><thead><tr><th>#</th><th>{t('LAUNCHPAD', '发射台')}</th><th>{t('FEES · 24H', '费用 · 24 小时')}</th><th>{t('FEES · 7D', '费用 · 7 天')}</th><th>{t('FEES · 30D', '费用 · 30 天')}</th><th>{t('24H CHANGE', '24 小时变化')}</th></tr></thead><tbody>
         {[...launchpads].sort((a, b) => (b.fees24h ?? -1) - (a.fees24h ?? -1)).map((item, index) => <tr key={item.slug}>
           <td className="launchpad-rank">{item.available ? String(index + 1).padStart(2, '0') : '—'}</td>
-          <td><div className="launchpad-project"><ProjectAvatar key={item.xHandle} className="launchpad-avatar" handle={item.xHandle} symbol={item.logo}/><span><b>{item.name}</b><small>{item.available ? t('Tracked on Arc', 'Arc 链上追踪中') : t('Data unavailable', '暂不可用')}</small></span></div></td>
+          <td><div className="launchpad-project"><ProjectAvatar key={item.xHandle} className="launchpad-avatar" handle={item.xHandle} symbol={item.logo} logoUrl={projectLogoForHandle(projects, item.xHandle)}/><span><b>{item.name}</b><small>{item.available ? t('Tracked on Arc', 'Arc 链上追踪中') : t('Data unavailable', '暂不可用')}</small></span></div></td>
           <td className="launchpad-money">{money(item.fees24h)}</td><td className="launchpad-money">{money(item.fees7d)}</td><td className="launchpad-money">{money(item.fees30d)}</td>
           <td><span className={item.change24h === null ? 'launchpad-change unavailable' : item.change24h >= 0 ? 'launchpad-change positive' : 'launchpad-change negative'}>{item.change24h !== null && (item.change24h >= 0 ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>)} {pct(item.change24h)}</span></td>
         </tr>)}

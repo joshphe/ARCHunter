@@ -468,3 +468,7 @@ html[data-theme='light'] .project-directory-sync.is-unavailable .ecosystem-revie
 @keyframes directory-refresh-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.project-directory-refresh .is-spinning{animation:none}}
 @media(max-width:760px){.project-directory-sync{justify-content:flex-start;flex-shrink:1}.ecosystem-map-workspace .page-heading{flex-wrap:wrap;gap:8px}}
+
+/* Keep missing avatars inside their allotted space, including long token symbols. */
+.x-avatar-container{overflow:hidden;flex-shrink:0}
+.x-avatar-initials{display:block;max-width:100%;overflow:hidden;white-space:nowrap;line-height:1;text-align:center}

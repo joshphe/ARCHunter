@@ -9,6 +9,7 @@ import { Crosshair, Maximize2, PanelRightClose, PanelRightOpen, Search, X, ZoomI
 import type { EcosystemProject } from '@/lib/project-schema';
 import { BUILDING_TIERS, PLOT_TIERS, layoutMap, mapScale, buildingHeight, buildingVariant } from '@/lib/ecosystem-map-layout';
 import ProjectAvatar from '@/app/project-avatar';
+import { avatarInitials, useProjectAvatar } from '@/app/use-project-avatar';
 
 type Props = { projects: EcosystemProject[]; language: 'en' | 'zh' };
 function Tree({ x, y, small = false }: { x: number; y: number; small?: boolean }) {
@@ -19,18 +20,17 @@ function Tree({ x, y, small = false }: { x: number; y: number; small?: boolean }
     <path d="M0-50V-9L-17-18Z" className="city-tree-light"/>
   </g>;
 }
-function ProjectBillboard({ handle, symbol, name, height, side }: { handle: string; symbol: string; name: string; height: number; side: number }) {
+function ProjectBillboard({ handle, symbol, logoUrl, name, height, side }: { handle: string; symbol: string; logoUrl?: string | null; name: string; height: number; side: number }) {
   const clip = useId().replace(/:/g, '');
-  const [failed, setFailed] = useState(false);
-  const username = handle.replace(/^@/, '').trim();
+  const { src, markFailed } = useProjectAvatar(handle, logoUrl);
   const scale = Math.min(2,Math.max(1,Math.sqrt(side/128)));
   return <g className="city-billboard" transform={`translate(0 ${-height-side*.13-32*scale}) scale(${scale})`} aria-hidden="true">
     <defs><clipPath id={`${clip}-avatar`}><rect x="-41" y="-11" width="22" height="22" rx="5"/></clipPath></defs>
     <path className="city-billboard-support" d="M-25 14V36M25 14V36"/>
     <rect className="city-billboard-frame" x="-48" y="-17" width="96" height="34" rx="7"/>
     <rect className="city-billboard-logo" x="-41" y="-11" width="22" height="22" rx="5"/>
-    <text className="city-billboard-initials" x="-30" y="4" textAnchor="middle">{symbol.slice(0,3)}</text>
-    {!failed && username ? <image href={`https://unavatar.io/x/${encodeURIComponent(username)}`} x="-41" y="-11" width="22" height="22" clipPath={`url(#${clip}-avatar)`} onError={()=>setFailed(true)}/> : null}
+    <text className="city-billboard-initials" x="-30" y="4" textAnchor="middle">{avatarInitials(symbol, handle)}</text>
+    {src ? <image key={src} href={src} x="-41" y="-11" width="22" height="22" preserveAspectRatio="xMidYMid slice" clipPath={`url(#${clip}-avatar)`} onError={()=>markFailed(src)}/> : null}
     <text className="city-billboard-name" x="-12" y="0">{name.length>10?`${name.slice(0,9)}…`:name}</text>
     <text className="city-billboard-symbol" x="-12" y="10">{symbol.slice(0,9)}</text>
     <path className="city-billboard-strip" d="M-38 16H38"/>
@@ -258,7 +258,7 @@ export default function EcosystemMap({projects,language}:Props) {
         })}
         {buildings.map(({project,x,y})=>{
           const {side,buildingTier}=mapScale(project.tokenMetrics?.marketCapUsd);
-          return <g key={project.slug} transform={`translate(${x} ${y})`}><a href={`/projects/${encodeURIComponent(project.slug)}`} className={projectClass(project.slug)} tabIndex={-1} aria-label={project.name} onClick={event=>{event.preventDefault();selectProject(project.slug);}} onMouseEnter={()=>setActiveSlug(project.slug)} onMouseLeave={()=>setActiveSlug(null)}><title>{`${project.name} · ${money(mapScale(project.tokenMetrics?.marketCapUsd).cap,zh)}`}</title><ProjectBillboard handle={project.handle} symbol={project.symbol} name={project.name} height={buildingTier===null?0:buildingHeight(buildingTier,side)} side={side}/></a></g>;
+          return <g key={project.slug} transform={`translate(${x} ${y})`}><a href={`/projects/${encodeURIComponent(project.slug)}`} className={projectClass(project.slug)} tabIndex={-1} aria-label={project.name} onClick={event=>{event.preventDefault();selectProject(project.slug);}} onMouseEnter={()=>setActiveSlug(project.slug)} onMouseLeave={()=>setActiveSlug(null)}><title>{`${project.name} · ${money(mapScale(project.tokenMetrics?.marketCapUsd).cap,zh)}`}</title><ProjectBillboard handle={project.handle} symbol={project.symbol} logoUrl={project.logoUrl} name={project.name} height={buildingTier===null?0:buildingHeight(buildingTier,side)} side={side}/></a></g>;
         })}
       </svg>
     </div>
