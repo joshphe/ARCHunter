@@ -36,7 +36,7 @@ export default function Home(){
  const handleWorkspaceKeyDown=(event:KeyboardEvent<HTMLButtonElement>,key:Workspace)=>{if(!event.altKey)return;if(event.key==='ArrowUp'){event.preventDefault();moveWorkspace(key,-1)}else if(event.key==='ArrowDown'){event.preventDefault();moveWorkspace(key,1)}};
  const handleWorkspaceDragStart=(event:DragEvent<HTMLDivElement>,key:Workspace)=>{event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',key);setDraggedWorkspace(key)};
  const handleWorkspaceDrop=(event:DragEvent<HTMLDivElement>,target:Workspace)=>{event.preventDefault();const source=draggedWorkspace??event.dataTransfer.getData('text/plain') as Workspace;if(source)reorderWorkspace(source,target);setDraggedWorkspace(null);setDropTarget(null)};
- return <main className="shell">
+ return <main className={`shell${active==='Map'?' is-map-workspace':''}`}>
   <aside className={`sidebar ${mobileOpen?'mobile-open':''}`}>
    <div className="brand"><div className="brand-mark"><span/></div><span>arc<span className="brand-light">watch</span></span><button className="mobile-close" onClick={()=>setMobileOpen(false)}><X size={18}/></button></div>
    <div className="network"><span className="network-dot"/> {tr('ARC Network','ARC 网络')} <ChevronDown size={14}/><span className="network-main">MAINNET</span></div>

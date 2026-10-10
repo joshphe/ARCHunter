@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import CityBuilding from './city-building';
-import { useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { PointerEvent } from 'react';
 import { Crosshair, Maximize2, PanelRightClose, PanelRightOpen, Search, X, ZoomIn, ZoomOut } from 'lucide-react';
 import type { EcosystemProject } from '@/lib/project-schema';
@@ -71,9 +71,22 @@ export default function EcosystemMap({projects,language}:Props) {
   const [categoryFilter,setCategoryFilter]=useState('all');
   const [capFilter,setCapFilter]=useState<CapFilter>('all');
   const [searchFocused,setSearchFocused]=useState(false);
-  const [guideCollapsed,setGuideCollapsed]=useState(false);
+  const [guideCollapsed,setGuideCollapsed]=useState(true);
   const [dragging,setDragging]=useState(false);
   const viewportRef=useRef<HTMLDivElement>(null);
+  const [viewportSize,setViewportSize]=useState<{width:number;height:number}|null>(null);
+  useEffect(()=>{
+    const viewport=viewportRef.current;
+    if(!viewport)return;
+    const updateSize=()=>{
+      const width=viewport.clientWidth,height=viewport.clientHeight;
+      setViewportSize(previous=>previous?.width===width&&previous.height===height?previous:{width,height});
+    };
+    updateSize();
+    const observer=new ResizeObserver(updateSize);
+    observer.observe(viewport);
+    return ()=>observer.disconnect();
+  },[]);
   const gesture=useRef<{id:number;x:number;y:number;left:number;top:number;moved:boolean}|null>(null);
   const suppressClick=useRef(false);
   const startPan=(event:PointerEvent<HTMLDivElement>)=>{
@@ -107,6 +120,7 @@ export default function EcosystemMap({projects,language}:Props) {
   };
   const sceneId=useId().replace(/:/g,'');
   const {buildings,vacant,blocks,streets,cityWidth,cityDepth,span,origin,width,height}=useMemo(()=>layoutMap(projects),[projects]);
+  const fittedWidth=viewportSize?Math.min(viewportSize.width,viewportSize.height*width/height):null;
   const categories=useMemo(()=>[...new Set(projects.flatMap(project=>project.categories))].sort((a,b)=>a.localeCompare(b)),[projects]);
   const matches=useMemo(()=>projects.filter(project=>{
     const normalized=query.trim().toLowerCase();
@@ -169,23 +183,20 @@ export default function EcosystemMap({projects,language}:Props) {
   const profileHref=selectedProject?`/projects/${encodeURIComponent(selectedProject.slug)}`:undefined;
 
   return <section className={`ecosystem-map-card${guideCollapsed?' is-guide-collapsed':''}`} aria-label={t('Arc ecosystem map','Arc 生态地图')}>
+    <div className="city-scene">
     <div className="ecosystem-map-toolbar">
-      <div><span className="section-kicker">THE ARC ATLAS</span><b>{t('A living city, shaped by its projects.','一座由项目生长而成的城市。')}</b></div>
       <div className="ecosystem-map-tools">
         <button type="button" disabled={zoom>=3.2} onClick={()=>setZoom(v=>Math.min(3.2,+(v+.2).toFixed(1)))} aria-label={t('Zoom in','放大地图')}><ZoomIn size={15}/></button>
         <button type="button" disabled={zoom<=.8} onClick={()=>setZoom(v=>Math.max(.8,+(v-.2).toFixed(1)))} aria-label={t('Zoom out','缩小地图')}><ZoomOut size={15}/></button>
         <button type="button" onClick={()=>{setZoom(1);viewportRef.current?.scrollTo({left:0,top:0});}} aria-label={t('Fit entire map','适配全图')} title={t('Fit entire map','适配全图')}><Maximize2 size={14}/></button>
       </div>
     </div>
-    <div className="city-scene">
-      <div className="city-scene-heading"><span>ARC / ECOSYSTEM</span><strong>{t('The onchain city','链上之城')}</strong><p>{t('Every building tells a story.','每一座建筑，都是一个项目。')}</p></div>
-      <div className="city-scene-index"><b>{String(projects.length).padStart(2,'0')}</b><span>{t('PROJECTS','项目坐标')}</span><i/>{t(`${priced} with market cap`,`${priced} 个已有市值`)}</div>
     <div ref={viewportRef} className={`ecosystem-map-viewport${dragging?' is-dragging':''}`} tabIndex={0} role="region" aria-label={t('Scrollable city map · drag to pan','可滚动城市地图 · 拖拽平移')}
       onPointerDown={startPan} onPointerMove={movePan} onPointerUp={endPan} onPointerCancel={endPan} onLostPointerCapture={endPan}
       onPointerLeave={()=>{if(!gesture.current?.moved)gesture.current=null;}}
       onDragStart={event=>event.preventDefault()}
       onClickCapture={event=>{if(suppressClick.current&&event.detail!==0){event.preventDefault();event.stopPropagation();suppressClick.current=false;}}}>
-      <svg className="arc-city" viewBox={`0 0 ${width} ${height}`} style={{width:`${zoom*100}%`,minWidth:0}} aria-label={t('Isometric project buildings','等距视角项目建筑')}>
+      <svg className="arc-city" viewBox={`0 0 ${width} ${height}`} style={{width:fittedWidth===null?`${zoom*100}%`:`${fittedWidth*zoom}px`,minWidth:0}} aria-label={t('Isometric project buildings','等距视角项目建筑')}>
         <defs>
           <linearGradient id={`${sceneId}-ground`} x1="0" y1="0" x2="0" y2="1"><stop className="city-ground-stop-light" stopColor="#d7efb6"/><stop className="city-ground-stop-dark" offset="1" stopColor="#a9d892"/></linearGradient>
           <pattern id={`${sceneId}-paving`} width="90" height="45" patternUnits="userSpaceOnUse"><path d="M0 22.5L45 0L90 22.5L45 45Z" fill="none" stroke="#eff9c6" strokeOpacity=".38" strokeWidth="1"/></pattern>
@@ -263,7 +274,7 @@ export default function EcosystemMap({projects,language}:Props) {
       </svg>
     </div>
     {activeProject?<div className="city-project-detail" aria-live="polite"><b>{activeProject.name}</b><span>{money(mapScale(activeProject.tokenMetrics?.marketCapUsd).cap,zh)} · {t('Plot','地块')} {PLOT_TIERS[mapScale(activeProject.tokenMetrics?.marketCapUsd).plotTier??0].size}</span><span>{t('Select the plot to see its profile →','选中地块后可在侧栏打开项目详情 →')}</span></div>:null}
-    <div className="city-scene-footer"><span><i/>{t('ISOMETRIC VIEW','等距视角')} <em>2.5D</em></span><span>{t('Drag to pan · Select a building · Open its profile in the side panel','拖拽平移 · 点击建筑选中 · 从侧栏打开项目详情')}</span></div>
+    <div className="city-scene-footer"><span>{t(`${projects.length} projects · ${priced} priced`,`${projects.length} 个项目 · ${priced} 个已有市值`)}</span><span>{t('Drag to pan · Select a building for details','拖拽平移 · 点击建筑查看详情')}</span></div>
     </div>
     <div className="city-scale-guide" tabIndex={guideCollapsed?-1:0} role="region" aria-label={t('Project details','项目详情')}>
       <button className="city-guide-collapse" type="button" onClick={()=>setGuideCollapsed(value=>!value)} aria-expanded={!guideCollapsed} aria-label={guideCollapsed?t('Expand details panel','展开详情栏'):t('Collapse details panel','向右收起详情栏')} title={guideCollapsed?t('Expand details panel','展开详情栏'):t('Collapse details panel','向右收起详情栏')}>
