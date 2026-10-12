@@ -39,6 +39,16 @@ export type EcosystemProject = {
   riskReviews?: RiskReview[];
 };
 
+// Public directory payload; full profiles and review history stay on the detail route.
+export type ProjectSummary = Pick<EcosystemProject,
+  'slug' | 'name' | 'symbol' | 'handle' | 'logoUrl' | 'tagline' | 'taglineZh' |
+  'categories' | 'status' | 'tvl' | 'tokenAddress' | 'tokenMetrics' |
+  'verifiedOn' | 'recommended' | 'updates'> & {
+  observationScore: number | null;
+  riskReview: Pick<RiskReview, 'priority' | 'evidenceStatus' | 'reviewedOn'> | null;
+  mapSlot: number | null;
+};
+
 export type ProjectInput = Omit<EcosystemProject, 'sourceUrls' | 'verifiedOn' | 'recommended' | 'recommendationReason' | 'taglineZh' | 'isPublished' | 'updates' | 'tokenMetrics'> & {
   logoUrl?: string | null;
   taglineZh?: string;

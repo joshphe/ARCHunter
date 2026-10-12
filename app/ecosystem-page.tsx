@@ -3,14 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, ExternalLink, Search, Send, TriangleAlert } from 'lucide-react';
-import type { EcosystemProject } from '@/lib/project-schema';
+import type { ProjectSummary } from '@/lib/project-schema';
 import { riskLabels, evidenceLabels, riskDescriptions, evidenceDescriptions } from '@/lib/project-risk';
 import ProjectAvatar from '@/app/project-avatar';
 import ProjectDirectorySync from './project-directory-sync';
 import type { DirectorySyncProps } from './project-directory-sync';
-import { getProjectScore } from '@/lib/project-scoring';
 
-type Props = { language: 'en' | 'zh'; projects: EcosystemProject[] } & DirectorySyncProps;
+type Props = { language: 'en' | 'zh'; projects: ProjectSummary[] } & DirectorySyncProps;
 const PROJECTS_PER_PAGE = 10;
 
 const categories = [
@@ -77,13 +76,13 @@ export default function EcosystemPage({ language, projects, ...syncProps }: Prop
     const matchesCategory = category === 'all' || project.categories.includes(category);
     const matchesStatus = status === 'all' || project.status === status;
     const term = query.trim().toLowerCase();
-    const searchableText = `${project.tokenAddress ?? ''} ${project.symbol} ${project.name} ${project.handle} ${project.categories.join(' ')} ${project.tagline} ${project.description.en} ${project.description.zh}`;
-    return (risk === 'all' || (project.riskReviews?.[0]?.priority ?? 'unassessed') === risk) && matchesCategory && matchesStatus && (!term || searchableText.toLowerCase().includes(term));
+    const searchableText = `${project.tokenAddress ?? ''} ${project.symbol} ${project.name} ${project.handle} ${project.categories.join(' ')} ${project.tagline} ${project.taglineZh}`;
+    return (risk === 'all' || (project.riskReview?.priority ?? 'unassessed') === risk) && matchesCategory && matchesStatus && (!term || searchableText.toLowerCase().includes(term));
   }), [category, projects, query, status, risk]);
   const sortedProjects = useMemo(() => {
     if (sortBy === 'recommended') return filteredProjects;
     return [...filteredProjects].sort((a, b) => {
-      if (sortBy === 'score') return (getProjectScore(b.scorecard).total ?? -1) - (getProjectScore(a.scorecard).total ?? -1);
+      if (sortBy === 'score') return (b.observationScore ?? -1) - (a.observationScore ?? -1);
       if (sortBy === 'market-cap') return (b.tokenMetrics?.marketCapUsd ?? -1) - (a.tokenMetrics?.marketCapUsd ?? -1);
       if (sortBy === 'tvl') return (b.tvl ?? -1) - (a.tvl ?? -1);
       return b.verifiedOn.localeCompare(a.verifiedOn);
@@ -137,8 +136,8 @@ export default function EcosystemPage({ language, projects, ...syncProps }: Prop
       <div className="ecosystem-table-body">
         {visibleProjects.map((project) => {
           const marketValue = project.tokenMetrics?.marketCapUsd ?? null;
-          const score = getProjectScore(project.scorecard).total;
-          const review = project.riskReviews?.[0];
+          const score = project.observationScore;
+          const review = project.riskReview;
           return <Link href={`/projects/${encodeURIComponent(project.slug)}`} className="ecosystem-table-row" key={project.slug} onClick={rememberScroll}>
             <span className="ecosystem-table-project"><ProjectAvatar handle={project.handle} symbol={project.symbol} logoUrl={project.logoUrl}/><span><span className="ecosystem-project-name"><b>{project.name}</b><span className={`ecosystem-risk-badge risk-${review?.priority ?? 'unassessed'}`} title={riskDescriptions[review?.priority ?? 'unassessed'][language]}><TriangleAlert size={11} aria-hidden="true"/>{riskLabels[review?.priority ?? 'unassessed'][language]}</span></span><small>{project.handle}</small>{review && <small title={evidenceDescriptions[review.evidenceStatus][language]}>{evidenceLabels[review.evidenceStatus][language]} · {review.reviewedOn}</small>}</span></span>
             <span className="ecosystem-table-tags">{project.categories.slice(0, 3).map((item) => <i key={item}>{categoryLabel(item, zh)}</i>)}</span>

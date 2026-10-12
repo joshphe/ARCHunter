@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { listProjects } from '@/lib/projects-db';
+import { listProjectSummaries, summarizeProject } from '@/lib/projects-db';
 import { getTokenMetrics } from '@/lib/token-metrics';
 import { fallbackProjects } from '@/lib/fallback-projects';
 
@@ -10,13 +10,13 @@ export async function GET(request: Request) {
   let projects;
   let source = 'database';
   try {
-    projects = await listProjects(true);
+    projects = await listProjectSummaries();
   } catch (error) {
     console.warn('Could not load the project directory:', error instanceof Error ? error.message : 'unknown database error');
     if (process.env.DATABASE_URL) {
       return NextResponse.json({ error: 'Project directory is temporarily unavailable.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
     }
-    projects = fallbackProjects.filter(project => project.isPublished);
+    projects = fallbackProjects.filter(project => project.isPublished).map(summarizeProject);
     source = 'bundled';
   }
   const headers = { 'Cache-Control': 'no-store', 'X-Project-Data-Source': source };

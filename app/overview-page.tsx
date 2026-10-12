@@ -5,10 +5,11 @@ import { Area, AreaChart, Brush, CartesianGrid, ResponsiveContainer, Tooltip, XA
 import { ArrowDownRight, ArrowUpRight, ExternalLink, Flame, Radio, RefreshCw, Sparkles, Wallet } from 'lucide-react';
 import { ARC_LAUNCH_START_TIMESTAMP } from '@/lib/arc';
 import ProjectAvatar from '@/app/project-avatar';
-import type { EcosystemProject } from '@/lib/project-schema';
+import type { ProjectSummary } from '@/lib/project-schema';
 import { projectLogoForHandle } from '@/lib/project-logo';
 import NetworkActivityPanel, { type NetworkActivityData } from '@/app/network-activity-panel';
 import Link from 'next/link';
+import { useOverviewResource } from './use-overview-resource';
 
 type Protocol = { name: string; twitter?: string; module?: string; category?: string; logo?: string; total24h?: number; total7d?: number; total30d?: number; change_1d?: number };
 type HistoryPoint = { timestamp: number; tvl?: number; fees?: number; volume?: number };
@@ -19,7 +20,7 @@ type OverviewData = {
 };
 type Launchpad = { slug: string; name: string; logo: string; xHandle: string; available: boolean; fees24h: number | null; fees7d: number | null; change24h: number | null };
 type LaunchpadData = { launchpads: Launchpad[] };
-type Props = { language: 'en' | 'zh'; isDark: boolean; projects: EcosystemProject[]; onNavigate: () => void };
+type Props = { language: 'en' | 'zh'; isDark: boolean; projects: ProjectSummary[]; onNavigate: () => void };
 type Metric = 'tvl' | 'fees' | 'volume';
 
 const currency = (value: number | null | undefined, compact = true) => value == null ? '—' : new Intl.NumberFormat('en-US', {
@@ -30,36 +31,26 @@ const percent = (value: number | null | undefined) => value == null ? '—' : `$
 export default function OverviewPage({ language, isDark, projects, onNavigate }: Props) {
   const zh = language === 'zh';
   const t = (en: string, cn: string) => zh ? cn : en;
-  const [data, setData] = useState<OverviewData | null>(null);
-  const [networkActivity, setNetworkActivity] = useState<NetworkActivityData | null>(null);
-  const [networkActivityLoaded, setNetworkActivityLoaded] = useState(false);
-  const [launchpads, setLaunchpads] = useState<Launchpad[]>([]);
-  const [failed, setFailed] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const overview = useOverviewResource<OverviewData>('/api/overview');
+  const launchpad = useOverviewResource<LaunchpadData>('/api/launchpads');
+  const activity = useOverviewResource<NetworkActivityData>('/api/network-activity');
+  const data = overview.data;
+  const launchpads = launchpad.data?.launchpads ?? [];
+  const failed = overview.failed || Boolean(data?.partial);
+  const refreshing = overview.loading || launchpad.loading || activity.loading;
   const [metric, setMetric] = useState<Metric>('tvl');
   const [period, setPeriod] = useState<number | null>(30);
   const [chartWindow, setChartWindow] = useState({ startIndex: 0, endIndex: 0 });
 
-  async function loadData(force = false) {
-    setRefreshing(true);
-    const refreshQuery = force ? `?refresh=${Date.now()}` : '';
-    const [overviewResult, launchpadResult, activityResult] = await Promise.allSettled([
-      fetch(`/api/overview${refreshQuery}`, force ? { cache: 'no-store' } : undefined).then((res) => { if (!res.ok) throw new Error('Failed'); return res.json() as Promise<OverviewData>; }),
-      fetch(`/api/launchpads${refreshQuery}`, force ? { cache: 'no-store' } : undefined).then((res) => { if (!res.ok) throw new Error('Failed'); return res.json() as Promise<LaunchpadData>; }),
-      fetch(`/api/network-activity${refreshQuery}`, force ? { cache: 'no-store' } : undefined).then((res) => { if (!res.ok) throw new Error('Failed'); return res.json() as Promise<NetworkActivityData>; }),
-    ]);
-    if (overviewResult.status === 'fulfilled') { setData(overviewResult.value); setFailed(overviewResult.value.partial); }
-    else setFailed(true);
-    if (launchpadResult.status === 'fulfilled') setLaunchpads(launchpadResult.value.launchpads);
-    if (activityResult.status === 'fulfilled') setNetworkActivity(activityResult.value);
-    setNetworkActivityLoaded(true);
-    setRefreshing(false);
+  function refreshAll() {
+    void overview.refresh();
+    void launchpad.refresh();
+    void activity.refresh();
   }
 
-  useEffect(() => { void loadData(); }, []);
-
   const history = useMemo(() => {
-    const points = (data?.history ?? []).filter((point) => point.timestamp >= ARC_LAUNCH_START_TIMESTAMP);
+    if (!data) return [];
+    const points = data.history.filter((point) => point.timestamp >= ARC_LAUNCH_START_TIMESTAMP);
     if (!points.some((point) => point.timestamp === ARC_LAUNCH_START_TIMESTAMP)) {
       points.push({ timestamp: ARC_LAUNCH_START_TIMESTAMP });
     }
@@ -98,9 +89,9 @@ export default function OverviewPage({ language, isDark, projects, onNavigate }:
   return <div className="content overview-content">
     <div className="page-heading overview-heading">
       <div><div className="eyebrow"><span className="eyebrow-line"/>{t('ARC ECOSYSTEM INTELLIGENCE', 'ARC 生态情报')}<span className="eyebrow-line"/></div><h1>ARC <span>{t('Overview', '总览')}</span></h1><p className="subtitle">{t('A live pulse of activity across the Arc ecosystem.', '实时掌握 Arc 生态整体动态。')}</p></div>
-      <button className="overview-refresh" onClick={() => void loadData(true)} disabled={refreshing}><RefreshCw size={14} className={refreshing ? 'spin' : ''}/>{t('Refresh', '刷新')}</button>
+      <button className="overview-refresh" onClick={refreshAll} disabled={refreshing}><RefreshCw size={14} className={refreshing ? 'spin' : ''}/>{t('Refresh', '刷新')}</button>
     </div>
-    <div className="overview-sourcebar"><span className="overview-live"><i/> {t('LIVE DATA', '实时数据')}</span><span>{t('Source: DefiLlama', '数据来源：DefiLlama')}</span>{updatedLabel && <span className="overview-updated">{t('Checked', '最近检查')} {updatedLabel}</span>}{failed && <span className="overview-partial">{t('Some data is temporarily unavailable', '部分数据暂时不可用')}</span>}<a href="https://defillama.com/chain/arc" target="_blank" rel="noreferrer">{t('Open source page', '打开数据源')} <ExternalLink size={12}/></a></div>
+    <div className="overview-sourcebar"><span className="overview-live"><i/> {t('LIVE DATA', '实时数据')}</span><span>{t('Source: DefiLlama', '数据来源：DefiLlama')}</span>{updatedLabel && <span className="overview-updated">{t('Checked', '最近检查')} {updatedLabel}</span>}{failed && <span className="overview-partial">{overview.failed && data ? t('Refresh failed; showing the previous snapshot', '刷新失败，保留上次数据') : t('Some data is temporarily unavailable', '部分数据暂时不可用')} <button className="module-retry" disabled={overview.loading} onClick={() => void overview.refresh()}>{t('Retry', '重试')}</button></span>}<a href="https://defillama.com/chain/arc" target="_blank" rel="noreferrer">{t('Open source page', '打开数据源')} <ExternalLink size={12}/></a></div>
 
     <div className="overview-metrics">
       <article className="overview-metric-card"><div className="overview-metric-label"><span>{t('TOTAL VALUE LOCKED', '总锁仓价值')}</span><Wallet size={15}/></div><strong>{currency(data?.metrics.tvl)}</strong><div className="overview-metric-foot"><span className={data?.metrics.tvlChange24h != null && data.metrics.tvlChange24h < 0 ? 'negative' : 'positive'}>{data?.metrics.tvlChange24h != null && (data.metrics.tvlChange24h >= 0 ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>)} {percent(data?.metrics.tvlChange24h)}</span><span>{t('24h change', '24 小时变化')}</span></div></article>
@@ -124,14 +115,14 @@ export default function OverviewPage({ language, isDark, projects, onNavigate }:
       <div className="overview-chart-summary"><span>{currentMetric.label}<b>{currency(currentMetric.value)}</b></span><span>{t('24h change', '24 小时变化')}<b className={(currentMetric.change ?? 0) < 0 ? 'negative' : 'positive'}>{percent(currentMetric.change)}</b></span><span className="overview-chart-source">{t('Daily data', '每日数据')}</span></div>
     </section>
 
-    <NetworkActivityPanel data={networkActivity} loaded={networkActivityLoaded} zh={zh} isDark={isDark}/>
+    <NetworkActivityPanel data={activity.data} loaded={!activity.loading} failed={activity.failed} refreshing={activity.loading} onRetry={() => void activity.refresh()} zh={zh} isDark={isDark}/>
 
     <div className="overview-lower-grid">
-      <section className="overview-panel"><div className="overview-panel-head"><div><div className="section-kicker">{t('ON-CHAIN FEES', '链上费用')}</div><h3>{t('Top protocols · 24h', '协议费用榜 · 24 小时')}</h3></div></div>
-        <div className="overview-table-scroll"><table className="overview-table"><thead><tr><th>#</th><th>{t('PROTOCOL', '协议')}</th><th>{t('CATEGORY', '类别')}</th><th>{t('FEES · 24H', '费用 · 24 小时')}</th><th>{t('FEES · 7D', '费用 · 7 天')}</th></tr></thead><tbody>{data?.topProtocols.map((protocol, index) => <tr key={`${protocol.name}-${index}`}><td className="overview-rank">{String(index + 1).padStart(2, '0')}</td><td><div className="overview-protocol-name"><ProjectAvatar key={protocol.twitter ?? protocol.name} className="overview-x-avatar" handle={protocol.twitter ?? ''} symbol={protocol.name.slice(0, 1)} logoUrl={projectLogoForHandle(projects, protocol.twitter)}/><b>{protocol.name}</b></div></td><td className="overview-category">{protocol.category ?? '—'}</td><td className="overview-money">{currency(protocol.total24h)}</td><td className="overview-money">{currency(protocol.total7d)}</td></tr>)}{!data && <tr><td colSpan={5} className="overview-loading">{t('Loading protocol fees…', '正在加载协议费用…')}</td></tr>}{data?.topProtocols.length === 0 && <tr><td colSpan={5} className="overview-loading">{t('No protocol fee data available.', '暂无协议费用数据。')}</td></tr>}</tbody></table></div>
+      <section className="overview-panel"><div className="overview-panel-head"><div><div className="section-kicker">{t('ON-CHAIN FEES', '链上费用')}</div><h3>{t('Top protocols · 24h', '协议费用榜 · 24 小时')}</h3></div>{overview.failed && <button disabled={overview.loading} onClick={() => void overview.refresh()}>{t('Retry', '重试')}</button>}</div>
+        <div className="overview-table-scroll"><table className="overview-table"><thead><tr><th>#</th><th>{t('PROTOCOL', '协议')}</th><th>{t('CATEGORY', '类别')}</th><th>{t('FEES · 24H', '费用 · 24 小时')}</th><th>{t('FEES · 7D', '费用 · 7 天')}</th></tr></thead><tbody>{data?.topProtocols.map((protocol, index) => <tr key={`${protocol.name}-${index}`}><td className="overview-rank">{String(index + 1).padStart(2, '0')}</td><td><div className="overview-protocol-name"><ProjectAvatar key={protocol.twitter ?? protocol.name} className="overview-x-avatar" handle={protocol.twitter ?? ''} symbol={protocol.name.slice(0, 1)} logoUrl={projectLogoForHandle(projects, protocol.twitter)}/><b>{protocol.name}</b></div></td><td className="overview-category">{protocol.category ?? '—'}</td><td className="overview-money">{currency(protocol.total24h)}</td><td className="overview-money">{currency(protocol.total7d)}</td></tr>)}{!data && <tr><td colSpan={5} className="overview-loading">{overview.failed ? t('Protocol fees unavailable.', '协议费用暂不可用。') : t('Loading protocol fees…', '正在加载协议费用…')}</td></tr>}{data?.topProtocols.length === 0 && <tr><td colSpan={5} className="overview-loading">{t('No protocol fee data available.', '暂无协议费用数据。')}</td></tr>}</tbody></table></div>
       </section>
       <section className="overview-panel launchpad-pulse-panel"><div className="overview-panel-head"><div><div className="section-kicker">{t('LAUNCHPAD PULSE', '发射台动态')}</div><h3>{t('Tracked launchpads · 24h fees', '已追踪发射台 · 24 小时费用')}</h3></div><button onClick={onNavigate}>{t('View all', '查看全部')} <ArrowUpRight size={12}/></button></div>
-        <div className="overview-launchpad-list">{launchpadLeaders.map((item, index) => <div className="overview-launchpad-row" key={item.slug}><span className="overview-rank">{String(index + 1).padStart(2, '0')}</span><ProjectAvatar key={item.xHandle} className="overview-x-avatar launchpad-x-avatar" handle={item.xHandle} symbol={item.logo} logoUrl={projectLogoForHandle(projects, item.xHandle)}/><b>{item.name}</b><span className="overview-money">{currency(item.fees24h)}</span><span className={item.change24h == null ? 'launchpad-change unavailable' : item.change24h >= 0 ? 'launchpad-change positive' : 'launchpad-change negative'}>{item.change24h != null && (item.change24h >= 0 ? <ArrowUpRight size={11}/> : <ArrowDownRight size={11}/>)}{percent(item.change24h)}</span></div>)}{launchpadLeaders.length === 0 && <div className="overview-loading">{failed ? t('Launchpad metrics unavailable.', '发射台数据暂不可用。') : t('Loading launchpad fees…', '正在加载发射台费用…')}</div>}</div>
+        <div className="overview-launchpad-list">{launchpadLeaders.map((item, index) => <div className="overview-launchpad-row" key={item.slug}><span className="overview-rank">{String(index + 1).padStart(2, '0')}</span><ProjectAvatar key={item.xHandle} className="overview-x-avatar launchpad-x-avatar" handle={item.xHandle} symbol={item.logo} logoUrl={projectLogoForHandle(projects, item.xHandle)}/><b>{item.name}</b><span className="overview-money">{currency(item.fees24h)}</span><span className={item.change24h == null ? 'launchpad-change unavailable' : item.change24h >= 0 ? 'launchpad-change positive' : 'launchpad-change negative'}>{item.change24h != null && (item.change24h >= 0 ? <ArrowUpRight size={11}/> : <ArrowDownRight size={11}/>)}{percent(item.change24h)}</span></div>)}{launchpad.failed && <div className="overview-loading">{launchpad.data ? t('Refresh failed; showing the previous snapshot.', '刷新失败，保留上次数据。') : t('Launchpad metrics unavailable.', '发射台数据暂不可用。')} <button className="module-retry" disabled={launchpad.loading} onClick={() => void launchpad.refresh()}>{t('Retry', '重试')}</button></div>}{!launchpad.failed && launchpadLeaders.length === 0 && <div className="overview-loading">{launchpad.loading ? t('Loading launchpad fees…', '正在加载发射台费用…') : t('No launchpad fee data available.', '暂无发射台费用数据。')}</div>}</div>
         <div className="overview-launchpad-foot"><span>{t('Tracked Arc launchpads', '已追踪 Arc 发射台')}</span><Sparkles size={13}/></div>
       </section>
     </div>

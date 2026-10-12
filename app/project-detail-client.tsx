@@ -13,7 +13,7 @@ import { WORKSPACES, WORKSPACE_ORDER_KEY, parseWorkspaceOrder } from '@/lib/work
 import type { Workspace } from '@/lib/workspaces';
 import type { TokenMetrics } from '@/lib/token-metrics';
 
-type Props = { project: EcosystemProject; initialLanguage: 'en' | 'zh' };
+type Props = { project: EcosystemProject; initialLanguage: 'en' | 'zh'; fromMap?: boolean };
 
 const amount = (value: number | null, zh: boolean) => value == null
   ? (zh ? '未收录' : 'Not indexed')
@@ -25,13 +25,14 @@ const price = (value: number | null, zh: boolean) => value == null
   ? (zh ? '未收录' : 'Not indexed')
   : new Intl.NumberFormat(zh ? 'zh-CN' : 'en-US', { style: 'currency', currency: 'USD', maximumSignificantDigits: 6 }).format(value);
 
-export default function ProjectDetailClient({ project, initialLanguage }: Props) {
+export default function ProjectDetailClient({ project, initialLanguage, fromMap = false }: Props) {
   const [metrics, setMetrics] = useState<TokenMetrics | null | undefined>(project.tokenAddress ? undefined : null);
   const [language, setLanguage] = useState<'en' | 'zh'>(initialLanguage);
   const [isDark, setIsDark] = useState(true);
   const [copied, setCopied] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [workspaceOrder, setWorkspaceOrder] = useState<Workspace[]>(() => WORKSPACES.map(({ key }) => key));
+  const backHref = fromMap ? '/?view=map' : '/?view=ecosystem';
   const zh = language === 'zh';
   const t = (en: string, cn: string) => zh ? cn : en;
 
@@ -94,14 +95,14 @@ export default function ProjectDetailClient({ project, initialLanguage }: Props)
         {workspaceOrder.map(key => {
           const workspace = WORKSPACES.find(item => item.key === key)!;
           const Icon = workspace.Icon;
-          return <Link key={key} className={`nav-item${key === 'Ecosystem' ? ' selected' : ''}`} href={workspace.href}><Icon size={17}/><span>{t(key, workspace.label)}</span></Link>;
+          return <Link key={key} className={`nav-item${key === (fromMap ? 'Map' : 'Ecosystem') ? ' selected' : ''}`} href={workspace.href}><Icon size={17}/><span>{t(key, workspace.label)}</span></Link>;
         })}
       </nav>
     </aside>
     <section className="main-area">
-      <header className="topbar"><button className="hamburger" onClick={() => setMobileOpen(!mobileOpen)} aria-label={t('Open menu', '打开菜单')}><Menu size={19}/></button><div className="breadcrumbs"><span>{t('Workspace', '工作区')}</span><span className="slash">/</span><Link href="/?view=ecosystem">{t('Ecosystem', '生态')}</Link><span className="slash">/</span><b>{project?.name ?? t('Project', '项目')}</b></div><div className="top-actions"><div className="live-indicator"><span/> {t('LIVE DATA', '实时数据')}</div><button className="language-button" onClick={() => {const next = zh ? 'en' : 'zh'; setLanguage(next); localStorage.setItem('arcwatch-language', next); document.cookie = `arcwatch-language=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;}} aria-label={zh ? '切换为英文' : 'Switch to Chinese'}>{zh ? 'CN' : 'EN'}</button><button className="icon-button" onClick={() => setIsDark(!isDark)} aria-label={isDark ? '切换到白天模式' : '切换到夜间模式'}>{isDark ? <Sun size={17}/> : <Moon size={17}/>}</button></div></header>
+      <header className="topbar"><button className="hamburger" onClick={() => setMobileOpen(!mobileOpen)} aria-label={t('Open menu', '打开菜单')}><Menu size={19}/></button><div className="breadcrumbs"><span>{t('Workspace', '工作区')}</span><span className="slash">/</span><Link href={backHref}>{fromMap ? t('Map', '生态地图') : t('Ecosystem', '生态')}</Link><span className="slash">/</span><b>{project?.name ?? t('Project', '项目')}</b></div><div className="top-actions"><div className="live-indicator"><span/> {t('LIVE DATA', '实时数据')}</div><button className="language-button" onClick={() => {const next = zh ? 'en' : 'zh'; setLanguage(next); localStorage.setItem('arcwatch-language', next); document.cookie = `arcwatch-language=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;}} aria-label={zh ? '切换为英文' : 'Switch to Chinese'}>{zh ? 'CN' : 'EN'}</button><button className="icon-button" onClick={() => setIsDark(!isDark)} aria-label={isDark ? '切换到白天模式' : '切换到夜间模式'}>{isDark ? <Sun size={17}/> : <Moon size={17}/>}</button></div></header>
       <div className="project-route-content">
-      <Link className="project-back-link" href="/?view=ecosystem"><ArrowLeft size={15}/>{t('Back to project directory', '返回项目目录')}</Link>
+      <Link className="project-back-link" href={backHref}><ArrowLeft size={15}/>{fromMap ? t('Back to ecosystem map', '返回生态地图') : t('Back to project directory', '返回项目目录')}</Link>
         <section className="project-detail-hero">
           <div className="project-detail-heading"><ProjectAvatar handle={project.handle} symbol={project.symbol} logoUrl={project.logoUrl} large/><div><span>{project.handle}</span><h1>{project.name}</h1><p>{zh ? project.taglineZh || project.tagline : project.tagline}</p></div></div>
           <div className="project-detail-actions"><span className={`ecosystem-status ${project.status}`}>{project.status === 'beta' ? t('BETA', '测试版') : project.status === 'live' ? t('LIVE ON ARC', '已上线 ARC') : t('UPCOMING', '即将上线')}</span><a href={project.website} target="_blank" rel="noreferrer">{t('Website', '官网')} <ExternalLink size={13}/></a><a href={project.x} target="_blank" rel="noreferrer">X <ExternalLink size={13}/></a></div>

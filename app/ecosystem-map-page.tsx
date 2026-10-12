@@ -1,11 +1,11 @@
 'use client';
 
-import type { EcosystemProject } from '@/lib/project-schema';
+import type { ProjectSummary } from '@/lib/project-schema';
 import EcosystemMap from '@/app/ecosystem-map';
 import ProjectDirectorySync from './project-directory-sync';
 import type { DirectorySyncProps } from './project-directory-sync';
 
-type Props = { language: 'en' | 'zh'; projects: EcosystemProject[] } & DirectorySyncProps;
+type Props = { language: 'en' | 'zh'; projects: ProjectSummary[] } & DirectorySyncProps;
 
 export default function EcosystemMapPage({ language, projects, syncError, ...syncProps }: Props) {
   const zh = language === 'zh';

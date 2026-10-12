@@ -1,16 +1,16 @@
 'use client';
 
-import type { EcosystemProject } from '@/lib/project-schema';
+import type { ProjectSummary } from '@/lib/project-schema';
 import ProjectAvatar from '@/app/project-avatar';
 
-type Props = { projects: EcosystemProject[]; language: 'en' | 'zh'; onSelectProject: (slug: string) => void };
+type Props = { projects: ProjectSummary[]; language: 'en' | 'zh'; onSelectProject: (slug: string) => void };
 
 export default function ProjectTicker({ projects, language, onSelectProject }: Props) {
   if (projects.length === 0) return null;
 
   const items = [...projects].sort((a, b) => Number(b.recommended) - Number(a.recommended));
   const zh = language === 'zh';
-  const statusLabel = (status: EcosystemProject['status']) => status === 'live'
+  const statusLabel = (status: ProjectSummary['status']) => status === 'live'
     ? (zh ? '已上线' : 'LIVE')
     : status === 'beta' ? (zh ? '测试版' : 'BETA') : (zh ? '即将上线' : 'UPCOMING');
 

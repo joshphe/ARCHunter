@@ -1,5 +1,6 @@
-import type { EcosystemProject } from '@/lib/project-schema';
+import type { EcosystemProject, ProjectSummary, ProjectScorecard } from '@/lib/project-schema';
 import { getSql } from '@/lib/db';
+import { getProjectScore } from '@/lib/project-scoring';
 
 const projectSelect = `
   SELECT slug, name, symbol, handle, logo_url AS "logoUrl", tagline_en AS "taglineEn", tagline_zh AS "taglineZh",
@@ -10,6 +11,57 @@ const projectSelect = `
     recommendation_reason_en AS "recommendationReasonEn", recommendation_reason_zh AS "recommendationReasonZh",
     COALESCE((SELECT jsonb_agg(jsonb_build_object('id',r.id,'priority',r.priority,'evidenceStatus',r.evidence_status,'reasonEn',r.reason_en,'reasonZh',r.reason_zh,'sources',r.sources,'reviewedOn',r.reviewed_on::text) ORDER BY r.id DESC) FROM project_risk_reviews r WHERE r.slug=ecosystem_projects.slug),'[]'::jsonb) AS "riskReviews"
   FROM ecosystem_projects`;
+
+// One bounded query for the public directory; do not load profiles or histories here.
+export async function listProjectSummaries(): Promise<ProjectSummary[]> {
+  const rows = await getSql().query(`
+    SELECT p.slug, p.name, p.symbol, p.handle, p.logo_url AS "logoUrl",
+      p.tagline_en AS "tagline", p.tagline_zh AS "taglineZh", p.categories, p.status,
+      p.tvl_usd AS "tvl", p.token_address AS "tokenAddress", p.verified_on::text AS "verifiedOn",
+      p.recommended, p.map_slot AS "mapSlot",
+      (SELECT jsonb_object_agg(d.key, jsonb_build_object('score',d.value->'score','applicable',d.value->'applicable'))
+        FROM jsonb_each(COALESCE(p.scorecard,'{}'::jsonb)) d) AS "scoreValues",
+      (SELECT jsonb_build_object('priority',r.priority,'evidenceStatus',r.evidence_status,'reviewedOn',r.reviewed_on::text)
+        FROM project_risk_reviews r WHERE r.slug=p.slug ORDER BY r.id DESC LIMIT 1) AS "riskReview",
+      COALESCE((SELECT jsonb_agg(u.item ORDER BY u.published_at DESC NULLS LAST,u.created_at DESC,u.id DESC)
+        FROM (SELECT id, published_at, created_at, jsonb_build_object(
+          'titleEn',title_en,'titleZh',title_zh,'summaryEn',summary_en,'summaryZh',summary_zh,
+          'sourceUrl',source_url,'publishedAt',published_at) AS item
+          FROM ecosystem_project_updates WHERE project_id=p.id AND is_published=true AND update_kind='news'
+          ORDER BY published_at DESC NULLS LAST,created_at DESC,id DESC LIMIT 3) u),'[]'::jsonb) AS updates
+    FROM ecosystem_projects p
+    WHERE p.is_published=true AND NOT EXISTS (SELECT 1 FROM rug_projects r WHERE r.slug=p.slug)
+    ORDER BY p.recommended DESC,p.sort_order ASC,p.name ASC
+  `);
+  return rows.map(row => ({
+    slug: String(row.slug), name: String(row.name), symbol: String(row.symbol), handle: String(row.handle),
+    logoUrl: row.logoUrl == null ? null : String(row.logoUrl), tagline: String(row.tagline), taglineZh: String(row.taglineZh ?? ''),
+    categories: row.categories as string[], status: row.status as ProjectSummary['status'],
+    tvl: row.tvl == null ? null : Number(row.tvl), tokenAddress: row.tokenAddress == null ? null : String(row.tokenAddress),
+    verifiedOn: String(row.verifiedOn), recommended: Boolean(row.recommended), tokenMetrics: null,
+    mapSlot: row.mapSlot == null ? null : Number(row.mapSlot),
+    observationScore: getProjectScore(row.scoreValues as ProjectScorecard | null).total,
+    riskReview: row.riskReview as ProjectSummary['riskReview'], updates: row.updates as ProjectSummary['updates'],
+  }));
+}
+
+export function summarizeProject(project: EcosystemProject): ProjectSummary {
+  return {
+    slug: project.slug, name: project.name, symbol: project.symbol, handle: project.handle, logoUrl: project.logoUrl,
+    tagline: project.tagline, taglineZh: project.taglineZh, categories: project.categories, status: project.status,
+    tvl: project.tvl, tokenAddress: project.tokenAddress, tokenMetrics: project.tokenMetrics,
+    verifiedOn: project.verifiedOn, recommended: project.recommended, updates: project.updates.slice(0,3),
+    observationScore: getProjectScore(project.scorecard).total,
+    riskReview: project.riskReviews?.[0] ? {priority:project.riskReviews[0].priority,evidenceStatus:project.riskReviews[0].evidenceStatus,reviewedOn:project.riskReviews[0].reviewedOn} : null, mapSlot: null,
+  };
+}
+
+// A metrics request needs only the published token address, not a second full profile.
+export async function getPublishedProjectToken(slug: string): Promise<{ tokenAddress: string | null } | null> {
+  const rows = await getSql().query(`SELECT token_address AS "tokenAddress" FROM ecosystem_projects p
+    WHERE p.slug=$1 AND p.is_published=true AND NOT EXISTS (SELECT 1 FROM rug_projects r WHERE r.slug=p.slug)`, [slug]);
+  return rows[0] ? { tokenAddress: rows[0].tokenAddress == null ? null : String(rows[0].tokenAddress) } : null;
+}
 
 export async function listProjects(publishedOnly = true): Promise<EcosystemProject[]> {
   const sql = getSql();
@@ -102,9 +154,9 @@ export async function saveProject(project: import('@/lib/project-schema').Projec
       slug, name, symbol, handle, logo_url, tagline_en, tagline_zh, description_en, description_zh,
       categories, status, products, website_url, x_url, token_address, tvl_usd,
       fees_24h_usd, volume_24h_usd, source_urls, verified_on, recommended,
-      recommendation_reason_en, recommendation_reason_zh, is_published, updated_at
+      recommendation_reason_en, recommendation_reason_zh, is_published, updated_at, map_slot
     ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,now()
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,now(),COALESCE((SELECT map_slot FROM ecosystem_projects WHERE slug=$1),nextval('ecosystem_project_map_slot_seq'))
     ) ON CONFLICT (slug) DO UPDATE SET
       name=EXCLUDED.name, symbol=EXCLUDED.symbol, handle=EXCLUDED.handle, logo_url=EXCLUDED.logo_url, tagline_en=EXCLUDED.tagline_en,
       tagline_zh=EXCLUDED.tagline_zh, description_en=EXCLUDED.description_en, description_zh=EXCLUDED.description_zh,

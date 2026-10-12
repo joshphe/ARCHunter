@@ -5,7 +5,7 @@ import { Area, AreaChart, Brush, CartesianGrid, ResponsiveContainer, Tooltip, XA
 import { ArrowDownRight, ArrowUpRight, ExternalLink, Flame, Radio, RefreshCw, Trophy } from 'lucide-react';
 import { ARC_LAUNCH_START_TIMESTAMP } from '@/lib/arc';
 import ProjectAvatar from '@/app/project-avatar';
-import type { EcosystemProject } from '@/lib/project-schema';
+import type { ProjectSummary } from '@/lib/project-schema';
 import { projectLogoForHandle } from '@/lib/project-logo';
 
 type Launchpad = {
@@ -14,7 +14,7 @@ type Launchpad = {
   change24h: number | null; history: [number, number][]; methodology: string | null; sourceUrl: string;
 };
 type ApiResponse = { updatedAt: string; launchpads: Launchpad[] };
-type Props = { language: 'en' | 'zh'; isDark: boolean; projects: EcosystemProject[] };
+type Props = { language: 'en' | 'zh'; isDark: boolean; projects: ProjectSummary[] };
 
 const money = (value: number | null) => value === null ? '—' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: value < 100 ? 2 : 0 }).format(value);
 const pct = (value: number | null) => value === null ? '—' : `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;

@@ -8,7 +8,7 @@ import { isRugProject } from '@/lib/rug-projects';
 import { fallbackProjects } from '@/lib/fallback-projects';
 import type { EcosystemProject } from '@/lib/project-schema';
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ from?: string }> };
 
 const getProject = cache(async (slug: string): Promise<EcosystemProject | null> => {
   try {
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: `${name} — ARC Watch`, description: `Project profile and live market data for ${name} on Arc.` };
 }
 
-export default async function ProjectPage({ params }: Props) {
+export default async function ProjectPage({ params, searchParams }: Props) {
   const { slug } = await params;
   // The bundled directory remains usable when local database access is not configured.
   if (slug === 'vort' || (process.env.DATABASE_URL && await isRugProject(decodeURIComponent(slug)))) redirect(`/?view=rug#${encodeURIComponent(slug)}`);
@@ -34,5 +34,6 @@ export default async function ProjectPage({ params }: Props) {
   if (!project) notFound();
   const cookieStore = await cookies();
   const initialLanguage = cookieStore.get('arcwatch-language')?.value === 'zh' ? 'zh' : 'en';
-  return <ProjectDetailClient key={project.slug} project={project} initialLanguage={initialLanguage}/>;
+  const fromMap = (await searchParams).from === 'map';
+  return <ProjectDetailClient key={project.slug} project={project} initialLanguage={initialLanguage} fromMap={fromMap}/>;
 }

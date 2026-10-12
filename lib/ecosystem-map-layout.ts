@@ -30,7 +30,7 @@ export const NEIGHBORHOOD_ORIGIN = { u: 0, v: 0 } as const;
 const RESERVE_TIERS = [1,0,1,1,2,1,0,0,1,0,0,0,1,0] as const;
 type Cell = { u: number; v: number; side: number };
 export type CityLandmarkKind = 'stadium' | 'playland' | 'museum' | 'monument' | 'garden';
-type MapProject = { slug: string; tokenMetrics?: { marketCapUsd?: number | null } | null };
+type MapProject = { slug: string; mapSlot?: number | null; tokenMetrics?: { marketCapUsd?: number | null } | null };
 const ROOF_HEIGHTS = [24,24,24,24,24,24,24,24] as const;
 export const buildingHeight = (tier: number, side: number) => (BUILDING_TIERS[tier].height + ROOF_HEIGHTS[tier]) * side / BASE_PLOT_SIDE;
 export const BUILDING_FAMILIES = [
@@ -57,13 +57,30 @@ export function layoutMap<T extends MapProject>(projects: T[]) {
   const registry = new Set<string>(PROJECT_PLOTS);
   const bySlug = new Map(projects.map(p => [p.slug,p]));
   const additions = projects.filter(p => !registry.has(p.slug)).sort((a,b) => a.slug.localeCompare(b.slug));
-  const slots: string[] = [...PROJECT_PLOTS,...additions.map(p=>p.slug)];
+  const assigned = new Map<number,string>();
+  const fallback = additions.filter(p=>!Number.isSafeInteger(p.mapSlot)||p.mapSlot! < PROJECT_PLOTS.length);
+  for(const project of additions) {
+    if(Number.isSafeInteger(project.mapSlot)&&project.mapSlot! >= PROJECT_PLOTS.length) assigned.set(project.mapSlot!,project.slug);
+  }
+  let available=PROJECT_PLOTS.length;
+  for(const project of fallback) {
+    while(assigned.has(available))available++;
+    assigned.set(available++,project.slug);
+  }
+  // Retain vacant addresses: adding/removing projects never compacts occupied blocks.
+  const occupiedEnd=Math.max(PROJECT_PLOTS.length+5,...assigned.keys());
+  // Reserve complete blocks so filling their last empty plot cannot reorder members.
+  const lastSlot=PROJECT_PLOTS.length+Math.ceil((occupiedEnd-PROJECT_PLOTS.length+1)/3)*3-1;
+  const slots: string[] = [...PROJECT_PLOTS];
+  for(let slot=PROJECT_PLOTS.length;slot<=lastSlot;slot++) slots.push(assigned.get(slot)??`__reserved-${slot}`);
   const memberships: string[][] = PROJECT_BLOCKS.map(slugs=>[...slugs]);
-  for(let i=0;i<additions.length;i+=3)memberships.push(additions.slice(i,i+3).map(p=>p.slug));
+  for(let i=PROJECT_PLOTS.length;i<slots.length;i+=3) {
+    memberships.push(Array.from({length:3},(_,offset)=>slots[i+offset]??`__reserved-${i+offset}`));
+  }
   const local = memberships.map((slugs,block) => {
     const entries = slugs.map(slug => {
       const slot=slots.indexOf(slug), project=bySlug.get(slug);
-      return {slug,slot,project,side:project?mapScale(project.tokenMetrics?.marketCapUsd).side:PLOT_TIERS[RESERVE_TIERS[slot]??0].side};
+      return {slug,slot,project,side:PLOT_TIERS[RESERVE_TIERS[slot]??1].side};
     }).sort((a,b)=>b.side-a.side||a.slot-b.slot);
     const free: Cell[]=[{u:0,v:0,side:2048}];
     const parcels=entries.map(entry=>{
@@ -131,7 +148,7 @@ export function layoutMap<T extends MapProject>(projects: T[]) {
   const parkCells=[...vacant].filter(cell=>cell.side>=64).sort((a,b)=>b.side-a.side||a.block-b.block||a.v-b.v||a.u-b.u);
   // Find a civic plaza in a gap between developed neighborhoods. A bounded
   // sampling grid avoids scanning every parcel-sized cell in a large city.
-  let plaza:Cell|null=null;
+  const plaza:{cell:Cell|null}={cell:null};
   const step=Math.max(16,Math.ceil(Math.max(cityWidth,cityDepth)/32/16)*16);
   for(const side of [160,128,96]){
     let bestDistance=Infinity;
@@ -141,11 +158,11 @@ export function layoutMap<T extends MapProject>(projects: T[]) {
         ?a.u+28>u&&a.u-28<u+side&&Math.max(a.v,b.v)>v&&Math.min(a.v,b.v)<v+side
         :a.v+28>v&&a.v-28<v+side&&Math.max(a.u,b.u)>u&&Math.min(a.u,b.u)<u+side))continue;
       const distance=Math.hypot(u+side/2-cityWidth*.4,v+side/2-cityDepth*.55);
-      if(distance<bestDistance){bestDistance=distance;plaza={u,v,side};}
+      if(distance<bestDistance){bestDistance=distance;plaza.cell={u,v,side};}
     }
-    if(plaza)break;
+    if(plaza.cell)break;
   }
-  const publicPlaza=plaza?[{...plaza,kind:'museum' as const,placement:'city' as const}]:[];
+  const publicPlaza=plaza.cell?[{...plaza.cell,kind:'museum' as const,placement:'city' as const}]:[];
   const civicKinds:CityLandmarkKind[]=publicPlaza.length?['monument','garden']:['museum','monument','garden'];
   const civicCells=parkCells.filter(cell=>{
     if(usedBlocks.has(cell.block)||usedBlocks.size>=civicKinds.length)return false;
@@ -158,7 +175,8 @@ export function layoutMap<T extends MapProject>(projects: T[]) {
   const landmarks=[...waterfront,...publicPlaza,...inland];
   const landmarkParks=new Set(civicCells);
   const landscapeVacant=vacant.filter(cell=>!landmarkParks.has(cell));
-  const top=Math.max(180,...parcels.map(p=>p.project?buildingHeight(mapScale(p.project.tokenMetrics?.marketCapUsd).buildingTier??0,p.side)+p.side/2+160-(p.u+p.v+p.side)/2:0));
+  // Reserve the tallest silhouette so fetching prices never shifts the projection origin.
+  const top=Math.max(180,...parcels.map(p=>buildingHeight(7,p.side)+p.side/2+160-(p.u+p.v+p.side)/2));
   const origin={x:cityDepth+160,y:top};
   const buildings=parcels.flatMap(p=>p.project?[{project:p.project,slot:p.slot,side:p.side,u:p.u,v:p.v,block:p.block,x:origin.x+p.u-p.v,y:origin.y+(p.u+p.v+p.side)/2}]:[]).sort((a,b)=>a.y-b.y||a.x-b.x);
   return {buildings,parcels,vacant,landscapeVacant,blocks,streets,landmarks,cityWidth,cityDepth,span:Math.max(cityWidth,cityDepth),origin,width:cityWidth+cityDepth+440+civicSide+150,height:top+(cityWidth+cityDepth)/2+220+civicSide/2+110};

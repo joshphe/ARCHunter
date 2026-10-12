@@ -472,3 +472,5 @@ html[data-theme='light'] .project-directory-sync.is-unavailable .ecosystem-revie
 /* Keep missing avatars inside their allotted space, including long token symbols. */
 .x-avatar-container{overflow:hidden;flex-shrink:0}
 .x-avatar-initials{display:block;max-width:100%;overflow:hidden;white-space:nowrap;line-height:1;text-align:center}
+
+.module-retry{padding:3px 8px;border:1px solid var(--line2);border-radius:6px;background:var(--panel);color:var(--text);font-size:11px}.module-retry:disabled{opacity:.5;cursor:wait}

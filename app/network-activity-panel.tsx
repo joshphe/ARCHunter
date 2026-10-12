@@ -21,7 +21,7 @@ export type NetworkActivityData = {
   partial: boolean;
   history: ActivityPoint[];
 };
-type Props = { data: NetworkActivityData | null; loaded: boolean; zh: boolean; isDark: boolean };
+type Props = { data: NetworkActivityData | null; loaded: boolean; zh: boolean; isDark: boolean; failed?: boolean; refreshing?: boolean; onRetry?: () => void };
 
 const metrics: Array<{ key: MetricKey; title: string; titleZh: string; icon: typeof Activity; color: string; unit: 'count' | 'usdc' }> = [
   { key: 'transactions', title: 'Transactions', titleZh: '每日交易数', icon: Activity, color: '#c2f970', unit: 'count' },
@@ -36,7 +36,7 @@ const timestampLabel = (timestamp: number, zh: boolean, withTime = false) => new
   ? { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }
   : { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(timestamp * 1000));
 
-export default function NetworkActivityPanel({ data, loaded, zh, isDark }: Props) {
+export default function NetworkActivityPanel({ data, loaded, zh, isDark, failed = false, refreshing = false, onRetry }: Props) {
   const [selected, setSelected] = useState<MetricKey>('transactions');
   const [days, setDays] = useState(30);
   const activeMetric = metrics.find((metric) => metric.key === selected) ?? metrics[0];
@@ -49,6 +49,7 @@ export default function NetworkActivityPanel({ data, loaded, zh, isDark }: Props
     <div className="network-activity-heading">
       <div><div className="section-kicker">{zh ? 'ARC 链上活跃度' : 'ARC NETWORK ACTIVITY'}</div><h3>{zh ? '网络使用情况' : 'Network usage'}</h3><p>{zh ? '按 UTC 自然日统计，持续观察链上活动变化。' : 'Daily UTC measurements to track on-chain activity over time.'}</p></div>
       <div className="network-activity-meta">
+        {failed && <span role="status">{data ? (zh ? '刷新失败，保留上次数据' : 'Refresh failed; showing previous data') : (zh ? '链上数据加载失败' : 'Network data unavailable')} {onRetry && <button className="module-retry" disabled={refreshing} onClick={onRetry}>{zh ? '重试' : 'Retry'}</button>}</span>}
         {data?.updatedAt ? <span>{zh ? '数据更新' : 'Updated'} · {timestampLabel(Date.parse(data.updatedAt) / 1000, zh, true)} UTC</span> : null}
         {data?.latestBlock ? <span>{zh ? '索引区块' : 'Indexed block'} · {fullNumber(data.latestBlock, zh)}</span> : null}
         <a href="https://docs.arc-scan.org/apis" target="_blank" rel="noreferrer">{zh ? `数据来源：${data?.source ?? 'Arcscan'}` : `Source: ${data?.source ?? 'Arcscan'}`}</a>

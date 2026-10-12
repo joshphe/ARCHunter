@@ -1,14 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { EcosystemProject } from '@/lib/project-schema';
+import type { ProjectSummary } from '@/lib/project-schema';
 
 export type ProjectDataSource = 'database' | 'bundled' | null;
 const REFRESH_INTERVAL_MS = 120_000;
 const FOCUS_THROTTLE_MS = 30_000;
 
 export function useEcosystemProjects(view: string) {
-  const [projects, setProjects] = useState<EcosystemProject[]>([]);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [source, setSource] = useState<ProjectDataSource>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
@@ -28,7 +28,7 @@ export function useEcosystemProjects(view: string) {
       const data: unknown = await response.json();
       if (!Array.isArray(data)) throw new Error('Invalid directory response');
       if (disposed) return;
-      setProjects(data as EcosystemProject[]);
+      setProjects(data as ProjectSummary[]);
       setSource(response.headers.get('X-Project-Data-Source') === 'bundled' ? 'bundled' : 'database');
       hasLoaded.current = true;
       lastSynced.current = Date.now();

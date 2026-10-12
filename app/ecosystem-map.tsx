@@ -7,12 +7,13 @@ import CityLandmark from './city-landmark';
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent } from 'react';
 import { Crosshair, Maximize2, PanelRightClose, PanelRightOpen, Search, X, ZoomIn, ZoomOut } from 'lucide-react';
-import type { EcosystemProject } from '@/lib/project-schema';
+import type { ProjectSummary } from '@/lib/project-schema';
 import { BUILDING_TIERS, PLOT_TIERS, layoutMap, mapScale, buildingHeight, buildingVariant } from '@/lib/ecosystem-map-layout';
 import ProjectAvatar from '@/app/project-avatar';
+import { readMapView, saveMapView, type MapViewState } from '@/lib/map-view-state';
 import { avatarInitials, useProjectAvatar } from '@/app/use-project-avatar';
 
-type Props = { projects: EcosystemProject[]; language: 'en' | 'zh' };
+type Props = { projects: ProjectSummary[]; language: 'en' | 'zh' };
 function Tree({ x, y, small = false }: { x: number; y: number; small?: boolean }) {
   return <g transform={`translate(${x} ${y}) scale(${small ? .72 : 1})`} className="city-tree">
     <ellipse cx="7" cy="4" rx="18" ry="7" className="city-tree-shadow"/>
@@ -79,6 +80,27 @@ export default function EcosystemMap({projects,language}:Props) {
   const viewportRef=useRef<HTMLDivElement>(null);
   const mapRef=useRef<SVGSVGElement>(null);
   const zoomRef=useRef(1);
+  const restoreView=useRef<MapViewState|null>(null);
+  const viewReady=useRef(false);
+  const [viewLoaded,setViewLoaded]=useState(false);
+  const saveTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const persistLatest=useRef<(()=>void)|null>(null);
+  const camera=useRef<{centerX:number;centerY:number}|null>(null);
+  const lastGeometry=useRef('');
+  useEffect(()=>{
+    const saved=readMapView();
+    restoreView.current=saved;
+    if(saved){
+      zoomRef.current=saved.zoom;
+      setZoom(saved.zoom);
+      setSelectedSlug(saved.selectedSlug);
+      setQuery(saved.query);
+      setCategoryFilter(saved.category);
+      setCapFilter(saved.cap as CapFilter);
+      setGuideCollapsed(saved.collapsed);
+    }
+    setViewLoaded(true);
+  },[]);
   const zoomAnchor=useRef<{x:number;y:number;u:number;v:number}|null>(null);
   const wheelFrame=useRef<number|null>(null);
   const wheelInput=useRef({delta:0,x:0,y:0});
@@ -101,6 +123,7 @@ export default function EcosystemMap({projects,language}:Props) {
     zoomRef.current=1;
     setZoom(1);
     viewportRef.current?.scrollTo({left:0,top:0,behavior:'instant'});
+    requestAnimationFrame(()=>persistLatest.current?.());
   };
   const [viewportSize,setViewportSize]=useState<{width:number;height:number}|null>(null);
   useEffect(()=>{
@@ -145,6 +168,7 @@ export default function EcosystemMap({projects,language}:Props) {
     suppressClick.current=pan.moved;
     gesture.current=null;
     setDragging(false);
+    persistLatest.current?.();
     if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);
   };
   const sceneId=useId().replace(/:/g,'');
@@ -193,6 +217,51 @@ export default function EcosystemMap({projects,language}:Props) {
       wheelInput.current.delta=0;
     };
   },[changeZoom]);
+  const persistView=useCallback(()=>{
+    const viewport=viewportRef.current,map=mapRef.current;
+    if(!viewReady.current||!viewport||!map)return;
+    const view=viewport.getBoundingClientRect(),scene=map.getBoundingClientRect();
+    if(!scene.width||!scene.height)return;
+    // Coordinates relative to the island origin survive new streets and screen resizing.
+    const center={
+      centerX:(view.left+view.width/2-scene.left)/scene.width*width-origin.x,
+      centerY:(view.top+view.height/2-scene.top)/scene.height*height-origin.y};
+    camera.current=center;
+    saveMapView({version:2,zoom:zoomRef.current,...center,
+      selectedSlug,query,category:categoryFilter,cap:capFilter,collapsed:guideCollapsed});
+  },[width,height,origin.x,origin.y,selectedSlug,query,categoryFilter,capFilter,guideCollapsed]);
+  useLayoutEffect(()=>{persistLatest.current=persistView;},[persistView]);
+  useLayoutEffect(()=>{
+    if(!viewLoaded||fittedWidth===null||!fittedWidth)return;
+    const geometry=`${width}:${height}:${origin.x}:${origin.y}:${fittedWidth}`;
+    if(viewReady.current&&lastGeometry.current===geometry)return;
+    const saved=viewReady.current?camera.current:restoreView.current,viewport=viewportRef.current,map=mapRef.current;
+    if(!viewport||!map)return;
+    if(saved){
+      const view=viewport.getBoundingClientRect(),scene=map.getBoundingClientRect();
+      if(!scene.width||!scene.height||!view.width||!view.height)return;
+      viewport.scrollLeft+=(scene.left+(origin.x+saved.centerX)/width*scene.width-view.left-view.width/2)*viewport.clientWidth/view.width;
+      viewport.scrollTop+=(scene.top+(origin.y+saved.centerY)/height*scene.height-view.top-view.height/2)*viewport.clientHeight/view.height;
+    }
+    viewReady.current=true;
+    lastGeometry.current=geometry;
+    restoreView.current=null;
+    persistLatest.current?.();
+  },[viewLoaded,fittedWidth,width,height,origin.x,origin.y,zoom]);
+  useEffect(()=>{persistLatest.current?.();},[zoom,selectedSlug,query,categoryFilter,capFilter,guideCollapsed]);
+  useEffect(()=>{
+    const save=()=>persistLatest.current?.();
+    window.addEventListener('pagehide',save);
+    return ()=>{
+      window.removeEventListener('pagehide',save);
+      if(saveTimer.current!==null)clearTimeout(saveTimer.current);
+    };
+  },[]);
+  useLayoutEffect(()=>()=>{persistLatest.current?.();},[]);
+  const scheduleSave=()=>{
+    if(saveTimer.current!==null)clearTimeout(saveTimer.current);
+    saveTimer.current=setTimeout(()=>persistLatest.current?.(),100);
+  };
   const categories=useMemo(()=>[...new Set(projects.flatMap(project=>project.categories))].sort((a,b)=>a.localeCompare(b)),[projects]);
   const matches=useMemo(()=>projects.filter(project=>{
     const normalized=query.trim().toLowerCase();
@@ -211,7 +280,7 @@ export default function EcosystemMap({projects,language}:Props) {
       const target=viewport?.querySelector<SVGGraphicsElement>(`[data-project="${slug}"]`);
       if(!viewport||!target)return;
       const view=viewport.getBoundingClientRect(),item=target.getBoundingClientRect();
-      viewport.scrollTo({left:viewport.scrollLeft+item.left+item.width/2-view.left-view.width/2,top:viewport.scrollTop+item.top+item.height/2-view.top-view.height/2,behavior:'smooth'});
+      viewport.scrollTo({left:viewport.scrollLeft+(item.left+item.width/2-view.left-view.width/2)*viewport.clientWidth/view.width,top:viewport.scrollTop+(item.top+item.height/2-view.top-view.height/2)*viewport.clientHeight/view.height,behavior:'smooth'});
     });
   };
   const selectProject=(slug:string)=>{
@@ -252,7 +321,7 @@ export default function EcosystemMap({projects,language}:Props) {
   const selectedCap=mapScale(selectedProject?.tokenMetrics?.marketCapUsd);
   const selectedBuildingTier=selectedCap.buildingTier===null?null:BUILDING_TIERS[selectedCap.buildingTier];
   const selectedStatus=selectedProject?.status==='live'?t('LIVE','已上线'):selectedProject?.status==='beta'?t('BETA','测试中'):t('UPCOMING','即将推出');
-  const profileHref=selectedProject?`/projects/${encodeURIComponent(selectedProject.slug)}`:undefined;
+  const profileHref=selectedProject?`/projects/${encodeURIComponent(selectedProject.slug)}?from=map`:undefined;
 
   return <section className={`ecosystem-map-card${guideCollapsed?' is-guide-collapsed':''}`} aria-label={t('Arc ecosystem map','Arc 生态地图')}>
     <div className="city-scene">
@@ -264,6 +333,7 @@ export default function EcosystemMap({projects,language}:Props) {
       </div>
     </div>
     <div ref={viewportRef} className={`ecosystem-map-viewport${dragging?' is-dragging':''}`} tabIndex={0} role="region" aria-label={t('City map · wheel to zoom · drag to pan','城市地图 · 滚轮缩放 · 拖拽平移')}
+      onScroll={scheduleSave}
       onPointerDown={startPan} onPointerMove={movePan} onPointerUp={endPan} onPointerCancel={endPan} onLostPointerCapture={endPan}
       onPointerLeave={()=>{if(!gesture.current?.moved)gesture.current=null;}}
       onDragStart={event=>event.preventDefault()}
@@ -343,8 +413,9 @@ export default function EcosystemMap({projects,language}:Props) {
             return <g key={`landmark-${landmark.kind}`} transform={`translate(${x} ${y})`} data-landmark={landmark.kind}><CityLandmark kind={landmark.kind} side={landmark.side} language={language}/></g>;
           }
           const {project}=item.building!;
-          const {cap,buildingTier,plotTier,side}=mapScale(project.tokenMetrics?.marketCapUsd);
-          const label=`${project.name} · ${money(cap,zh)} · ${buildingTier===null?t('Awaiting market cap','待补充市值'):`${BUILDING_TIERS[buildingTier].name[zh?1:0]} / ${BUILDING_TIERS[buildingTier].label} · ${t('Plot','地块')} ${PLOT_TIERS[plotTier!].size}`}`;
+          const {cap,buildingTier,plotTier}=mapScale(project.tokenMetrics?.marketCapUsd);
+          const {side}=item.building!;
+          const label=`${project.name} · ${money(cap,zh)} · ${buildingTier===null?t('Awaiting market cap','待补充市值'):`${BUILDING_TIERS[buildingTier].name[zh?1:0]} / ${BUILDING_TIERS[buildingTier].label} · ${t('Fixed plot','固定地块')}`}`;
           return <g key={project.slug} transform={`translate(${x} ${y})`}><a href={`/projects/${encodeURIComponent(project.slug)}`} className={projectClass(project.slug)} onClick={event=>{event.preventDefault();selectProject(project.slug);}} onMouseEnter={()=>setActiveSlug(project.slug)} onMouseLeave={()=>setActiveSlug(null)} onFocus={()=>{setActiveSlug(project.slug);selectProject(project.slug);}} onBlur={()=>setActiveSlug(null)} aria-label={label} data-project={project.slug} data-building-tier={buildingTier??'unknown'} data-plot-tier={plotTier??'unknown'}>
             <title>{label}</title>
             <path className="city-cast-shadow" d={`M${-side},0 L0,${side/2} L${side+40},${side/2+25} L${side+65},18 L${side},0 Z`}/>
@@ -352,13 +423,13 @@ export default function EcosystemMap({projects,language}:Props) {
             {buildingTier===null?<g className="city-vacant"><polygon points={`0,${-side/2} ${side},0 0,${side/2} ${-side},0`}/><text x="0" y="5" textAnchor="middle">?</text></g>:<CityBuilding tier={buildingTier} side={side} variant={buildingVariant(project.slug)}/>}
           </a></g>;
         })}
-        {buildings.map(({project,x,y})=>{
-          const {side,buildingTier}=mapScale(project.tokenMetrics?.marketCapUsd);
+        {buildings.map(({project,x,y,side})=>{
+          const {buildingTier}=mapScale(project.tokenMetrics?.marketCapUsd);
           return <g key={project.slug} transform={`translate(${x} ${y})`}><a href={`/projects/${encodeURIComponent(project.slug)}`} className={projectClass(project.slug)} tabIndex={-1} aria-label={project.name} onClick={event=>{event.preventDefault();selectProject(project.slug);}} onMouseEnter={()=>setActiveSlug(project.slug)} onMouseLeave={()=>setActiveSlug(null)}><title>{`${project.name} · ${money(mapScale(project.tokenMetrics?.marketCapUsd).cap,zh)}`}</title><ProjectBillboard handle={project.handle} symbol={project.symbol} logoUrl={project.logoUrl} name={project.name} height={buildingTier===null?0:buildingHeight(buildingTier,side)} side={side}/></a></g>;
         })}
       </svg>
     </div>
-    {activeProject?<div className="city-project-detail" aria-live="polite"><b>{activeProject.name}</b><span>{money(mapScale(activeProject.tokenMetrics?.marketCapUsd).cap,zh)} · {t('Plot','地块')} {PLOT_TIERS[mapScale(activeProject.tokenMetrics?.marketCapUsd).plotTier??0].size}</span><span>{t('Select the plot to see its profile →','选中地块后可在侧栏打开项目详情 →')}</span></div>:null}
+    {activeProject?<div className="city-project-detail" aria-live="polite"><b>{activeProject.name}</b><span>{money(mapScale(activeProject.tokenMetrics?.marketCapUsd).cap,zh)} · {t('Fixed plot','固定地块')}</span><span>{t('Select the plot to see its profile →','选中地块后可在侧栏打开项目详情 →')}</span></div>:null}
     <div className="city-scene-footer"><span>{t(`${projects.length} projects · ${priced} priced`,`${projects.length} 个项目 · ${priced} 个已有市值`)}</span><span>{t('Wheel to zoom · Drag to pan · Select a building','滚轮缩放 · 拖拽平移 · 点击建筑')}</span></div>
     </div>
     <div className="city-scale-guide" tabIndex={guideCollapsed?-1:0} role="region" aria-label={t('Project details','项目详情')}>
@@ -381,9 +452,9 @@ export default function EcosystemMap({projects,language}:Props) {
       {selectedProject?<div className="city-selected-project" aria-live="polite">
         <div className="city-selected-head"><ProjectAvatar handle={selectedProject.handle} symbol={selectedProject.symbol} logoUrl={selectedProject.logoUrl} className="city-selected-avatar"/><div><b>{selectedProject.name}</b><span>{selectedProject.categories[0]||t('ARC ecosystem','ARC 生态')} · {selectedStatus}</span></div><button type="button" onClick={()=>{setSelectedSlug(null);}} aria-label={t('Clear selected project','清除选中项目')}><X size={14}/></button></div>
         <p>{zh?selectedProject.taglineZh||selectedProject.tagline:selectedProject.tagline}</p>
-        <div className="city-selected-metrics"><span>{t('MARKET CAP','市值')} <b>{money(selectedCap.cap,zh)}</b></span><span>{t('BUILDING / PLOT','建筑 / 地块')} <b>{selectedBuildingTier?`${selectedBuildingTier.label} · `:''}{selectedCap.plotTier===null?'—':PLOT_TIERS[selectedCap.plotTier].size}</b></span></div>
+        <div className="city-selected-metrics"><span>{t('MARKET CAP','市值')} <b>{money(selectedCap.cap,zh)}</b></span><span>{t('BUILDING TIER','建筑等级')} <b>{selectedBuildingTier?selectedBuildingTier.label:'—'}</b></span></div>
         <div className="city-selected-source">{selectedProject.tokenMetrics?<><span>{metricSource(selectedProject.tokenMetrics.source,zh)}</span><span>{t('Updated','更新于')} {metricDate(selectedProject.tokenMetrics.updatedAt,zh)}</span>{selectedProject.tokenMetrics.sourceUrl?<a href={selectedProject.tokenMetrics.sourceUrl} target="_blank" rel="noreferrer">↗</a>:null}</>:<span>{t('Market cap has not been verified','暂无已验证的市值数据')}</span>}</div>
-        <div className="city-project-actions"><button type="button" className="city-locate-button" onClick={()=>focusProject(selectedProject.slug)}><Crosshair size={12}/>{t('Locate','定位建筑')}</button><Link className="city-profile-link" href={profileHref!}>{t('Open profile','项目详情')} ↗</Link></div>
+        <div className="city-project-actions"><button type="button" className="city-locate-button" onClick={()=>focusProject(selectedProject.slug)}><Crosshair size={12}/>{t('Locate','定位建筑')}</button><Link className="city-profile-link" href={profileHref!} onClick={persistView}>{t('Open profile','项目详情')} ↗</Link></div>
       </div>:<p className="city-selection-hint">{t('Select a building to view the project.','点击地图中的建筑，查看项目详情。')}</p>}
 
       </>:null}

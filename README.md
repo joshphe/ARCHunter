@@ -67,14 +67,22 @@ Queries are bounded to 20 pages per contract, at most three registered contracts
 Validation: `node --test tests/project-activity.test.cjs tests/project-risk.test.cjs`.
 # Ecosystem city map
 
-The eight building bands and five square parcel bands are defined in `lib/ecosystem-map-layout.ts`. USD boundaries include the lower bound and exclude the upper bound. Missing or invalid market caps remain unpriced, distinct from zero. Parcel side lengths are 64, 128, 256, 512 and 1024 (1:2:4:8:16); each larger plot has four times the area. Buildings sit within a landscaped square parcel.
+Apply `007_stable_map_slots.sql` before deploying this version:
 
-Seven architectural families use distinct geometry and materials: terraced offices, gabled buildings with standing-seam metal roofs, courtyard buildings, round glass towers, twin towers, domed halls and sawtooth roofs. Smoked glass reflections, shaded concrete, recessed windows, thinner structural lines and rooftop services give the scene a contemporary architectural appearance. Each registered project has a fixed family; new project IDs receive a deterministic family. Market cap controls height and parcel scale without changing that identity. Style and building size do not indicate project safety or quality.
+```bash
+vercel env run -- npm run db:migrate -- 007_stable_map_slots.sql
+```
 
-PROJECT_BLOCKS gives registered projects permanent clusters, mixing parcel sizes independently of category. Buddy allocation packs plots within each cluster; a 25% coordinate expansion inserts pedestrian and green space between parcels. A 112-unit corridor separates the blocks, with orthogonal streets, planting strips and a straight canal. New projects automatically receive parcels in additional clusters. Directory ordering does not affect allocation. No polling is added.
+Use `DATABASE_URL_UNPOOLED` for migrations. The migration adds an immutable `map_slot` address, retains the original 14 project reservations, and assigns new records an automatic address. Slots are never compacted when projects are hidden or removed. Existing admin edits preserve their address without consuming new sequence values.
 
-Logo pins use the directory avatar source with symbol fallback. Selecting a building opens its project card with market-cap source, timestamp, location action and profile link. Search and category/cap filters operate on the map. The side panel contains project search, filters and selected project details; architectural and parcel reference guides are omitted. Actual footprints use the five doubling sizes.
+Project land is now fixed independently of live market cap. Original neighborhoods retain mixed parcel sizes; additional neighborhoods use fixed medium parcels with pedestrian gaps. Missing members retain reserved land. Market cap controls the eight building height bands; architecture identity stays unchanged. Missing market cap remains unknown rather than zero. Building height and size do not indicate safety or quality.
 
-The map supports pointer dragging with mouse, touch or pen, wheel/scrollbar navigation and keyboard scrolling. A movement threshold separates clicks from drags; completed drags suppress project selection. Pointer capture keeps dragging active outside the viewport. Fit-to-map restores a view of the entire island.
+Seven architectural families use distinct geometry and materials. Decorative civic landmarks occupy parks and waterfront space and never represent projects. Logo billboards use the directory avatar source with symbol fallback. Search and category/cap filters operate on the map; clicking a project opens its details panel.
 
-Run `node --test tests/ecosystem-map.test.cjs` to check cap boundaries, parcel ratios and packing, non-overlap, road clearance, permanent cluster membership, deterministic allocation, maximum-tier capacity and all seven architectural families at every market-cap tier.
+Pointer dragging pans the map; the wheel zooms around the cursor with hidden scrollbars. Fit-to-map restores the entire island. The current tab remembers zoom, island-relative camera position, selected project, filters and panel state. Map profile links include `from=map`; their detail page offers a return-to-map link. Saved state restores across workspace changes, browser back and reloads in the same tab; it does not require a user account.
+
+## Public loading and query shape
+
+The overview, launchpad pulse and network activity modules fetch and render independently, each with its own timeout and retry state. Failed refreshes retain the previous snapshot. Unmounting cancels active requests.
+
+`/api/ecosystem-projects` returns `ProjectSummary` records from one query: display/search fields, observation totals, latest risk summary and at most three published news updates per project. Full descriptions, products, scoring notes and review histories are fetched only by the full project/admin routes. Directory search covers names, handles, symbols, contracts, categories and bilingual taglines. The detail metrics endpoint reads only the published project's token address before calling the market provider.
