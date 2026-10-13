@@ -86,3 +86,9 @@ Pointer dragging pans the map; the wheel zooms around the cursor with hidden scr
 The overview, launchpad pulse and network activity modules fetch and render independently, each with its own timeout and retry state. Failed refreshes retain the previous snapshot. Unmounting cancels active requests.
 
 `/api/ecosystem-projects` returns `ProjectSummary` records from one query: display/search fields, observation totals, latest risk summary and at most three published news updates per project. Full descriptions, products, scoring notes and review histories are fetched only by the full project/admin routes. Directory search covers names, handles, symbols, contracts, categories and bilingual taglines. The detail metrics endpoint reads only the published project's token address before calling the market provider.
+
+## Network usage data
+
+The overview uses Arc Mainnet Blockscout's public Stats service at `https://explorer.arc.io/stats-service/api/v1/lines` without an API key. Daily series are `newTxns`, `activeAccounts`, `newContracts` and `txnsFee`; fee units are validated as USDC. Arcscan was replaced after its public API returned Cloudflare 530 / 1033.
+
+All requests run concurrently with a seven-second provider timeout and a five-minute cache. Partial failures preserve available series, and each card selects its own latest complete UTC day. Incomplete/current-day points remain in the trend but never become headline values. The provider does not expose computation time or index height in these chart responses: the UI labels request time as Fetched and leaves those unknown metadata fields unset.

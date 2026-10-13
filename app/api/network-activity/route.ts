@@ -2,71 +2,65 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ARC_LAUNCH_START_TIMESTAMP } from '@/lib/arc';
 
 type MetricKey = 'transactions' | 'activeAddresses' | 'contractsDeployed' | 'feesUsdc';
-type ArcscanPoint = { t: number; v: string; c: boolean; b: number; u: number };
-type ArcscanChart = {
-  points?: ArcscanPoint[];
-  coverage?: Array<{ computed_at?: number; block_to?: number }>;
-};
-
+type StatsPoint = { date: string; value: string; is_approximate?: boolean };
+type StatsChart = { chart?: StatsPoint[]; info?: { id?: string; units?: string | null } };
 const chartMetrics: Array<{ id: string; key: MetricKey }> = [
-  { id: 'tx', key: 'transactions' },
-  { id: 'active-address', key: 'activeAddresses' },
-  { id: 'deployed-contracts', key: 'contractsDeployed' },
-  { id: 'transactionfee', key: 'feesUsdc' },
+  { id: 'newTxns', key: 'transactions' },
+  { id: 'activeAccounts', key: 'activeAddresses' },
+  { id: 'newContracts', key: 'contractsDeployed' },
+  { id: 'txnsFee', key: 'feesUsdc' },
 ];
-
-async function fetchChart(id: string, forceRefresh: boolean): Promise<ArcscanChart | null> {
-  try {
-    const response = await fetch(`https://api.arc-scan.org/v1/charts/${id}?granularity=d&days=90`, {
-      ...(forceRefresh ? { cache: 'no-store' as const } : { next: { revalidate: 300 } }),
-      headers: { accept: 'application/json' },
-    });
-    if (!response.ok) return null;
-    return await response.json() as ArcscanChart;
-  } catch {
-    return null;
-  }
-}
+const STATS_URL = 'https://explorer.arc.io/stats-service/api/v1/lines';
+export const maxDuration = 15;
 
 export async function GET(request: NextRequest) {
   const forceRefresh = request.nextUrl.searchParams.has('refresh');
-  const charts = await Promise.all(chartMetrics.map(async ({ id, key }) => ({ key, chart: await fetchChart(id, forceRefresh) })));
-  const availableCharts = charts.filter((item) => item.chart?.points?.length);
-  if (!availableCharts.length) {
-    return NextResponse.json({ error: 'Arc network activity is temporarily unavailable.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
-  }
-
-  const pointsByTime = new Map<number, Record<string, number | boolean>>();
-  let updatedAtSeconds = 0;
-  let latestBlock = Number.MAX_SAFE_INTEGER;
-
-  for (const { key, chart } of availableCharts) {
-    for (const coverage of chart?.coverage ?? []) {
-      if (coverage.computed_at) updatedAtSeconds = Math.max(updatedAtSeconds, coverage.computed_at);
-      if (coverage.block_to) latestBlock = Math.min(latestBlock, coverage.block_to);
+  const now = Date.now();
+  const today = Math.floor(now / 86400000) * 86400;
+  const from = new Date(Math.max(ARC_LAUNCH_START_TIMESTAMP, today - 89 * 86400) * 1000).toISOString().slice(0, 10);
+  const to = new Date(now).toISOString().slice(0, 10);
+  const charts = await Promise.all(chartMetrics.map(async ({ id, key }) => {
+    try {
+      const response = await fetch(`${STATS_URL}/${id}?from=${from}&to=${to}&resolution=DAY`, {
+        ...(forceRefresh ? { cache: 'no-store' as const } : { next: { revalidate: 300 } }),
+        signal: AbortSignal.timeout(7000), headers: { accept: 'application/json' },
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json() as StatsChart;
+      if (!Array.isArray(data.chart) || data.info?.id !== id) throw new Error('Invalid chart response');
+      if (key === 'feesUsdc' && data.info.units !== 'USDC') throw new Error('Unexpected fee unit');
+      const points = data.chart.flatMap(point => {
+        const timestamp = /^\d{4}-\d{2}-\d{2}$/.test(point.date) ? Date.parse(`${point.date}T00:00:00Z`) / 1000 : NaN;
+        const value = typeof point.value === 'string' && point.value.trim() ? Number(point.value) : NaN;
+        if (!Number.isFinite(timestamp) || timestamp < ARC_LAUNCH_START_TIMESTAMP || timestamp > today || !Number.isFinite(value) || value < 0) return [];
+        return [{ timestamp, value, complete: timestamp < today && point.is_approximate !== true }];
+      });
+      return { key, points };
+    } catch (error) {
+      console.warn(`Network activity provider failed (${id}):`, error instanceof Error ? error.message : 'Unknown provider error');
+      return { key, points: [] };
     }
-    for (const point of chart?.points ?? []) {
-      if (point.t < ARC_LAUNCH_START_TIMESTAMP) continue;
-      const value = Number(point.v);
-      if (!Number.isFinite(value)) continue;
-      const row = pointsByTime.get(point.t) ?? {};
-      row[key] = value;
-      row.complete = row.complete === undefined ? point.c : Boolean(row.complete) && point.c;
-      row.block = point.b;
-      pointsByTime.set(point.t, row);
-      updatedAtSeconds = Math.max(updatedAtSeconds, point.u || 0);
-    }
+  }));
+  const available = charts.filter(chart => chart.points.length);
+  if (!available.length) return NextResponse.json({
+    error: 'Network statistics provider is temporarily unavailable.', code: 'NETWORK_SOURCE_UNAVAILABLE',
+  }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+
+  const daily = new Map<number, { timestamp: number; metricComplete: Partial<Record<MetricKey, boolean>> } & Partial<Record<MetricKey, number>>>();
+  for (const { key, points } of available) for (const point of points) {
+    const row = daily.get(point.timestamp) ?? { timestamp: point.timestamp, metricComplete: {} };
+    row[key] = point.value;
+    row.metricComplete[key] = point.complete;
+    daily.set(point.timestamp, row);
   }
-
-  const history = [...pointsByTime.entries()]
-    .sort(([left], [right]) => left - right)
-    .map(([timestamp, point]) => ({ timestamp, ...point }));
-
   return NextResponse.json({
-    source: 'Arcscan',
-    updatedAt: updatedAtSeconds ? new Date(updatedAtSeconds * 1000).toISOString() : null,
-    latestBlock: latestBlock === Number.MAX_SAFE_INTEGER ? null : latestBlock,
-    partial: availableCharts.length !== chartMetrics.length,
-    history,
-  }, { headers: { 'Cache-Control': forceRefresh ? 'no-store' : 'public, s-maxage=300, stale-while-revalidate=600' } });
+    source: 'Blockscout', sourceUrl: 'https://explorer.arc.io/stats',
+    // The provider supplies daily completeness but no computation timestamp or indexed block.
+    updatedAt: null, checkedAt: new Date(now).toISOString(), latestBlock: null,
+    partial: available.length !== chartMetrics.length,
+    unavailableMetrics: charts.filter(chart => !chart.points.length).map(chart => chart.key),
+    history: [...daily.values()].sort((a, b) => a.timestamp - b.timestamp).map(row => ({
+      ...row, complete: chartMetrics.every(({ key }) => row.metricComplete[key] === true),
+    })),
+  }, { headers: { 'Cache-Control': forceRefresh || available.length !== chartMetrics.length ? 'no-store' : 'public, s-maxage=300, stale-while-revalidate=600' } });
 }

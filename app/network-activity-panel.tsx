@@ -12,11 +12,14 @@ type ActivityPoint = {
   contractsDeployed?: number;
   feesUsdc?: number;
   complete?: boolean;
+  metricComplete?: Partial<Record<MetricKey, boolean>>;
   block?: number;
 };
 export type NetworkActivityData = {
   source: string;
   updatedAt: string | null;
+  checkedAt?: string;
+  sourceUrl?: string;
   latestBlock: number | null;
   partial: boolean;
   history: ActivityPoint[];
@@ -41,27 +44,31 @@ export default function NetworkActivityPanel({ data, loaded, zh, isDark, failed 
   const [days, setDays] = useState(30);
   const activeMetric = metrics.find((metric) => metric.key === selected) ?? metrics[0];
   const chartData = (data?.history ?? []).slice(-days);
-  const completed = (data?.history ?? []).filter((point) => point.complete && metrics.every((metric) => typeof point[metric.key] === 'number'));
-  const latest = completed.at(-1);
-  const dateLabel = latest ? timestampLabel(latest.timestamp, zh) : null;
+  const latestFor = (key: MetricKey) => (data?.history ?? []).filter(point =>
+    Number.isFinite(point[key]) && (point.metricComplete?.[key] ?? point.complete) === true).at(-1);
+  const hasSelectedData = chartData.some(point => Number.isFinite(point[selected]));
 
   return <section className="network-activity-panel">
     <div className="network-activity-heading">
       <div><div className="section-kicker">{zh ? 'ARC 链上活跃度' : 'ARC NETWORK ACTIVITY'}</div><h3>{zh ? '网络使用情况' : 'Network usage'}</h3><p>{zh ? '按 UTC 自然日统计，持续观察链上活动变化。' : 'Daily UTC measurements to track on-chain activity over time.'}</p></div>
       <div className="network-activity-meta">
-        {failed && <span role="status">{data ? (zh ? '刷新失败，保留上次数据' : 'Refresh failed; showing previous data') : (zh ? '链上数据加载失败' : 'Network data unavailable')} {onRetry && <button className="module-retry" disabled={refreshing} onClick={onRetry}>{zh ? '重试' : 'Retry'}</button>}</span>}
+        {failed && <span role="status">{data ? (zh ? '刷新失败，保留上次数据' : 'Refresh failed; showing previous data') : (zh ? '统计数据源暂时无法连接' : 'Statistics provider is temporarily unavailable')} {onRetry && <button className="module-retry" disabled={refreshing} onClick={onRetry}>{zh ? '重试' : 'Retry'}</button>}</span>}
         {data?.updatedAt ? <span>{zh ? '数据更新' : 'Updated'} · {timestampLabel(Date.parse(data.updatedAt) / 1000, zh, true)} UTC</span> : null}
+        {!data?.updatedAt && data?.checkedAt ? <span>{zh ? '最近获取' : 'Fetched'} · {timestampLabel(Date.parse(data.checkedAt) / 1000, zh, true)} UTC</span> : null}
         {data?.latestBlock ? <span>{zh ? '索引区块' : 'Indexed block'} · {fullNumber(data.latestBlock, zh)}</span> : null}
-        <a href="https://docs.arc-scan.org/apis" target="_blank" rel="noreferrer">{zh ? `数据来源：${data?.source ?? 'Arcscan'}` : `Source: ${data?.source ?? 'Arcscan'}`}</a>
+        <a href={data?.sourceUrl ?? "https://explorer.arc.io/stats"} target="_blank" rel="noreferrer">{zh ? `数据来源：${data?.source ?? 'Blockscout'}` : `Source: ${data?.source ?? 'Blockscout'}`}</a>
       </div>
     </div>
 
     <div className="network-activity-cards">
-      {metrics.map(({ key, title, titleZh, icon: Icon, unit }) => <article className="network-activity-card" key={key}>
+      {metrics.map(({ key, title, titleZh, icon: Icon, unit }) => {
+        const latest = latestFor(key);
+        const dateLabel = latest ? timestampLabel(latest.timestamp, zh) : null;
+        return <article className="network-activity-card" key={key}>
         <div className="network-activity-card-label"><span>{zh ? titleZh : title}</span><Icon size={15}/></div>
         <strong>{!loaded && !data ? '…' : latest ? (unit === 'usdc' ? `${shortNumber(latest[key], zh)} USDC` : shortNumber(latest[key], zh)) : '—'}</strong>
-        <small>{dateLabel ? `${zh ? '最近完整日' : 'Latest complete day'} · ${dateLabel} UTC` : (zh ? '等待完整日数据' : 'Waiting for a complete day')}</small>
-      </article>)}
+        <small>{dateLabel ? `${zh ? '最近完整日' : 'Latest complete day'} · ${dateLabel} UTC` : (!loaded ? (zh ? '正在加载' : 'Loading') : (zh ? '该指标暂不可用' : 'This metric is unavailable'))}</small>
+      </article>;})}
     </div>
 
     <div className="network-activity-chart-card">
@@ -74,14 +81,14 @@ export default function NetworkActivityPanel({ data, loaded, zh, isDark, failed 
         </div>
       </div>
       <div className="network-activity-chart">
-        {chartData.length ? <ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
+        {hasSelectedData ? <ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
           <defs><linearGradient id="networkActivityFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={activeMetric.color} stopOpacity={0.22}/><stop offset="100%" stopColor={activeMetric.color} stopOpacity={0}/></linearGradient></defs>
           <CartesianGrid stroke={isDark ? '#252a32' : '#e6e9e2'} vertical={false}/>
           <XAxis dataKey="timestamp" axisLine={false} tickLine={false} tick={{ fill: isDark ? '#7c8490' : '#798179', fontSize: 10 }} tickFormatter={(value) => timestampLabel(Number(value), zh)} dy={8}/>
           <YAxis axisLine={false} tickLine={false} tick={{ fill: isDark ? '#7c8490' : '#798179', fontSize: 10 }} tickFormatter={(value) => shortNumber(Number(value), zh)}/>
           <Tooltip contentStyle={{ background: isDark ? '#151920' : '#fff', border: `1px solid ${isDark ? '#303640' : '#dfe3da'}`, borderRadius: 8, color: isDark ? '#eef0eb' : '#20251e', fontSize: 11 }} labelFormatter={(value) => `${timestampLabel(Number(value), zh)} UTC`} formatter={(value) => [`${fullNumber(Number(value), zh)}${activeMetric.unit === 'usdc' ? ' USDC' : ''}`, zh ? activeMetric.titleZh : activeMetric.title]}/>
           <Area type="monotone" dataKey={selected} stroke={activeMetric.color} strokeWidth={2} fill="url(#networkActivityFill)" connectNulls={false} isAnimationActive={false}/>
-        </AreaChart></ResponsiveContainer> : <div className="network-activity-empty">{loaded ? (zh ? '链上活跃度暂时不可用。' : 'Network activity is temporarily unavailable.') : (zh ? '正在加载链上数据…' : 'Loading network activity…')}</div>}
+        </AreaChart></ResponsiveContainer> : <div className="network-activity-empty">{loaded ? (zh ? '当前指标暂时不可用，可重试或切换其他指标。' : 'This metric is unavailable. Retry or select another metric.') : (zh ? '正在加载链上数据…' : 'Loading network activity…')}</div>}
       </div>
       <div className="network-activity-note">
         <span>{zh ? '图表包含未完成的当日数据；上方指标仅显示最近完整 UTC 日。' : 'The chart may include an incomplete current day; cards use the latest complete UTC day.'}</span>
@@ -93,10 +100,10 @@ export default function NetworkActivityPanel({ data, loaded, zh, isDark, failed 
       <summary>{zh ? '指标口径' : 'Metric definitions'}</summary>
       <ul>
         <li>{zh ? '交易数：该时间段内已提交的顶层交易，包含成功与失败交易。' : 'Transactions: top-level transactions committed in the period, including successful and reverted transactions.'}</li>
-        <li>{zh ? '活跃地址：该时间段内发送或接收顶层交易的去重地址数。' : 'Active addresses: distinct addresses that sent or received a top-level transaction in the period.'}</li>
-        <li>{zh ? '合约部署数：该时间段内新部署的合约数。' : 'Contracts deployed: new contracts deployed during the period.'}</li>
+        <li>{zh ? '活跃地址：采用 Blockscout 的 Active accounts 日度口径，不等同于真实用户人数。' : 'Active addresses: Blockscout daily Active accounts metric; addresses are not individual users.'}</li>
+        <li>{zh ? '合约部署数：采用 Blockscout 的 New contracts 日度统计，按浏览器索引覆盖展示。' : 'Contracts deployed: Blockscout daily New contracts metric, subject to explorer index coverage.'}</li>
         <li>{zh ? '网络手续费：交易发送者支付的手续费总额，Arc 使用 USDC 作为 Gas 代币。' : 'Network fees: total fees paid by transaction senders; Arc uses USDC as its gas token.'}</li>
-        <li>{zh ? '所有日度数据按 UTC 统计；完整性与更新区块由数据源索引状态决定。' : 'Daily buckets use UTC; completeness and indexed block coverage follow the data source index.'}</li>
+        <li>{zh ? '所有日度数据按 UTC 统计；完整性由数据源的未完成标记决定；各项指标独立显示最近完整日。最近获取时间不代表数据源计算时间。' : 'Daily buckets use UTC; each metric uses its own latest complete day. Fetch time is not the provider computation time.'}</li>
       </ul>
     </details>
   </section>;
