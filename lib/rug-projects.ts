@@ -2,7 +2,7 @@ import { getSql } from '@/lib/db';
 import type { ProjectScorecard } from '@/lib/project-schema';
 
 export type RugProject = {
-  slug: string; name: string; symbol: string; handle: string;
+  slug: string; name: string; symbol: string; handle: string; logoUrl: string | null;
   tokenAddress: string | null; website: string; x: string;
   reportedOn: string; incidentOn: string | null; classification: 'reported' | 'verified';
   reasonEn: string; reasonZh: string;
@@ -12,11 +12,14 @@ export type RugProject = {
 };
 
 export async function listRugProjects(): Promise<RugProject[]> {
-  const rows = await getSql().query(`SELECT slug, reported_on::text, incident_on::text, classification,
-    reason_en, reason_zh, evidence, project_snapshot FROM rug_projects ORDER BY reported_on DESC, slug`);
+  const rows = await getSql().query(`SELECT r.slug, r.reported_on::text, r.incident_on::text, r.classification,
+    r.reason_en, r.reason_zh, r.evidence, r.project_snapshot,
+    COALESCE(NULLIF(BTRIM(r.project_snapshot->>'logo_url'), ''), NULLIF(BTRIM(p.logo_url), '')) AS "logoUrl"
+    FROM rug_projects r LEFT JOIN ecosystem_projects p ON p.slug=r.slug
+    ORDER BY r.reported_on DESC, r.slug`);
   return rows.map(row => {
     const p = row.project_snapshot;
-    return { slug: row.slug, name: p.name, symbol: p.symbol, handle: p.handle,
+    return { slug: row.slug, name: p.name, symbol: p.symbol, handle: p.handle, logoUrl: row.logoUrl ?? null,
       tokenAddress: p.token_address, website: p.website_url, x: p.x_url,
       reportedOn: row.reported_on, incidentOn: row.incident_on, classification: row.classification,
       reasonEn: row.reason_en, reasonZh: row.reason_zh, evidence: row.evidence,

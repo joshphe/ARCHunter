@@ -79,6 +79,8 @@ Project land is now fixed independently of live market cap. Original neighborhoo
 
 Seven architectural families use distinct geometry and materials. Decorative civic landmarks occupy parks and waterfront space and never represent projects. Logo billboards use the directory avatar source with symbol fallback. Search and category/cap filters operate on the map; clicking a project opens its details panel.
 
+Shared landscape components add layered broadleaf, cypress, flowering and palm trees, raised shrub and flower beds, wooden benches and shaded pergolas. Vacant parcels contain orthogonal garden paths; street and waterfront planting stays outside project footprints. Decorative placement is deterministic and introduces no animation or polling.
+
 Pointer dragging pans the map; the wheel zooms around the cursor with hidden scrollbars. Fit-to-map restores the entire island. The current tab remembers zoom, island-relative camera position, selected project, filters and panel state. Map profile links include `from=map`; their detail page offers a return-to-map link. Saved state restores across workspace changes, browser back and reloads in the same tab; it does not require a user account.
 
 ## Public loading and query shape

@@ -45,7 +45,7 @@ export default function RugPage({ language }: { language: 'en' | 'zh' }) {
     {state === 'ready' && !selectedSlug && visible.length > 0 && <section className="ecosystem-table rug-table" aria-label={t('Rug project directory', 'Rug 项目列表')}>
       <div className="ecosystem-table-head" aria-hidden="true"><span>{t('PROJECT', '项目')}</span><span>{t('RECORDED', '标记日期')}</span><span>{t('EVIDENCE STATUS', '证据状态')}</span><span>{t('STATUS', '状态')}</span><span/></div>
       <div className="ecosystem-table-body">{visible.map(p => <a key={p.slug} className="ecosystem-table-row" href={`#${encodeURIComponent(p.slug)}`}>
-        <span className="ecosystem-table-project"><ProjectAvatar handle={p.handle} symbol={p.symbol}/><span><b>{p.name}</b><small>{p.handle}</small></span></span>
+        <span className="ecosystem-table-project"><ProjectAvatar handle={p.handle} symbol={p.symbol} logoUrl={p.logoUrl}/><span><b>{p.name}</b><small>{p.handle}</small></span></span>
         <span className="rug-row-date">{p.reportedOn}</span>
         <span className="rug-row-evidence">{p.classification === 'verified' ? t('Independently verified', '已独立核验') : t('User report · verification pending', '用户报告 · 待独立核验')}</span>
         <span className="rug-badge">{t('RUG · ARCHIVED', 'RUG · 已归档')}</span><ChevronRight className="ecosystem-row-arrow" size={16}/>
@@ -54,7 +54,7 @@ export default function RugPage({ language }: { language: 'en' | 'zh' }) {
     {selectedSlug && <a className="rug-back" href="#"><ArrowLeft size={16}/>{t('Back to Rug archive', '返回 Rug 列表')}</a>}
     {state === 'ready' && selectedSlug && !projects.some(p => p.slug === selectedSlug) && <p>{t('Archive record not found.', '未找到该项目档案。')}</p>}
     {state === 'ready' && projects.filter(p => p.slug === selectedSlug).map(p => <article className="rug-card" key={p.slug} id={p.slug}>
-      <header><div><h2>{p.name} <small>{p.symbol}</small></h2><span>{p.handle}</span></div><strong className="rug-badge">{t('RUG · ARCHIVED', 'RUG · 已归档')}</strong></header>
+      <header><div className="rug-project-identity"><ProjectAvatar handle={p.handle} symbol={p.symbol} logoUrl={p.logoUrl} large/><div><h2>{p.name} <small>{p.symbol}</small></h2><span>{p.handle}</span></div></div><strong className="rug-badge">{t('RUG · ARCHIVED', 'RUG · 已归档')}</strong></header>
       <dl className="rug-facts">
         <div><dt>{t('Recorded', '标记日期')}</dt><dd>{p.reportedOn}</dd></div>
         <div><dt>{t('Incident date', '事件日期')}</dt><dd>{p.incidentOn ?? t('Not established', '尚未核实')}</dd></div>

@@ -7,7 +7,7 @@ const projectSelect = `
     description_en AS "descriptionEn", description_zh AS "descriptionZh", categories, status,
     products, tvl_usd AS "tvlUsd", fees_24h_usd AS "fees24hUsd", volume_24h_usd AS "volume24hUsd",
     token_address AS "tokenAddress", website_url AS website, x_url AS x, source_urls AS "sourceUrls",
-    verified_on AS "verifiedOn", recommended, is_published AS "isPublished",
+    verified_on::text AS "verifiedOn", recommended, is_published AS "isPublished",
     recommendation_reason_en AS "recommendationReasonEn", recommendation_reason_zh AS "recommendationReasonZh",
     COALESCE((SELECT jsonb_agg(jsonb_build_object('id',r.id,'priority',r.priority,'evidenceStatus',r.evidence_status,'reasonEn',r.reason_en,'reasonZh',r.reason_zh,'sources',r.sources,'reviewedOn',r.reviewed_on::text) ORDER BY r.id DESC) FROM project_risk_reviews r WHERE r.slug=ecosystem_projects.slug),'[]'::jsonb) AS "riskReviews"
   FROM ecosystem_projects`;

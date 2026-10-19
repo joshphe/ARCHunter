@@ -62,12 +62,14 @@ test('parcel arrangement is deterministic across directory order and unregistere
   assert.deepEqual(world(layoutMap(projects)),world(withNew));
   assert.ok(withNew.buildings.some(b=>b.project.slug==='new-project'));
 });
-test('crossing cap bands repacks inside the fixed neighborhood and all XXL parcels fit',()=>{
+test('crossing cap bands preserves every reserved parcel and neighborhood',()=>{
   const before={...NEIGHBORHOOD_ORIGIN};
+  const initial=layoutMap(PROJECT_PLOTS.map(slug=>project(slug,0)));
   const after=layoutMap(PROJECT_PLOTS.map(slug=>project(slug,1e9)));
   verifyTiling(after);assert.deepEqual(NEIGHBORHOOD_ORIGIN,before);
   assert.equal(after.buildings.length,PROJECT_PLOTS.length);
-  assert.ok(after.parcels.every(p=>p.side===1024));
+  const positions=result=>result.parcels.map(({slot,u,v,side,block})=>({slot,u,v,side,block}));
+  assert.deepEqual(positions(after),positions(initial));
 });
 
 test('every permanent cluster has two to four projects and membership survives cap changes',()=>{
@@ -79,6 +81,7 @@ test('every permanent cluster has two to four projects and membership survives c
 });
 
 test('neighboring buildings have a pedestrian gap without changing parcel dimensions',()=>{
+  const baseline=layoutMap(PROJECT_PLOTS.map(slug=>project(slug,0)));
   for(const cap of [0,5e5,5e6,1e8,1e9]){
     const result=layoutMap(PROJECT_PLOTS.map(slug=>project(slug,cap)));
     for(let i=0;i<result.parcels.length;i++)for(let j=i+1;j<result.parcels.length;j++){
@@ -87,7 +90,7 @@ test('neighboring buildings have a pedestrian gap without changing parcel dimens
       const gapV=Math.max(a.v,b.v)-Math.min(a.v+a.side,b.v+b.side);
       assert.ok(gapU>=16||gapV>=16,'Buildings must not share an occupied edge');
     }
-    assert.ok(result.parcels.every(p=>p.side===mapScale(cap).side));
+    assert.deepEqual(result.parcels.map(p=>[p.slot,p.side]),baseline.parcels.map(p=>[p.slot,p.side]));
   }
 });
 
@@ -102,8 +105,11 @@ test('project architecture is stable and all seven silhouettes are assigned',()=
 test('all architectural families render at every scale with distinct geometry',()=>{
   const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
   const buildingModule={exports:{}};
+  const landscapeModule={exports:{}};
+  const landscapeCode=ts.transpileModule(fs.readFileSync('app/city-landscape.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+  new Function('require','exports','module',landscapeCode)(require,landscapeModule.exports,landscapeModule);
   const code=ts.transpileModule(fs.readFileSync('app/city-building.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
-  new Function('require','exports','module',code)(name=>name==='@/lib/ecosystem-map-layout'?m.exports:require(name),buildingModule.exports,buildingModule);
+  new Function('require','exports','module',code)(name=>name==='@/lib/ecosystem-map-layout'?m.exports:name==='./city-landscape'?landscapeModule.exports:require(name),buildingModule.exports,buildingModule);
   for(let tier=0;tier<8;tier++){
     const shapes=[];
     for(let family=0;family<7;family++){

@@ -1,0 +1,321 @@
+{
+  "reviewDate": "2026-10-09",
+  "verifiedExistingSlugs": ["obrain", "arcflow", "foci", "arcstocks"],
+  "projects": [
+    {
+      "slug": "arctools",
+      "name": "ArcTools",
+      "symbol": "ARCT",
+      "handle": "@ArcToolsBackup",
+      "taglineEn": "Trading, launch and on-chain intelligence tools for Arc.",
+      "taglineZh": "面向 Arc 的交易、发行与链上情报工具集。",
+      "descriptionEn": "ArcTools is an Arc-native tooling suite that combines a multi-venue trading terminal, token explorer, on-chain risk score, launchpad, liquidity locker, alerts, portfolio views, x402 data APIs and automation tools. The suite routes across supported Arc venues and uses ARCT in rewards, access and fee flows. Product availability and fee destinations vary by module, and the official rewards page currently says staker fee sharing and buybacks are paused while referral and creator-tribute payouts continue.",
+      "descriptionZh": "ArcTools 是 Arc 原生工具套件，整合多场所交易终端、代币浏览器、链上风险评分、发行平台、流动性锁定、提醒、投资组合、x402 数据 API 与自动化工具。平台在支持的 Arc 场所间路由，并将 ARCT 用于奖励、访问和费用流程。不同模块的可用状态与费用去向并不相同，官方奖励页目前注明质押者手续费分成与回购暂停，推荐和创作者 Tribute 支付仍继续。",
+      "categories": ["DeFi", "Tokens"],
+      "status": "live",
+      "products": [
+        {"en": "Multi-venue trading terminal", "zh": "多场所交易终端"},
+        {"en": "ArcToolsPad token launchpad", "zh": "ArcToolsPad 代币发行平台"},
+        {"en": "On-chain token explorer and ARS risk score", "zh": "链上代币浏览器与 ARS 风险评分"},
+        {"en": "Sniper, alerts and tracked-wallet calls", "zh": "狙击、提醒与跟踪钱包信号"},
+        {"en": "Liquidity locker and creator tribute", "zh": "流动性锁定与创作者 Tribute"},
+        {"en": "x402 agent data APIs", "zh": "x402 智能体数据 API"},
+        {"en": "ArcToolsAI assistant", "zh": "ArcToolsAI 助手"}
+      ],
+      "website": "https://arctools.fun/",
+      "x": "https://x.com/ArcToolsBackup",
+      "tokenAddress": "0x1ea1e4f9a9975f1f6e9c0a9f6e8ada7a66e6de52",
+      "sources": [
+        "https://arctools.fun/",
+        "https://arctools.fun/risk",
+        "https://arctools.fun/tribute",
+        "https://arctools.fun/v3/api-docs",
+        "https://arctools.fun/ai",
+        "https://arctools.fun/v3-rh/rewards",
+        "https://x.com/ArcToolsBackup",
+        "https://www.coingecko.com/en/coins/arctools"
+      ],
+      "scorecard": {
+        "delivery": {"score": 5, "applicable": true, "noteEn": "Reviewed 2026-10-09: Multiple live product surfaces, public methodology and machine-readable APIs are available. Sources: https://arctools.fun/risk ; https://arctools.fun/v3/api-docs ; https://arctools.fun/ai", "noteZh": "2026-10-09 复核：多个线上产品、公开评分方法和机器可读 API 均可访问。来源：https://arctools.fun/risk；https://arctools.fun/v3/api-docs；https://arctools.fun/ai"},
+        "adoption": {"score": 3, "applicable": true, "noteEn": "Reviewed 2026-10-09: Public market sources show active ARCT trading and holders, but verified distinct users and product retention were not obtained. Sources: https://www.coingecko.com/en/coins/arctools ; https://dexscreener.com/arc", "noteZh": "2026-10-09 复核：公开市场来源显示 ARCT 存在交易和持币者，但未取得可核验的独立用户与产品留存数据。来源：https://www.coingecko.com/en/coins/arctools；https://dexscreener.com/arc"},
+        "economics": {"score": 3, "applicable": true, "noteEn": "Reviewed 2026-10-09: Interface, API and token fee paths are documented; the official rewards page says staker fee share and buybacks are currently paused. Sources: https://arctools.fun/v3/api-docs ; https://arctools.fun/v3-rh/rewards", "noteZh": "2026-10-09 复核：界面、API 与代币费用路径有公开说明；官方奖励页称质押者分成与回购目前暂停。来源：https://arctools.fun/v3/api-docs；https://arctools.fun/v3-rh/rewards"},
+        "security": {"score": 3, "applicable": true, "noteEn": "Reviewed 2026-10-09: The risk model is transparent and sell simulation is described, but it is not an audit and no independent suite-wide audit was verified. Source: https://arctools.fun/risk", "noteZh": "2026-10-09 复核：风险模型与卖出模拟方法公开，但官方明确其不是审计，本次未核验到覆盖整套产品的独立审计。来源：https://arctools.fun/risk"},
+        "ecosystem": {"score": 5, "applicable": true, "noteEn": "Reviewed 2026-10-09: Provides reusable trading, launch, risk, data and agent infrastructure across the Arc ecosystem. Sources: https://arctools.fun/ ; https://arctools.fun/v3/api-docs", "noteZh": "2026-10-09 复核：为 Arc 生态提供可复用的交易、发行、风险、数据和智能体基础设施。来源：https://arctools.fun/；https://arctools.fun/v3/api-docs"}
+      },
+      "risk": {
+        "priority": "watch",
+        "evidenceStatus": "partial",
+        "reasonEn": "ArcTools spans trading, launch, browser-wallet, automation and paid-data surfaces, so contract, routing, keeper and operational risks differ by module. Its ARS score is an on-chain heuristic rather than an audit. The official rewards page says ARCT staker fee sharing and buybacks are paused, and no independent audit covering the full suite was verified.",
+        "reasonZh": "ArcTools 同时覆盖交易、发行、浏览器钱包、自动化和付费数据，不同模块分别存在合约、路由、Keeper 与运营风险。ARS 属于链上启发式评分，并非审计。官方奖励页注明 ARCT 质押分成与回购暂停，本次未核验到覆盖整套产品的独立审计。",
+        "sources": ["https://arctools.fun/risk", "https://arctools.fun/v3-rh/rewards", "https://arctools.fun/terms"]
+      },
+      "update": {
+        "titleEn": "ArcTools publishes transparent ARS risk methodology and x402 data APIs",
+        "titleZh": "ArcTools 公布 ARS 风险方法与 x402 数据 API",
+        "summaryEn": "The public methodology scores contract, liquidity, holder, developer, market and governance signals. The x402 API exposes paid token statistics, developer checks, sell simulations and combined reports for agents.",
+        "summaryZh": "公开方法从合约、流动性、持币、开发者、市场和治理六类信号评分；x402 API 向智能体提供付费代币统计、开发者检查、卖出模拟与综合报告。",
+        "sourceUrl": "https://arctools.fun/risk",
+        "publishedAt": null
+      }
+    },
+    {
+      "slug": "memespad",
+      "name": "MEMES PAD",
+      "symbol": "MEMESPAD",
+      "handle": "@memespad",
+      "taglineEn": "A configurable multichain memecoin launchpad born on Arc.",
+      "taglineZh": "诞生于 Arc 的可配置多链 Meme 代币发行平台。",
+      "descriptionEn": "MEMES PAD is a token launch and trading platform that lets creators configure reward splits, buybacks, burns, liquidity routing and holder dividends. Its production MEMESPAD token is listed on Arc under the contract shown below. Earlier test-token messaging and several similarly named contracts make contract verification especially important before using the platform or token.",
+      "descriptionZh": "MEMES PAD 是代币发行与交易平台，允许创作者配置奖励分成、回购、销毁、流动性路由和持币者分红。其生产版 MEMESPAD 代币已在 Arc 上线，合约如下。此前曾存在测试代币说明和多个同名合约，因此使用平台或代币前尤其需要核对官方合约。",
+      "categories": ["DeFi", "Tokens"],
+      "status": "live",
+      "products": [
+        {"en": "Memecoin launchpad", "zh": "Meme 代币发行平台"},
+        {"en": "Creator reward splitting", "zh": "创作者奖励分配"},
+        {"en": "Buyback, burn and liquidity routing", "zh": "回购、销毁与流动性路由"},
+        {"en": "Holder dividend distributions", "zh": "持币者分红分配"},
+        {"en": "Token discovery and trading", "zh": "代币发现与交易"}
+      ],
+      "website": "https://memespad.com/",
+      "x": "https://x.com/memespad",
+      "tokenAddress": "0x0bb3befba323578dad33efb6356c69b557787777",
+      "sources": [
+        "https://memespad.com/",
+        "https://x.com/memespad",
+        "https://www.coingecko.com/en/coins/memespad",
+        "https://dexscreener.com/arc/0x5318f13e00bfe42a5c07223c5073fc3f14be80c476a12f6cd40ea504391b82f0"
+      ],
+      "scorecard": {
+        "delivery": {"score": 4, "applicable": true, "noteEn": "Reviewed 2026-10-09: The launchpad and production token are live, with configurable fee and reward flows described by the project. Sources: https://memespad.com/ ; https://x.com/memespad", "noteZh": "2026-10-09 复核：发行平台与生产版代币已上线，项目说明了可配置费用和奖励流程。来源：https://memespad.com/；https://x.com/memespad"},
+        "adoption": {"score": 3, "applicable": true, "noteEn": "Reviewed 2026-10-09: Public markets show early trading activity, but verified launcher, creator and returning-user totals were not obtained. Sources: https://www.coingecko.com/en/coins/memespad ; https://dexscreener.com/arc/0x5318f13e00bfe42a5c07223c5073fc3f14be80c476a12f6cd40ea504391b82f0", "noteZh": "2026-10-09 复核：公开市场显示早期交易活动，但未取得可核验的发行者、创作者和回访用户总量。来源：https://www.coingecko.com/en/coins/memespad；https://dexscreener.com/arc/0x5318f13e00bfe42a5c07223c5073fc3f14be80c476a12f6cd40ea504391b82f0"},
+        "economics": {"score": 3, "applicable": true, "noteEn": "Reviewed 2026-10-09: Fee routing, dividends, buybacks and burns are described, but realized protocol revenue and dividend sustainability were not independently verified. Sources: https://memespad.com/ ; https://x.com/memespad", "noteZh": "2026-10-09 复核：费用路由、分红、回购和销毁有说明，但实际协议收入与分红可持续性未独立核验。来源：https://memespad.com/；https://x.com/memespad"},
+        "security": {"score": 2, "applicable": true, "noteEn": "Reviewed 2026-10-09: Public messaging distinguishes test and production tokens, but similarly named contracts and configurable economics increase verification risk. No independent audit was verified. Sources: https://x.com/memespad ; https://www.coingecko.com/en/coins/memespad", "noteZh": "2026-10-09 复核：公开说明区分测试与生产代币，但同名合约和可配置经济参数提高了核验风险；未核验到独立审计。来源：https://x.com/memespad；https://www.coingecko.com/en/coins/memespad"},
+        "ecosystem": {"score": 3, "applicable": true, "noteEn": "Reviewed 2026-10-09: Adds configurable token-launch and creator-reward tooling to Arc, with limited verified external integrations. Source: https://memespad.com/", "noteZh": "2026-10-09 复核：为 Arc 增加可配置代币发行和创作者奖励工具，但已核验的外部集成有限。来源：https://memespad.com/"}
+      },
+      "risk": {
+        "priority": "priority",
+        "evidenceStatus": "partial",
+        "reasonEn": "MEMES PAD is very new and public posts distinguish earlier test tokens from the production token. Multiple similarly named contracts and rapidly changing tokenomics increase contract-confusion risk. Creator-configured taxes and reward routing add smart-contract and operational dependencies, while no independent audit and no durable revenue record were verified.",
+        "reasonZh": "MEMES PAD 上线时间很短，公开动态还专门区分早期测试代币与生产代币。多个同名合约及快速变化的代币经济增加了合约混淆风险。创作者可配置税率和奖励路由带来额外合约与运营依赖，本次未核验到独立审计或长期收入记录。",
+        "sources": ["https://x.com/memespad", "https://www.coingecko.com/en/coins/memespad", "https://dexscreener.com/arc/0x5318f13e00bfe42a5c07223c5073fc3f14be80c476a12f6cd40ea504391b82f0"]
+      },
+      "update": {
+        "titleEn": "Production MEMESPAD token launches on Arc",
+        "titleZh": "生产版 MEMESPAD 代币在 Arc 上线",
+        "summaryEn": "The project identified 0x0bb3befba323578dad33efb6356c69b557787777 as the production token and described automated holder-dividend, buyback, burn and liquidity flows.",
+        "summaryZh": "项目将 0x0bb3befba323578dad33efb6356c69b557787777 标记为生产版代币，并说明自动持币分红、回购、销毁和流动性流程。",
+        "sourceUrl": "https://www.coingecko.com/en/coins/memespad",
+        "publishedAt": "2026-09-24T00:00:00Z"
+      }
+    },
+    {
+      "slug": "solonpad",
+      "name": "SolonPad",
+      "symbol": "SOLON",
+      "handle": "@Solonlabs1",
+      "taglineEn": "An agent-ready launchpad, aggregator and data rail for Arc.",
+      "taglineZh": "面向 Arc 的智能体友好发行、聚合与数据基础设施。",
+      "descriptionEn": "SolonPad is a non-custodial Arc launchpad and trading interface with bonding-curve launches, Uniswap V4 graduation, token discovery and aggregation. It also publishes machine-readable agent guides, x402 paid risk/data endpoints and prepaid multi-chain RPC credits. SOLON is the project token and platform fees are described as funding token buybacks.",
+      "descriptionZh": "SolonPad 是 Arc 上的非托管发行与交易界面，提供绑定曲线发行、Uniswap V4 毕业、代币发现与聚合交易。项目还发布机器可读智能体指南、x402 付费风险/数据接口以及预付多链 RPC 额度。SOLON 是项目代币，平台说明费用用于代币回购。",
+      "categories": ["DeFi", "Tokens"],
+      "status": "live",
+      "products": [
+        {"en": "Arc token launchpad", "zh": "Arc 代币发行平台"},
+        {"en": "Token trading aggregator", "zh": "代币交易聚合器"},
+        {"en": "x402 risk and data endpoints", "zh": "x402 风险与数据接口"},
+        {"en": "Multi-chain RPC credits", "zh": "多链 RPC 额度"},
+        {"en": "Open agent skill and guides", "zh": "开放智能体技能与指南"}
+      ],
+      "website": "https://solonpad.fun/",
+      "x": "https://x.com/Solonlabs1",
+      "tokenAddress": "0xd36687146385f7dc84a18fea3d00319d39d6d1a0",
+      "sources": [
+        "https://solonpad.fun/",
+        "https://solonpad.fun/terms",
+        "https://solonpad.fun/x402",
+        "https://solonpad.fun/rpc",
+        "https://github.com/solonlend/solonpad-skill",
+        "https://x.com/Solonlabs1",
+        "https://www.coingecko.com/en/coins/solonpad"
+      ],
+      "scorecard": {
+        "delivery": {"score": 4, "applicable": true, "noteEn": "Reviewed 2026-10-09: The launchpad, trading interface, x402 documentation, RPC product and open agent skill are published. Sources: https://solonpad.fun/ ; https://solonpad.fun/x402 ; https://solonpad.fun/rpc", "noteZh": "2026-10-09 复核：发行平台、交易界面、x402 文档、RPC 产品和开放智能体技能均已发布。来源：https://solonpad.fun/；https://solonpad.fun/x402；https://solonpad.fun/rpc"},
+        "adoption": {"score": 3, "applicable": true, "noteEn": "Reviewed 2026-10-09: SOLON has a live market and the launchpad lists launches, but verified distinct users and repeat launch activity were not obtained. Sources: https://solonpad.fun/ ; https://www.coingecko.com/en/coins/solonpad", "noteZh": "2026-10-09 复核：SOLON 存在活跃市场且发行平台列出项目，但未取得可核验的独立用户和重复发行活动数据。来源：https://solonpad.fun/；https://www.coingecko.com/en/coins/solonpad"},
+        "economics": {"score": 3, "applicable": true, "noteEn": "Reviewed 2026-10-09: Trading, x402 and RPC prices are published and fees are linked to SOLON buybacks; realized revenue was not independently reconciled. Sources: https://solonpad.fun/ ; https://solonpad.fun/x402 ; https://solonpad.fun/rpc", "noteZh": "2026-10-09 复核：交易、x402 与 RPC 价格公开，费用与 SOLON 回购关联；实际收入未独立对账。来源：https://solonpad.fun/；https://solonpad.fun/x402；https://solonpad.fun/rpc"},
+        "security": {"score": 3, "applicable": true, "noteEn": "Reviewed 2026-10-09: The service publishes non-custodial terms, open tooling and payment-pinning guidance, but no independent audit covering launch and routing contracts was verified. Sources: https://solonpad.fun/terms ; https://github.com/solonlend/solonpad-skill", "noteZh": "2026-10-09 复核：服务公开非托管条款、开放工具和付款固定校验指引，但未核验到覆盖发行与路由合约的独立审计。来源：https://solonpad.fun/terms；https://github.com/solonlend/solonpad-skill"},
+        "ecosystem": {"score": 4, "applicable": true, "noteEn": "Reviewed 2026-10-09: Combines launch, trading, risk, agent and RPC infrastructure for Arc and adjacent networks. Sources: https://solonpad.fun/ ; https://solonpad.fun/rpc", "noteZh": "2026-10-09 复核：为 Arc 及相关网络组合发行、交易、风险、智能体与 RPC 基础设施。来源：https://solonpad.fun/；https://solonpad.fun/rpc"}
+      },
+      "risk": {
+        "priority": "watch",
+        "evidenceStatus": "partial",
+        "reasonEn": "SolonPad combines launch contracts, external liquidity venues, indexers, keepers, RPC providers and x402 payments. Its terms state that third-party venue and provider failures are outside its control. Open tooling improves inspectability, but no independent audit of the full launch and routing stack was verified and the SOLON market remains young.",
+        "reasonZh": "SolonPad 依赖发行合约、外部流动性场所、索引器、Keeper、RPC 提供商和 x402 支付。其条款明确第三方场所和提供商故障不在平台控制范围内。开放工具提升了可检查性，但未核验到整套发行与路由系统的独立审计，SOLON 市场也仍很年轻。",
+        "sources": ["https://solonpad.fun/terms", "https://solonpad.fun/x402", "https://github.com/solonlend/solonpad-skill"]
+      },
+      "update": {
+        "titleEn": "SolonPad publishes x402 data and multi-chain RPC credits",
+        "titleZh": "SolonPad 发布 x402 数据与多链 RPC 额度",
+        "summaryEn": "The platform documents paid risk/data calls settled with Arc USDC and a prepaid RPC voucher shared across Arc, BSC, Robinhood Chain and Solana.",
+        "summaryZh": "平台公开使用 Arc USDC 结算的付费风险/数据调用，并提供可在 Arc、BSC、Robinhood Chain 和 Solana 共用的预付 RPC 凭证。",
+        "sourceUrl": "https://solonpad.fun/x402",
+        "publishedAt": null
+      }
+    },
+    {
+      "slug": "potato",
+      "name": "Potato",
+      "symbol": "POTATO",
+      "handle": "@Potatonarc",
+      "taglineEn": "A community meme token and mascot in the Argus ecosystem.",
+      "taglineZh": "Argus 生态中的社区 Meme 代币与吉祥物。",
+      "descriptionEn": "Potato is a community meme token launched through Arguspad and presented as an Argus mascot. Its public profile says the creator takes no fee and promotes community token burns. No separate protocol, application, treasury report or independently verified utility was found during this review.",
+      "descriptionZh": "Potato 是通过 Arguspad 发行的社区 Meme 代币，并被定位为 Argus 吉祥物。其公开资料称创作者不收取费用，并推动社区销毁代币。本次复核未发现独立协议、应用、金库报告或经独立核验的实用功能。",
+      "categories": ["Tokens"],
+      "status": "live",
+      "products": [
+        {"en": "Community meme token", "zh": "社区 Meme 代币"},
+        {"en": "Community burn campaigns", "zh": "社区销毁活动"},
+        {"en": "Argus ecosystem mascot", "zh": "Argus 生态吉祥物"}
+      ],
+      "website": "https://arctools.fun/token2/0x333a07961b50924056b15477b409a9ae774e1ed7",
+      "x": "https://x.com/Potatonarc",
+      "tokenAddress": "0x333a07961b50924056b15477b409a9ae774e1ed7",
+      "sources": [
+        "https://x.com/Potatonarc",
+        "https://arctools.fun/token2/0x333a07961b50924056b15477b409a9ae774e1ed7",
+        "https://dexscreener.com/arc"
+      ],
+      "scorecard": {
+        "delivery": {"score": 2, "applicable": true, "noteEn": "Reviewed 2026-10-09: The token and market are live, but no separate protocol or application was verified. Sources: https://x.com/Potatonarc ; https://arctools.fun/token2/0x333a07961b50924056b15477b409a9ae774e1ed7", "noteZh": "2026-10-09 复核：代币和市场已上线，但未核验到独立协议或应用。来源：https://x.com/Potatonarc；https://arctools.fun/token2/0x333a07961b50924056b15477b409a9ae774e1ed7"},
+        "adoption": {"score": 2, "applicable": true, "noteEn": "Reviewed 2026-10-09: A public market and community account exist, but verified active-user or holder-retention data were not obtained. Sources: https://x.com/Potatonarc ; https://dexscreener.com/arc", "noteZh": "2026-10-09 复核：存在公开市场与社区账号，但未取得可核验的活跃用户或持币留存数据。来源：https://x.com/Potatonarc；https://dexscreener.com/arc"},
+        "economics": {"score": 1, "applicable": true, "noteEn": "Reviewed 2026-10-09: No revenue-producing product or durable token utility was verified; burn announcements do not create cash flow. Source: https://x.com/Potatonarc", "noteZh": "2026-10-09 复核：未核验到产生收入的产品或持续代币用途；销毁公告不等同于现金流。来源：https://x.com/Potatonarc"},
+        "security": {"score": 2, "applicable": true, "noteEn": "Reviewed 2026-10-09: The creator states a zero fee and community burns, but contract privileges, holder concentration and LP controls were not independently verified. Source: https://x.com/Potatonarc", "noteZh": "2026-10-09 复核：创作者称费用为零并进行社区销毁，但合约权限、持币集中度和 LP 控制未独立核验。来源：https://x.com/Potatonarc"},
+        "ecosystem": {"score": 2, "applicable": true, "noteEn": "Reviewed 2026-10-09: The project contributes community identity around Argus but limited reusable ecosystem infrastructure. Source: https://x.com/Potatonarc", "noteZh": "2026-10-09 复核：项目为 Argus 提供社区身份符号，但可复用生态基础设施有限。来源：https://x.com/Potatonarc"}
+      },
+      "risk": {
+        "priority": "priority",
+        "evidenceStatus": "partial",
+        "reasonEn": "Potato is a meme token without a separately verified product or cash-flow utility. Public burn claims do not establish liquidity depth, holder distribution or contract safety. The market is relatively thin, and contract privileges, LP control and wallet concentration were not independently verified.",
+        "reasonZh": "Potato 属于 Meme 代币，未核验到独立产品或现金流用途。公开销毁声明不能证明流动性深度、持币分布或合约安全。市场相对较薄，合约权限、LP 控制和钱包集中度均未独立核验。",
+        "sources": ["https://x.com/Potatonarc", "https://arctools.fun/token2/0x333a07961b50924056b15477b409a9ae774e1ed7", "https://dexscreener.com/arc"]
+      },
+      "update": {
+        "titleEn": "Potato launches as an Argus community mascot token",
+        "titleZh": "Potato 作为 Argus 社区吉祥物代币上线",
+        "summaryEn": "The project identifies the token as an Arguspad-launched community meme, states that creator fees are set to zero and reports community-led burns.",
+        "summaryZh": "项目将其定位为通过 Arguspad 发行的社区 Meme 代币，称创作者费用设为零，并报告由社区推动的销毁。",
+        "sourceUrl": "https://x.com/Potatonarc",
+        "publishedAt": null
+      }
+    },
+    {
+      "slug": "arcanus",
+      "name": "Arcanus",
+      "symbol": "ARCANUS",
+      "handle": "@ArcanusNetwork",
+      "taglineEn": "A pay-as-you-use privacy and compute protocol on Arc.",
+      "taglineZh": "Arc 上按使用付费的隐私与计算协议。",
+      "descriptionEn": "Arcanus presents a wallet-based privacy protocol spanning pay-per-gigabyte VPN access, encrypted voice, mail and messaging, a privacy-oriented desktop browser and pay-per-token AI inference. Settlement uses ARCANUS or Arc USDC depending on the service. Official documentation separates on-chain payment receipts from off-chain traffic and states that open inference nodes can read prompts, while the attested private inference lane is not yet live.",
+      "descriptionZh": "Arcanus 是基于钱包的隐私协议，覆盖按流量付费的 VPN、加密语音、邮件与即时通讯、注重隐私的桌面浏览器以及按 Token 付费的 AI 推理。不同服务使用 ARCANUS 或 Arc USDC 结算。官方文档明确区分链上付款凭证与链下流量，并说明开放推理节点可以读取提示词，而经证明的私密推理通道尚未上线。",
+      "categories": ["DeFi", "AI", "Tokens"],
+      "status": "live",
+      "products": [
+        {"en": "dePIN VPN capacity", "zh": "dePIN VPN 流量"},
+        {"en": "Encrypted wallet-to-wallet voice", "zh": "钱包到钱包加密语音"},
+        {"en": "Encrypted mail and messenger", "zh": "加密邮件与即时通讯"},
+        {"en": "Privacy-oriented desktop browser", "zh": "注重隐私的桌面浏览器"},
+        {"en": "Pay-per-token AI inference", "zh": "按 Token 付费的 AI 推理"},
+        {"en": "GPU operator marketplace", "zh": "GPU 运营者市场"}
+      ],
+      "website": "https://arcanus.network/",
+      "x": "https://x.com/ArcanusNetwork",
+      "tokenAddress": "0x29316db42ff99f640fd4d1bb169635b6318cd430",
+      "sources": [
+        "https://arcanus.network/",
+        "https://arcanus.network/docs",
+        "https://arcanus.network/dashboard?tab=tunnel",
+        "https://arcanus.network/dashboard?tab=infer",
+        "https://x.com/ArcanusNetwork",
+        "https://www.coingecko.com/en/coins/arcanus"
+      ],
+      "scorecard": {
+        "delivery": {"score": 3, "applicable": true, "noteEn": "Reviewed 2026-10-09: Product interfaces, detailed docs and a downloadable browser are published; the tunnel dashboard showed no live locations in one reviewed snapshot and private inference is not live. Sources: https://arcanus.network/ ; https://arcanus.network/dashboard?tab=tunnel ; https://arcanus.network/dashboard?tab=infer", "noteZh": "2026-10-09 复核：产品界面、详细文档和可下载浏览器已发布；一次核验快照中 VPN 面板未显示在线节点，私密推理也尚未上线。来源：https://arcanus.network/；https://arcanus.network/dashboard?tab=tunnel；https://arcanus.network/dashboard?tab=infer"},
+        "adoption": {"score": 1, "applicable": true, "noteEn": "Reviewed 2026-10-09: A token market exists, but verified paying users, active nodes, delivered bandwidth and messaging usage were not obtained. Sources: https://arcanus.network/ ; https://www.coingecko.com/en/coins/arcanus", "noteZh": "2026-10-09 复核：代币市场存在，但未取得可核验的付费用户、活跃节点、已交付流量和通信使用数据。来源：https://arcanus.network/；https://www.coingecko.com/en/coins/arcanus"},
+        "economics": {"score": 2, "applicable": true, "noteEn": "Reviewed 2026-10-09: VPN, voice, messaging and inference prices are published, but realized revenue, node earnings and service utilization were not verified. Sources: https://arcanus.network/ ; https://arcanus.network/docs", "noteZh": "2026-10-09 复核：VPN、语音、通信与推理价格公开，但实际收入、节点收益和服务利用率未核验。来源：https://arcanus.network/；https://arcanus.network/docs"},
+        "security": {"score": 2, "applicable": true, "noteEn": "Reviewed 2026-10-09: The docs disclose that open GPU nodes see prompts and distinguish settlement from data transport, but encryption, node isolation and contract security were not independently audited in this review. Source: https://arcanus.network/docs", "noteZh": "2026-10-09 复核：文档披露开放 GPU 节点可读取提示词，并区分结算与数据传输；本次未独立审计加密实现、节点隔离和合约安全。来源：https://arcanus.network/docs"},
+        "ecosystem": {"score": 3, "applicable": true, "noteEn": "Reviewed 2026-10-09: Extends Arc payments into privacy, communications and inference services, although live decentralized capacity was not verified. Sources: https://arcanus.network/ ; https://arcanus.network/docs", "noteZh": "2026-10-09 复核：将 Arc 支付扩展到隐私、通信和推理服务，但未核验实时去中心化容量。来源：https://arcanus.network/；https://arcanus.network/docs"}
+      },
+      "risk": {
+        "priority": "priority",
+        "evidenceStatus": "partial",
+        "reasonEn": "Arcanus makes privacy and service-availability claims that require independent technical verification. The official tunnel dashboard showed zero live locations in one reviewed snapshot, the private inference lane is not live, and open GPU nodes can read prompts. No independent audit of encryption, node isolation or payment contracts was verified, so sensitive data should not rely solely on marketing claims.",
+        "reasonZh": "Arcanus 的隐私和服务可用性主张需要独立技术核验。一次核验快照中官方 VPN 面板显示在线节点为零，私密推理通道尚未上线，开放 GPU 节点可以读取提示词。本次未核验到加密实现、节点隔离或支付合约的独立审计，因此敏感数据不应仅依赖宣传口径。",
+        "sources": ["https://arcanus.network/docs", "https://arcanus.network/dashboard?tab=tunnel", "https://arcanus.network/dashboard?tab=infer"]
+      },
+      "update": {
+        "titleEn": "Arcanus documents its privacy, messaging and inference architecture",
+        "titleZh": "Arcanus 公布隐私、通信与推理架构",
+        "summaryEn": "The documentation separates device, control, data, settlement and capacity layers, and explains which data remains off-chain and which inference paths can read prompts.",
+        "summaryZh": "文档将系统拆分为设备、控制、数据、结算和容量层，并说明哪些数据留在链下以及哪些推理路径能够读取提示词。",
+        "sourceUrl": "https://arcanus.network/docs",
+        "publishedAt": null
+      }
+    },
+    {
+      "slug": "synthra",
+      "name": "Synthra",
+      "symbol": "SYNTHRA",
+      "handle": "@synthra_finance",
+      "taglineEn": "A chain-abstracted trading layer for spot, liquidity and perps.",
+      "taglineZh": "覆盖现货、流动性与永续合约的链抽象交易层。",
+      "descriptionEn": "Synthra combines concentrated-liquidity spot pools, cross-chain routing, Hyperliquid-powered perpetuals, developer APIs and a permissionless launchpad in one non-custodial trading surface. Synthra V3 and Synthra Launches have Arc mainnet deployments, and sStocks bridge stock-token representations from Robinhood Chain to Arc. No standalone Synthra project-token contract was identified in the reviewed official deployment tables, so the project is listed without a token address.",
+      "descriptionZh": "Synthra 在一个非托管交易界面中整合集中流动性现货池、跨链路由、由 Hyperliquid 提供执行的永续合约、开发者 API 和无需许可的发行平台。Synthra V3 与 Synthra Launches 已部署在 Arc 主网，sStocks 则把 Robinhood Chain 的股票代币表示桥接到 Arc。核验的官方部署表中未发现独立 Synthra 项目代币合约，因此本项目暂不填写代币地址。",
+      "categories": ["DeFi"],
+      "status": "live",
+      "products": [
+        {"en": "Concentrated-liquidity spot DEX", "zh": "集中流动性现货 DEX"},
+        {"en": "Cross-chain routing", "zh": "跨链路由"},
+        {"en": "Hyperliquid-powered perpetuals", "zh": "Hyperliquid 驱动的永续合约"},
+        {"en": "Synthra Launches", "zh": "Synthra Launches 发行平台"},
+        {"en": "sStocks bridge and Arc representations", "zh": "sStocks 桥与 Arc 资产表示"},
+        {"en": "Trading APIs and SDK", "zh": "交易 API 与 SDK"}
+      ],
+      "website": "https://synthra.org/",
+      "x": "https://x.com/synthra_finance",
+      "tokenAddress": null,
+      "sources": [
+        "https://synthra.org/",
+        "https://app.synthra.org/",
+        "https://docs.synthra.org/",
+        "https://docs.synthra.org/docs/protocol-overview",
+        "https://docs.synthra.org/docs/contract-addresses",
+        "https://docs.synthra.org/docs/launchpad-overview",
+        "https://docs.synthra.org/docs/sstocks",
+        "https://docs.synthra.org/docs/faq",
+        "https://x.com/synthra_finance"
+      ],
+      "scorecard": {
+        "delivery": {"score": 5, "applicable": true, "noteEn": "Reviewed 2026-10-09: Live Arc V3 and launchpad deployments, an application, public APIs, SDK references and detailed documentation are available. Sources: https://docs.synthra.org/docs/contract-addresses ; https://app.synthra.org/ ; https://docs.synthra.org/docs/protocol-overview", "noteZh": "2026-10-09 复核：Arc V3 与发行平台部署、应用、公开 API、SDK 参考和详细文档均可访问。来源：https://docs.synthra.org/docs/contract-addresses；https://app.synthra.org/；https://docs.synthra.org/docs/protocol-overview"},
+        "adoption": {"score": 3, "applicable": true, "noteEn": "Reviewed 2026-10-09: The project reports large testnet activity and exposes live products, but comparable verified mainnet users and retained trading volume were not established. Sources: https://synthra.org/ ; https://docs.synthra.org/", "noteZh": "2026-10-09 复核：项目报告较大测试网活动并已开放产品，但未建立可比较且核验过的主网用户与持续交易量。来源：https://synthra.org/；https://docs.synthra.org/"},
+        "economics": {"score": 4, "applicable": true, "noteEn": "Reviewed 2026-10-09: Spot, launchpad and bridge fee rules are documented, including launchpad fee allocation and permanent LP locking. Realized protocol revenue was not independently reconciled. Sources: https://docs.synthra.org/docs/launchpad-overview ; https://docs.synthra.org/docs/faq", "noteZh": "2026-10-09 复核：现货、发行与桥接费用规则有文档，包括发行费用分配和永久 LP 锁定；实际协议收入未独立对账。来源：https://docs.synthra.org/docs/launchpad-overview；https://docs.synthra.org/docs/faq"},
+        "security": {"score": 3, "applicable": true, "noteEn": "Reviewed 2026-10-09: Deployment tables and security boundaries are detailed, but the FAQ says the sStocks external audit is pending and the system depends on routing, Hyperliquid and LayerZero components. Sources: https://docs.synthra.org/docs/contract-addresses ; https://docs.synthra.org/docs/faq", "noteZh": "2026-10-09 复核：部署表和安全边界说明详细，但 FAQ 称 sStocks 外部审计仍待完成，系统还依赖路由、Hyperliquid 与 LayerZero 组件。来源：https://docs.synthra.org/docs/contract-addresses；https://docs.synthra.org/docs/faq"},
+        "ecosystem": {"score": 5, "applicable": true, "noteEn": "Reviewed 2026-10-09: Provides DEX, launch, stock-asset bridge and developer infrastructure across Arc and Robinhood Chain. Sources: https://docs.synthra.org/docs/chains ; https://docs.synthra.org/docs/contract-addresses", "noteZh": "2026-10-09 复核：在 Arc 与 Robinhood Chain 间提供 DEX、发行、股票资产桥和开发者基础设施。来源：https://docs.synthra.org/docs/chains；https://docs.synthra.org/docs/contract-addresses"}
+      },
+      "risk": {
+        "priority": "watch",
+        "evidenceStatus": "partial",
+        "reasonEn": "Synthra has a broad attack and dependency surface across V3 contracts, routing services, Hyperliquid perps, LayerZero bridges, indexers and session infrastructure. The project documents admin pause powers for new launches, and its FAQ says the sStocks external audit is pending. A public analytics page displayed implausibly large values during review, so TVL, volume and fees were left unset pending independent reconciliation.",
+        "reasonZh": "Synthra 的攻击面与依赖范围较广，覆盖 V3 合约、路由服务、Hyperliquid 永续、LayerZero 桥、索引器和会话基础设施。项目文档披露管理员可暂停新发行，FAQ 也称 sStocks 外部审计仍待完成。复核时公开分析页显示明显不合理的大额数据，因此 TVL、交易量和费用暂不填写，等待独立对账。",
+        "sources": ["https://docs.synthra.org/docs/protocol-overview", "https://docs.synthra.org/docs/launchpad-overview", "https://docs.synthra.org/docs/faq", "https://status.synthra.org/"]
+      },
+      "update": {
+        "titleEn": "Synthra publishes Arc mainnet V3 and launchpad deployments",
+        "titleZh": "Synthra 公布 Arc 主网 V3 与发行平台部署",
+        "summaryEn": "Official deployment tables list the Arc V3 factory, routers, position manager, launchpad, lens, migrator and permanent LP locker, together with the Arc USDC quote asset.",
+        "summaryZh": "官方部署表列出 Arc V3 工厂、路由器、仓位管理器、发行平台、Lens、迁移器和永久 LP 锁定器，以及 Arc USDC 报价资产。",
+        "sourceUrl": "https://docs.synthra.org/docs/contract-addresses",
+        "publishedAt": null
+      }
+    }
+  ]
+}

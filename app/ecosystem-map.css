@@ -341,7 +341,7 @@ html[data-theme='dark'] .city-round-glint{stroke:#a9eaff;opacity:.6}html[data-th
 html[data-theme='dark'] .city-lit-window{opacity:.65;fill:#e4c894}html[data-theme='dark'] .city-dome{fill:var(--dome-metal)}html[data-theme='dark'] .city-saw-glass{fill:#657f90}
 
 .city-family-1{--concrete-light:#e0dfd4;--concrete-mid:#b4b6ad;--concrete-shade:#a1a79d;--concrete-dark:#72807a}.city-family-5{--concrete-light:#e1e4e1;--concrete-mid:#bdc6c2;--concrete-shade:#a6b5b2;--concrete-dark:#768a8b}.city-family-6{--concrete-light:#b8c2c6;--concrete-mid:#8b9ea6;--concrete-shade:#778e99;--concrete-dark:#4d6878}
-city-parcel-tree-shadow{opacity:.24}.city-crown-light{stroke:#d6e6e7;stroke-width:.7;filter:none}
+.city-parcel-tree-shadow{opacity:.24}.city-crown-light{stroke:#d6e6e7;stroke-width:.7;filter:none}
 html[data-theme='dark'] .city-ground-stop-light{stop-color:#738a61}html[data-theme='dark'] .city-ground-stop-dark{stop-color:#4c7054}
 
 .city-selection-hint{margin:20px 0;color:#90aaa3;font-size:12px;line-height:1.7}
@@ -410,3 +410,10 @@ html[data-theme='dark'] .city-landmark-ground{fill:#718b61;stroke:#9bad91}
 html[data-theme='dark'] .city-landmark-paving{fill:#a0b0a1;stroke:#b5c4af}
 html[data-theme='dark'] .city-civic-promenade{stroke:#a0b2ab}
 html[data-theme='dark'] .city-landmark-light{fill:#ffedb4;filter:drop-shadow(0 0 2px #ffda8c)}
+
+/* Layered foliage and small street furniture, with sunlight from the upper left. */
+.city-foliage-shadow{fill:#153d32;opacity:.2}.city-natural-trunk{fill:none;stroke:#765939;stroke-width:3;stroke-linecap:round}.city-foliage-deep{fill:#246d4d}.city-foliage-mid{fill:#45925b}.city-foliage-light{fill:#80bb68}.city-leaf-vein{fill:none;stroke:#a1d277;stroke-width:1;opacity:.5}.city-tree-kind-1 .city-foliage-deep{fill:#24634f}.city-tree-kind-1 .city-foliage-mid{fill:#4e9d72}.city-tree-kind-2 .city-foliage-deep{fill:#408451}.city-tree-kind-2 .city-foliage-light{fill:#a4c977}.city-blossoms{fill:#ec9bb7}.city-blossom-center{fill:#ffe3b3}.city-palm-leaf{fill:#37895a;stroke:#4a9d69;stroke-width:.6}.city-palm-leaf-front{fill:#66ae69}
+.city-planter-wall{fill:#97a899;stroke:#d4dfc4;stroke-width:.65}.city-planter-soil{fill:#5c7556}.city-shrub{fill:#468552}.city-shrub-light{fill:#7bb268}.city-flower-0{fill:#f19ab4}.city-flower-1{fill:#f2c264}.city-flower-core{fill:#fff1c6}.city-bench-frame{fill:none;stroke:#465a61;stroke-width:2;stroke-linecap:round}.city-bench-wood{fill:#b88858;stroke:#745c41;stroke-width:.65}.city-bench-slats{fill:none;stroke:#dfb680;stroke-width:.8}.city-park-path{fill:none;stroke:#e6e3cc;stroke-width:7;stroke-linecap:butt;stroke-linejoin:miter}
+html[data-theme='dark'] .city-foliage-deep{fill:#285e46}html[data-theme='dark'] .city-foliage-mid{fill:#457e57}html[data-theme='dark'] .city-foliage-light{fill:#79a369}html[data-theme='dark'] .city-planter-wall{fill:#819283}html[data-theme='dark'] .city-park-path{stroke:#b7c2ad}
+
+.city-pergola-paving{fill:#c6ceb8;stroke:#e4e8d3;stroke-width:1}.city-pergola-canopy{fill:#d1b98e;stroke:#7e785c;stroke-width:.8;fill-opacity:.75}.city-pergola-slats{fill:none;stroke:#766b4e;stroke-width:1.7}

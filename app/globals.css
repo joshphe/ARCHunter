@@ -474,3 +474,5 @@ html[data-theme='light'] .project-directory-sync.is-unavailable .ecosystem-revie
 .x-avatar-initials{display:block;max-width:100%;overflow:hidden;white-space:nowrap;line-height:1;text-align:center}
 
 .module-retry{padding:3px 8px;border:1px solid var(--line2);border-radius:6px;background:var(--panel);color:var(--text);font-size:11px}.module-retry:disabled{opacity:.5;cursor:wait}
+
+.rug-project-identity{display:flex;align-items:center;gap:14px;min-width:0}.rug-project-identity>div{min-width:0;overflow-wrap:anywhere}

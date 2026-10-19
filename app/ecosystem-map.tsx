@@ -5,6 +5,7 @@ import Link from 'next/link';
 import CityBuilding from './city-building';
 import CityLandmark from './city-landmark';
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { LandscapeTree, LandscapeBed, LandscapeBench, LandscapePergola } from './city-landscape';
 import type { PointerEvent } from 'react';
 import { Crosshair, Maximize2, PanelRightClose, PanelRightOpen, Search, X, ZoomIn, ZoomOut } from 'lucide-react';
 import type { ProjectSummary } from '@/lib/project-schema';
@@ -14,13 +15,8 @@ import { readMapView, saveMapView, type MapViewState } from '@/lib/map-view-stat
 import { avatarInitials, useProjectAvatar } from '@/app/use-project-avatar';
 
 type Props = { projects: ProjectSummary[]; language: 'en' | 'zh' };
-function Tree({ x, y, small = false }: { x: number; y: number; small?: boolean }) {
-  return <g transform={`translate(${x} ${y}) scale(${small ? .72 : 1})`} className="city-tree">
-    <ellipse cx="7" cy="4" rx="18" ry="7" className="city-tree-shadow"/>
-    <path d="M0 0V-23" className="city-tree-trunk"/>
-    <path d="M0-50L17-18L0-9L-17-18Z" className="city-tree-crown"/>
-    <path d="M0-50V-9L-17-18Z" className="city-tree-light"/>
-  </g>;
+function Tree({x,y,small=false,kind=0}: {x:number;y:number;small?:boolean;kind?:number}) {
+  return <LandscapeTree x={x} y={y} scale={small ? .72 : 1} kind={kind}/>;
 }
 function ProjectBillboard({ handle, symbol, logoUrl, name, height, side }: { handle: string; symbol: string; logoUrl?: string | null; name: string; height: number; side: number }) {
   const clip = useId().replace(/:/g, '');
@@ -358,7 +354,11 @@ export default function EcosystemMap({projects,language}:Props) {
           <path className="city-river-current" d={river}/>
           {landscapeVacant.map((cell,i)=><g key={i}>
             <polygon className="city-park-lawns" points={[gp(cell.u,cell.v),gp(cell.u+cell.side,cell.v),gp(cell.u+cell.side,cell.v+cell.side),gp(cell.u,cell.v+cell.side)].join(' ')}/>
-            {[.25,.65].map(r=>{const[x,y]=ground(cell.u+cell.side*r,cell.v+cell.side*.5);return <Tree key={r} x={x} y={y} small/>;})}
+            <path className="city-park-path" d={`M${gp(cell.u+cell.side*.12,cell.v+cell.side*.72)} L${gp(cell.u+cell.side*.72,cell.v+cell.side*.72)} L${gp(cell.u+cell.side*.72,cell.v+cell.side*.12)}`}/>
+            {[.22,.5,.78].map((r,j)=>{const[x,y]=ground(cell.u+cell.side*r,cell.v+cell.side*.3);return <Tree key={r} x={x} y={y} small kind={(i+j)%3}/>;})}
+            <LandscapeBed x={ground(cell.u+cell.side*.32,cell.v+cell.side*.58)[0]} y={ground(cell.u+cell.side*.32,cell.v+cell.side*.58)[1]} scale={.65} flowers/>
+            {cell.side>=128?<LandscapePergola x={ground(cell.u+cell.side*.72,cell.v+cell.side*.72)[0]} y={ground(cell.u+cell.side*.72,cell.v+cell.side*.72)[1]} scale={.8}/>:null}
+            {cell.side>=64?<LandscapeBench x={ground(cell.u+cell.side*.56,cell.v+cell.side*.64)[0]} y={ground(cell.u+cell.side*.56,cell.v+cell.side*.64)[1]} scale={.6}/>:null}
           </g>)}
           {streets.flatMap((points,i)=>{
             const a=points[0],b=points[1];
@@ -369,7 +369,7 @@ export default function EcosystemMap({projects,language}:Props) {
               // Landscaping stays outside the adjoining square parcels.
               const occupied=blocks.some(block=>u>block.u&&u<block.u+block.width&&v>block.v&&v<block.v+block.depth);
               if(occupied||u<0||v<0||u>cityWidth||v>cityDepth)return null;
-              const[x,y]=ground(u,v);return <Tree key={`${i}-${j}`} x={x} y={y} small/>;
+              const[x,y]=ground(u,v);return <g key={`${i}-${j}`}><Tree x={x} y={y} small kind={(i+j)%4}/>{j%3===1?<LandscapeBed x={x-12} y={y-6} scale={.55} flowers/>:null}</g>;
             });
           })}
           <g className="city-road-edge">{roads.map((d,i)=><path key={i} d={d}/>)}</g>
@@ -386,8 +386,8 @@ export default function EcosystemMap({projects,language}:Props) {
               return <g key={`${i}-${j}`} transform={`translate(${x} ${y})`} className="city-streetlamp"><path d="M0 0V-23L6-26"/><ellipse className="city-streetlamp-glow" cx="6" cy="-6" rx="13" ry="6"/><circle cx="6" cy="-26" r="3"/></g>;
             });
           })}
-          {parks.map(([x,y],i)=><Tree key={i} x={x} y={y} small/>)}
-          {Array.from({length:Math.max(4,Math.floor(span/80))},(_,i)=>{const[x,y]=ground(16+i*cityWidth/Math.max(4,Math.floor(cityDepth/80)),cityDepth+52);return <Tree key={i} x={x} y={y} small/>;})}
+          {parks.map(([x,y],i)=><Tree key={i} x={x} y={y} small kind={i%4}/>)}
+          {Array.from({length:Math.max(4,Math.floor(span/80))},(_,i)=>{const[x,y]=ground(16+i*cityWidth/Math.max(4,Math.floor(cityDepth/80)),cityDepth+52);return <g key={i}><Tree x={x} y={y} small kind={i%3}/>{i%3===0?<LandscapeBench x={x+24} y={y+12} scale={.7}/>:null}</g>;})}
           <g transform={`translate(${gp(cityWidth+142,cityDepth*.55).replace(',', ' ')}) scale(.48)`} className="city-plaza">
             <polygon points="0,-94 188,0 0,94 -188,0" fill="#f0e9ce" stroke="#fffae9" strokeWidth="8"/>
             <ellipse cy="5" rx="61" ry="30" fill="#94cdbd" stroke="#fffdf0" strokeWidth="8"/>

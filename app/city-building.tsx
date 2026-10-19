@@ -1,4 +1,5 @@
 import { memo, useId } from 'react';
+import { LandscapeTree, LandscapeBed, LandscapeBench } from './city-landscape';
 import type { CSSProperties } from 'react';
 import { BUILDING_TIERS } from '@/lib/ecosystem-map-layout';
 
@@ -50,12 +51,8 @@ function Garden({ side, z, u = 0, v = 0 }: { side: number; z: number; u?: number
   </g>;
 }
 
-function PlotTree({u,v,round=false}: {u:number;v:number;round?:boolean}) {
-  return <g transform={`translate(${point(u,v,1)})`}>
-    <ellipse className="city-parcel-tree-shadow" cx="2" cy="1" rx="5" ry="2.5"/>
-    <path className="city-parcel-tree-trunk" d="M0 0V-8"/>
-    {round?<><ellipse className="city-parcel-tree" cy="-9" rx="5" ry="6"/><ellipse className="city-parcel-tree-highlight" cx="-1.6" cy="-10.5" rx="2.4" ry="3.5"/></>:<><path className="city-parcel-tree" d="M0-18L5-6L0-3L-5-6Z"/><path className="city-parcel-tree-highlight" d="M0-18V-3L-5-6Z"/></>}
-  </g>;
+function PlotTree({u,v,kind=0}: {u:number;v:number;kind?:number}) {
+  return <g transform={`translate(${point(u,v,1)})`}><LandscapeTree scale={.32} kind={kind}/></g>;
 }
 
 function Parcel({ variant }: { variant: number }) {
@@ -66,12 +63,12 @@ function Parcel({ variant }: { variant: number }) {
     <polygon className="city-parcel-forecourt" points={square(2,5,45,.5)}/>
     <g className="city-forecourt-seams">{[-12,-4,4,12].map(offset=><path key={offset} d={`M${point(offset,24,.7)}L${point(offset,30,.7)} M${point(24,offset,.7)}L${point(30,offset,.7)}`}/>)}</g>
     <path className="city-parcel-path" d={`M${point(13,18,.8)} L${point(13,32,.8)} M${point(18,13,.8)} L${point(32,13,.8)}`}/>
-    <polygon className="city-parcel-hedge" points={square(-24,-22,10,1)}/>
-    <PlotTree u={-25} v={-23} round={variant===1}/>
-    <PlotTree u={25} v={-24}/>
-    <PlotTree u={-26} v={18} round/>
-    <path className="city-parcel-bench" d={`M${point(-17,25,2)} L${point(-6,25,2)}`}/>
-    <path className="city-parcel-bench-legs" d={`M${point(-15,25,2)}L${point(-15,25)} M${point(-8,25,2)}L${point(-8,25)}`}/>
+    <g transform={`translate(${point(-24,-22,1)})`}><LandscapeBed scale={.32}/></g>
+    <PlotTree u={-25} v={-23} kind={variant%4}/>
+    <PlotTree u={25} v={-24} kind={(variant+1)%4}/>
+    <PlotTree u={-26} v={18} kind={(variant+2)%4}/>
+    <g transform={`translate(${point(-13,25,1)})`}><LandscapeBench scale={.28}/></g>
+    <g transform={`translate(${point(24,24,1)})`}><LandscapeBed scale={.26} flowers/></g>
     {[-17,-11,-5].map(u=><g key={u} transform={`translate(${point(u,-27,1)})`}><ellipse className="city-flower-bed" rx="3.8" ry="2"/><circle className="city-parcel-blossom" cx="-1" cy="-1.6" r=".9"/><circle className="city-parcel-blossom" cx="1.5" cy="-.5" r=".8"/></g>)}
     {[9,18].map(u=><g key={u} transform={`translate(${point(u,29,1)})`}><path className="city-parcel-light-post" d="M0 0V-6"/><circle className="city-parcel-light" cy="-6" r="1.5"/></g>)}
   </g>;
