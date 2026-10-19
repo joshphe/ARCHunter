@@ -7,6 +7,7 @@ import { DEMO_FLOWS, FLOW_CHAINS, type CapitalFlowSnapshot, type ChainFlow, type
 import dynamic from 'next/dynamic';
 import CapitalFlowRecords from './capital-flow-records';
 import { CHAIN_LOGOS } from '@/lib/chain-logos';
+import { layoutFlowNetwork } from '@/lib/capital-flow-layout';
 const CapitalFlowTrend = dynamic(()=>import('./capital-flow-trend'),{loading:()=> <div className="flow-trend-loading" role="status">…</div>});
 
 type Props = { language: 'zh' | 'en' };
@@ -62,11 +63,8 @@ export default function CapitalFlowNetwork({ language }: Props) {
   const totals = useMemo(() => chains.reduce((sum,c) => ({in:sum.in+c.inflow,out:sum.out+c.outflow,transfers:sum.transfers+c.transfers}), {in:0,out:0,transfers:0}), [chains]);
   const ranked = useMemo(() => [...chains].sort((a,b) => volume(b,direction)-volume(a,direction)), [chains,direction]);
   const displayed = useMemo(() => {
-    const source = chains.length ? [...chains].sort((a,b)=>(b.inflow+b.outflow)-(a.inflow+a.outflow)) : FLOW_CHAINS.slice(0,12).map(chain=>({...chain,inflow:0,outflow:0,transfers:0}));
-    const visible = source.slice(0,16);
-    const selection = source.find(chain=>chain.domain===selected);
-    if(selection&&!visible.some(chain=>chain.domain===selection.domain))visible[visible.length-1]=selection;
-    return visible.sort((a,b)=>a.domain-b.domain);
+    const source = chains.length ? chains : FLOW_CHAINS.slice(0,12).map(chain=>({...chain,inflow:0,outflow:0,transfers:0}));
+    return layoutFlowNetwork(source, selected);
   }, [chains,selected]);
   const focused = chains.find(c=>c.domain===(hovered ?? selected));
   const active = chains.find(c=>c.domain===selected);
@@ -111,11 +109,7 @@ export default function CapitalFlowNetwork({ language }: Props) {
           <circle cx="380" cy="340" r="235" fill={`url(#${uid}-aura)`}/>
           {[100,154,218,280].map((radius,i)=><circle key={radius} cx="380" cy="340" r={radius} className={`flow-orbit orbit-${i}`}/>)}
           <path d="M380 60V620M100 340H660" className="flow-crosshair"/>
-          {displayed.map((chain,i)=>{
-            const registry=FLOW_CHAINS.findIndex(meta=>meta.domain===chain.domain);
-            const slot=registry<0?chain.domain%16:registry;
-            const angle=-Math.PI/2+(slot<16?slot*Math.PI*2/16:(slot-16+.5)*Math.PI*2/Math.max(1,FLOW_CHAINS.length-16));
-            const x=380+Math.cos(angle)*(slot<16?265:218),y=340+Math.sin(angle)*(slot<16?252:208);
+          {displayed.map(({chain,x,y,labelX,labelAnchor},i)=>{
             const dx=x-380,dy=y-340;
             const curve=(dx>0?1:-1)*28;
             const incoming=`M${x} ${y} Q${380+dx*.42+curve} ${340+dy*.42-curve} 380 340`;
@@ -123,7 +117,6 @@ export default function CapitalFlowNetwork({ language }: Props) {
             const highlighted=(hovered ?? selected)===null||(hovered ?? selected)===chain.domain;
             const routeVolume=chain.inflow+chain.outflow;
             const radius=hasData?16+Math.sqrt(routeVolume/peak)*9:17;
-            const labelY=y<340?y-radius-17:y+radius+23;
             return <g key={chain.domain} className={`flow-route${highlighted?'':' is-dimmed'}${selected===chain.domain?' is-selected':''}`}>
               <path d={incoming} className="flow-guide-path"/>
               {(['in','out'] as const).map(dir=>{
@@ -137,8 +130,8 @@ export default function CapitalFlowNetwork({ language }: Props) {
                 <circle cx={x} cy={y} r={radius+5} className="flow-chain-halo" style={{stroke:chain.color}}/>
                 <circle cx={x} cy={y} r={radius} className="flow-chain-disc"/>
                 {CHAIN_LOGOS[chain.domain]?<><defs><clipPath id={`${uid}-chain-${chain.domain}`}><circle cx={x} cy={y} r={radius-3}/></clipPath></defs><image href={CHAIN_LOGOS[chain.domain]} x={x-radius+3} y={y-radius+3} width={(radius-3)*2} height={(radius-3)*2} clipPath={`url(#${uid}-chain-${chain.domain})`} aria-hidden="true"/></>:<text x={x} y={y+4} textAnchor="middle" style={{fill:chain.color}} className="flow-chain-symbol">{chain.short}</text>}
-                <text x={x} y={labelY} textAnchor="middle" className="flow-chain-name">{chain.name}</text>
-                <text x={x} y={labelY+19} textAnchor="middle" className={`flow-chain-value${chain.inflow-chain.outflow<0?' is-negative':''}`}>{hasData?usd(chain.inflow-chain.outflow,true):'—'}</text>
+                <text x={labelX} y={y-4} textAnchor={labelAnchor} className="flow-chain-name">{chain.name}</text>
+                <text x={labelX} y={y+16} textAnchor={labelAnchor} className={`flow-chain-value${chain.inflow-chain.outflow<0?' is-negative':''}`}>{hasData?usd(chain.inflow-chain.outflow,true):'—'}</text>
                 <title>{chain.name} · {t('Net inflow','净流入')} {hasData?usd(chain.inflow-chain.outflow,true):'—'}</title>
               </g>
             </g>;
