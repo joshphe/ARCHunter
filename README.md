@@ -92,3 +92,26 @@ The overview, launchpad pulse and network activity modules fetch and render inde
 The overview uses Arc Mainnet Blockscout's public Stats service at `https://explorer.arc.io/stats-service/api/v1/lines` without an API key. Daily series are `newTxns`, `activeAccounts`, `newContracts` and `txnsFee`; fee units are validated as USDC. Arcscan was replaced after its public API returned Cloudflare 530 / 1033.
 
 All requests run concurrently with a seven-second provider timeout and a five-minute cache. Partial failures preserve available series, and each card selects its own latest complete UTC day. Incomplete/current-day points remain in the trend but never become headline values. The provider does not expose computation time or index height in these chart responses: the UI labels request time as Fetched and leaves those unknown metadata fields unset.
+
+## Cross-chain capital radar
+
+The capital workspace provides an ARC-centered network, chain brand marks, stable node slots, a network/trend toggle, fullscreen, direction filters, chain inspection and 24H/7D windows. A selected chain filters its trend and transfer ledger. Records have ten rows per page, amount/recent sorting and explorer proofs. Themes, keyboard focus and reduced-motion preferences are supported. Offscreen and hidden-tab animations stop. Demo values require an explicit Preview action and retain a visible demo label.
+
+### Free collection and storage
+
+- Apply `db/migrations/008_cctp_capital_flows.sql` with the existing migration runner and a direct runtime connection. No credentials belong in the repository.
+- `arc_cctp_transfers` stores verified USDC principal, deduplicated by transaction hash and log index. Only newly inserted events contribute to persistent hourly rollups in `arc_cctp_hourly`.
+- `arc_cctp_scan_ranges` records scanned block/time bounds, including verified empty ranges. Interrupted backfills skip saved ranges on the next pass. Adjacent ranges determine actual contiguous coverage; data beyond a gap cannot silently appear as complete coverage.
+- `arc_cctp_collector_state` holds a database lease, cooldown and progress, shared by all function instances. Read responses use aggregates and a few proofs; they never download the full ledger.
+- The official free Arc mainnet RPC (`https://rpc.mainnet.arc.io`, chain 5042) is queried in 10,000-block ranges, with log requests paced at least 1.1 seconds apart. The last 20 blocks are excluded from persisted scans. No paid API, subscription, additional database or user account is required.
+- A single Hobby-compatible daily cron (`17 1 * * *`, UTC; scheduling precision depends on Vercel) invokes `/api/cron/capital-flows`. Configure `CRON_SECRET` as a Vercel production Secret; authorization is required and fails closed when it is missing. Each invocation has a bounded 240-second work budget inside a 300-second function limit.
+- `/api/capital/flows` returns saved results first. `after()` can run a bounded incremental catch-up behind the database lease. Partial initial history resumes server-side; browser polling only reads saved progress. Completed collection has a five-minute cooldown, with a shorter cooldown while backfilling. The daily job runs independently of open pages. Freshness therefore depends on the daily job and traffic-driven catch-ups; this is not a real-time feed or a minute-level cron.
+- `/api/admin/capital/collect` supports owner-authorized POST backfill. For initial local collection, start the development server with Vercel runtime environment variables, then run `vercel env run -- npm run capital:backfill`. The script signs a short-lived admin cookie in memory and calls localhost only. It never writes or prints secrets.
+
+### Measurement
+
+Outflows are USDC `DepositForBurn` events from Circle's published local TokenMessengers. Inflows pair `MessageReceived` with an actual USDC `MintAndWithdraw` in the same transaction, matching recipient and gross amount (recipient amount plus mint fee). This supports non-EVM origins without inferred sender addresses. Amounts use six USDC decimals and represent gross principal. Inflow uses Arc execution time; outflow uses Arc burn time, so pending transfers can fall in different windows.
+
+Snapshots include UTC bounds, block bounds, excluded-event count, coverage percentage, freshness, daily/hourly trends and recent transaction proofs. Unknown intervals remain blank, not zero. A stale snapshot or incomplete scan is labeled explicitly. Gateway, non-CCTP bridges, direct issuer mint/redemptions, exchange wallet movements and same-chain transfers are excluded. Particle motion expresses aggregate direction, not per-transaction playback.
+
+Sources: https://developers.circle.com/cctp/references/contract-addresses ; https://developers.circle.com/cctp/concepts/supported-chains-and-domains ; https://github.com/circlefin/evm-cctp-contracts/tree/master/src/messages/v2 . Chain marks are mirrored from DefiLlama's public icon CDN; unsupported marks retain text fallbacks.

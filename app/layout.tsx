@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import './ecosystem-map.css';
+import './capital-flow-network.css';
 import { SiteVisitsProvider } from './site-visits-provider';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://arc-hunter-lake.vercel.app';

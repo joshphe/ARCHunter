@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, Brush, CartesianGrid, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ArrowDownRight, ArrowUpRight, Coins, RefreshCw, Waves } from 'lucide-react';
+import dynamic from 'next/dynamic';
+const CapitalFlowNetwork = dynamic(() => import('./capital-flow-network'), { loading: () => <div className="capital-flow-placeholder" role="status" style={{minHeight:460}}/> });
 
 type CapitalData = {
   updatedAt: string;
@@ -108,10 +110,12 @@ export default function CapitalPage({ language, isDark }: Props) {
       <div>
         <div className="eyebrow"><span className="eyebrow-line"/>{t('ARC CAPITAL MARKETS', 'ARC 资金与流动性')}<span className="eyebrow-line"/></div>
         <h1>{t('Capital', '资金')} <span>{t('& Liquidity', '与流动性')}</span></h1>
-        <p className="subtitle">{t('Track stablecoin supply trends, DEX venues, and lending markets across Arc.', '追踪 Arc 稳定币存量趋势、DEX 场所与借贷市场。')}</p>
+        <p className="subtitle">{t('Explore cross-chain capital flows, stablecoin supply and Arc liquidity markets.', '观察跨链资金方向、稳定币存量与 Arc 流动性市场。')}</p>
       </div>
       <button className="capital-refresh" onClick={() => { void loadData(true); void loadStablecoinTrend(true); }} disabled={refreshing || trendRefreshing}><RefreshCw size={14} className={refreshing || trendRefreshing ? 'spin' : ''}/>{t('Refresh data', '刷新数据')}</button>
     </div>
+
+    <CapitalFlowNetwork language={language}/>
 
     <div className="capital-meta"><span className="capital-live"><i/>{t('LIVE DATA', '实时数据')}</span><span>{t('Updated', '更新时间')} {updatedLabel ?? '—'}</span>{(failed || data?.partial) && <span className="capital-warning">{t('Some data is temporarily unavailable', '部分数据暂时不可用')}</span>}</div>
 
