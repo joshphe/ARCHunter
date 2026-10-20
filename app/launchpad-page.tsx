@@ -168,14 +168,15 @@ export default function LaunchpadPage({ language, isDark, projects }: Props) {
 
     <section className="launchpad-table-card">
       <div className="launchpad-panel-head"><div><div className="section-kicker">{t('PROTOCOL BREAKDOWN', '协议明细')}</div><h3>{t('Launchpad leaderboard', '发射台排行榜')}</h3></div></div>
-      <div className="launchpad-table-scroll"><table className="launchpad-table"><thead><tr><th>#</th><th>{t('LAUNCHPAD', '发射台')}</th><th>{t('FEES · 24H', '费用 · 24 小时')}</th><th>{t('FEES · 7D', '费用 · 7 天')}</th><th>{t('FEES · 30D', '费用 · 30 天')}</th><th>{t('24H CHANGE', '24 小时变化')}</th></tr></thead><tbody>
+      <div className="launchpad-table-scroll"><table className="launchpad-table"><thead><tr><th>#</th><th>{t('LAUNCHPAD', '发射台')}</th><th>{t('FEES · 24H', '费用 · 24 小时')}</th><th>{t('FEES · 7D', '费用 · 7 天')}</th><th>{t('FEES · 30D', '费用 · 30 天')}</th><th>{t('ALL TIME', '累计费用')}</th><th>{t('24H CHANGE', '24 小时变化')}</th></tr></thead><tbody>
         {[...launchpads].sort((a, b) => (b.fees24h ?? -1) - (a.fees24h ?? -1)).map((item, index) => <tr key={item.slug}>
           <td className="launchpad-rank">{item.available ? String(index + 1).padStart(2, '0') : '—'}</td>
           <td><div className="launchpad-project"><ProjectAvatar key={item.xHandle} className="launchpad-avatar" handle={item.xHandle} symbol={item.logo} logoUrl={projectLogoForHandle(projects, item.xHandle)}/><span><b>{item.name}</b><small>{item.available ? t('Tracked on Arc', 'Arc 链上追踪中') : t('Data unavailable', '暂不可用')}</small></span></div></td>
           <td className="launchpad-money">{money(item.fees24h)}</td><td className="launchpad-money">{money(item.fees7d)}</td><td className="launchpad-money">{money(item.fees30d)}</td>
+          <td className="launchpad-money launchpad-alltime">{money(item.feesAllTime)}</td>
           <td><span className={item.change24h === null ? 'launchpad-change unavailable' : item.change24h >= 0 ? 'launchpad-change positive' : 'launchpad-change negative'}>{item.change24h !== null && (item.change24h >= 0 ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>)} {pct(item.change24h)}</span></td>
         </tr>)}
-        {!data && <tr><td colSpan={6} className="launchpad-loading">{t('Loading launchpad fees…', '正在加载发射台费用…')}</td></tr>}
+        {!data && <tr><td colSpan={7} className="launchpad-loading">{t('Loading launchpad fees…', '正在加载发射台费用…')}</td></tr>}
       </tbody></table></div>
       <div className="launchpad-methodology"><span>{t('Fee methodology may vary by protocol.', '各协议费用统计口径可能有所不同。')}</span></div>
     </section>

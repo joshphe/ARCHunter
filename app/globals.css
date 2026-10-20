@@ -290,6 +290,12 @@ html[data-theme='light'] .ecosystem-metric.metric-loading b.not-indexed{color:#7
 .network-activity-method{margin-top:10px;color:#818994;font-size:11px}
 .network-activity-method summary{width:max-content;cursor:pointer;color:#a5ad9f}
 .network-activity-method ul{display:grid;gap:5px;margin:8px 0 0;padding-left:18px;line-height:1.55}
+.network-activity-usdc-gas{display:flex;align-items:flex-start;gap:11px;margin-top:14px;padding:12px 14px;border:1px solid #2a3b1e;border-radius:7px;background:#141c10}
+.network-activity-usdc-gas-badge{flex:none;font:700 9px 'DM Mono',monospace;letter-spacing:.8px;color:#c2f970;background:#1e2e14;border:1px solid #3a5224;border-radius:4px;padding:4px 7px;white-space:nowrap;margin-top:1px}
+.network-activity-usdc-gas p{margin:0;font-size:11px;color:#a3ab9d;line-height:1.6}
+html[data-theme='light'] .network-activity-usdc-gas{border-color:#c8ddb0;background:#f2f8eb}
+html[data-theme='light'] .network-activity-usdc-gas-badge{color:#4a7a1e;background:#e4f1d3;border-color:#b2d08a}
+html[data-theme='light'] .network-activity-usdc-gas p{color:#566950}
 html[data-theme='light'] .network-activity-panel{border-color:#dfe3da;background:#fff}
 html[data-theme='light'] .network-activity-heading p,html[data-theme='light'] .network-activity-meta,html[data-theme='light'] .network-activity-note,html[data-theme='light'] .network-activity-method{color:#697265}
 html[data-theme='light'] .network-activity-meta a{color:#526d37}

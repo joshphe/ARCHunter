@@ -96,6 +96,14 @@ export default function NetworkActivityPanel({ data, loaded, zh, isDark, failed 
       </div>
     </div>
 
+    <div className="network-activity-usdc-gas">
+      <span className="network-activity-usdc-gas-badge">USDC = GAS</span>
+      <p>{zh
+        ? 'Arc 是以 USDC 作为原生 Gas 代币的 EVM 链。用户无需持有 ETH 等其他资产，直接用 USDC 支付所有交易手续费，Gas 费用稳定可预期。上方"网络手续费"数据即为 USDC 实际消耗量。'
+        : 'Arc is an EVM chain where USDC is the native gas token. Users pay all transaction fees directly in USDC — no ETH or other assets needed. Gas costs are stable and predictable. The "Network fees" metric above shows actual USDC consumed as gas.'
+      }</p>
+    </div>
+
     <details className="network-activity-method">
       <summary>{zh ? '指标口径' : 'Metric definitions'}</summary>
       <ul>
