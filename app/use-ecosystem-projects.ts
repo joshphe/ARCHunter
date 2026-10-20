@@ -7,7 +7,7 @@ export type ProjectDataSource = 'database' | 'bundled' | null;
 const REFRESH_INTERVAL_MS = 120_000;
 const FOCUS_THROTTLE_MS = 30_000;
 
-export function useEcosystemProjects(view: string) {
+export function useEcosystemProjects(view: string | null) {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [source, setSource] = useState<ProjectDataSource>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -17,6 +17,7 @@ export function useEcosystemProjects(view: string) {
   const refreshRef = useRef<((force?: boolean) => Promise<void>) | null>(null);
 
   useEffect(() => {
+    if (!view || !['Overview', 'Ecosystem', 'Map', 'Launchpad'].includes(view)) return;
     const includeMetrics = view === 'Ecosystem' || view === 'Map';
     let disposed = false;
     let inFlight = false;

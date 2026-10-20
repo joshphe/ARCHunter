@@ -417,3 +417,10 @@ html[data-theme='dark'] .city-landmark-light{fill:#ffedb4;filter:drop-shadow(0 0
 html[data-theme='dark'] .city-foliage-deep{fill:#285e46}html[data-theme='dark'] .city-foliage-mid{fill:#457e57}html[data-theme='dark'] .city-foliage-light{fill:#79a369}html[data-theme='dark'] .city-planter-wall{fill:#819283}html[data-theme='dark'] .city-park-path{stroke:#b7c2ad}
 
 .city-pergola-paving{fill:#c6ceb8;stroke:#e4e8d3;stroke-width:1}.city-pergola-canopy{fill:#d1b98e;stroke:#7e785c;stroke-width:.8;fill-opacity:.75}.city-pergola-slats{fill:none;stroke:#766b4e;stroke-width:1.7}
+
+/* Move one HTML layer during a gesture; keep SVG geometry and hit testing still. */
+.ecosystem-map-viewport{contain:layout paint;isolation:isolate;overflow-anchor:none;scroll-behavior:auto}
+.city-camera-layer{flex:none;margin:auto;transform-origin:0 0}
+.city-camera-layer>.arc-city{width:100%;margin:0}
+.ecosystem-map-viewport.is-dragging .arc-city{pointer-events:none}
+.workspace-loading{min-height:calc(100dvh - 57px);color:var(--muted)}
