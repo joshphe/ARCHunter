@@ -10,6 +10,7 @@ import { projectLogoForHandle } from '@/lib/project-logo';
 import NetworkActivityPanel, { type NetworkActivityData } from '@/app/network-activity-panel';
 import Link from 'next/link';
 import { useOverviewResource } from './use-overview-resource';
+import GasPanel from './gas-panel';
 
 type Protocol = { name: string; twitter?: string; module?: string; category?: string; logo?: string; total24h?: number; total7d?: number; total30d?: number; change_1d?: number };
 type HistoryPoint = { timestamp: number; tvl?: number; fees?: number; volume?: number };
@@ -89,7 +90,10 @@ export default function OverviewPage({ language, isDark, projects, onNavigate }:
   return <div className="content overview-content">
     <div className="page-heading overview-heading">
       <div><div className="eyebrow"><span className="eyebrow-line"/>{t('ARC ECOSYSTEM INTELLIGENCE', 'ARC 生态情报')}<span className="eyebrow-line"/></div><h1>ARC <span>{t('Overview', '总览')}</span></h1><p className="subtitle">{t('A live pulse of activity across the Arc ecosystem.', '实时掌握 Arc 生态整体动态。')}</p></div>
-      <button className="overview-refresh" onClick={refreshAll} disabled={refreshing}><RefreshCw size={14} className={refreshing ? 'spin' : ''}/>{t('Refresh', '刷新')}</button>
+      <div className="overview-heading-actions">
+        <button className="overview-refresh" onClick={refreshAll} disabled={refreshing}><RefreshCw size={14} className={refreshing ? 'spin' : ''}/>{t('Refresh', '刷新')}</button>
+        <GasPanel zh={zh} isDark={isDark}/>
+      </div>
     </div>
     <div className="overview-sourcebar"><span className="overview-live"><i/> {t('LIVE DATA', '实时数据')}</span><span>{t('Source: DefiLlama', '数据来源：DefiLlama')}</span>{updatedLabel && <span className="overview-updated">{t('Checked', '最近检查')} {updatedLabel}</span>}{failed && <span className="overview-partial">{overview.failed && data ? t('Refresh failed; showing the previous snapshot', '刷新失败，保留上次数据') : t('Some data is temporarily unavailable', '部分数据暂时不可用')} <button className="module-retry" disabled={overview.loading} onClick={() => void overview.refresh()}>{t('Retry', '重试')}</button></span>}<a href="https://defillama.com/chain/arc" target="_blank" rel="noreferrer">{t('Open source page', '打开数据源')} <ExternalLink size={12}/></a></div>
 
