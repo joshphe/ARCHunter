@@ -42,7 +42,7 @@ export type EcosystemProject = {
 // Public directory payload; full profiles and review history stay on the detail route.
 export type ProjectSummary = Pick<EcosystemProject,
   'slug' | 'name' | 'symbol' | 'handle' | 'logoUrl' | 'tagline' | 'taglineZh' |
-  'categories' | 'status' | 'tvl' | 'tokenAddress' | 'tokenMetrics' |
+  'categories' | 'status' | 'tvl' | 'tokenAddress' | 'tokenMetrics' | 'website' | 'x' |
   'verifiedOn' | 'recommended' | 'updates'> & {
   observationScore: number | null;
   riskReview: Pick<RiskReview, 'priority' | 'evidenceStatus' | 'reviewedOn'> | null;

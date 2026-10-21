@@ -23,6 +23,16 @@ const amount = (value: number | null, zh: boolean) => value == null
   ? (zh ? '未收录' : 'Not indexed')
   : new Intl.NumberFormat(zh ? 'zh-CN' : 'en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 2 }).format(value);
 
+const httpUrl = (value: string | undefined) => {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return ['https:', 'http:'].includes(url.protocol) ? url.href : null;
+  } catch {
+    return null;
+  }
+};
+
 const categoryLabel = (category: string, zh: boolean) => {
   if (!zh) return category;
   if (category === 'Prediction Markets') return '预测市场';
@@ -131,22 +141,34 @@ export default function EcosystemPage({ language, projects, ...syncProps }: Prop
 
     {visibleProjects.length > 0 ? <section className="ecosystem-table ecosystem-directory-table" aria-label={t('Project directory', '项目目录')}>
       <div className="ecosystem-table-head" aria-hidden="true">
-        <span>{t('PROJECT', '项目')}</span><span>{t('TAGS', '标签')}</span><span>{t('INTRODUCTION', '简介')}</span><span>{t('MARKET CAP', '市值')}</span><span>TVL</span><span>{t('SCORE', '观察分')}</span><span>{t('STATUS', '状态')}</span><span/>
+        <span>{t('PROJECT', '项目')}</span><span>{t('TAGS', '标签')}</span><span>{t('INTRODUCTION', '简介')}</span><span>{t('MARKET CAP', '市值')}</span><span>{t('QUICK LINKS', '快捷访问')}</span>
       </div>
       <div className="ecosystem-table-body">
         {visibleProjects.map((project) => {
           const marketValue = project.tokenMetrics?.marketCapUsd ?? null;
-          const score = project.observationScore;
-          return <Link href={`/projects/${encodeURIComponent(project.slug)}`} className="ecosystem-table-row" key={project.slug} onClick={rememberScroll}>
-            <span className="ecosystem-table-project"><ProjectAvatar handle={project.handle} symbol={project.symbol} logoUrl={project.logoUrl}/><span><span className="ecosystem-project-name"><b>{project.name}</b></span><small>{project.handle}</small></span></span>
+          const links = [
+            {
+              label: 'OKX',
+              href: project.tokenAddress && /^0x[a-fA-F0-9]{40}$/.test(project.tokenAddress)
+                ? `https://web3.okx.com/${zh ? 'zh-hans' : 'en'}/token/arc/${project.tokenAddress}`
+                : null,
+              title: t('Trade token on OKX', '在 OKX 查看并交易代币'),
+              unavailable: t('Token contract not listed', '暂未收录代币合约'),
+            },
+            { label: 'X', href: httpUrl(project.x), title: t('Official X account', '官方 X 账号'), unavailable: t('Official X account not listed', '暂未收录官方 X 账号') },
+            { label: t('Website', '官网'), href: httpUrl(project.website), title: t('Official website', '项目官网'), unavailable: t('Official website not listed', '暂未收录官网') },
+          ];
+          return <article className="ecosystem-table-row" key={project.slug}>
+            <Link href={`/projects/${encodeURIComponent(project.slug)}`} className="ecosystem-table-project" onClick={rememberScroll} aria-label={`${project.name} · ${t('View project details', '查看项目详情')}`}><ProjectAvatar handle={project.handle} symbol={project.symbol} logoUrl={project.logoUrl}/><span><span className="ecosystem-project-name"><b>{project.name}</b></span><small>{project.handle}</small></span></Link>
             <span className="ecosystem-table-tags">{project.categories.slice(0, 3).map((item) => <i key={item}>{categoryLabel(item, zh)}</i>)}</span>
             <span className="ecosystem-table-description">{zh ? project.taglineZh || project.tagline : project.tagline}</span>
             <span className="ecosystem-table-value"><small>{t('MARKET CAP', '市值')}</small><b className={marketValue == null ? 'not-indexed' : ''}>{amount(marketValue, zh)}</b></span>
-            <span className="ecosystem-table-value ecosystem-table-tvl"><small>TVL</small><b className={project.tvl == null ? 'not-indexed' : ''}>{amount(project.tvl,zh)}</b></span>
-            <span className={`ecosystem-score-value ${score == null ? 'unrated' : ''}`}><b>{score ?? '—'}</b>{score != null ? <small>/100</small> : null}</span>
-            <span className={`ecosystem-status ${project.status}`}>{project.status === 'beta' ? t('BETA', '测试版') : project.status === 'live' ? t('LIVE', '已上线') : t('UPCOMING', '即将上线')}</span>
-            <ChevronRight className="ecosystem-row-arrow" size={16}/>
-          </Link>;
+            <div className="ecosystem-project-links" role="group" aria-label={`${project.name} · ${t('Quick links', '快捷访问')}`}>
+              {links.map((link) => link.href
+                ? <a key={link.label} className="ecosystem-project-link" href={link.href} target="_blank" rel="noopener noreferrer" title={link.title} aria-label={`${project.name} · ${link.title} (${t('opens in a new tab', '新标签页打开')})`}>{link.label}<ExternalLink size={12} aria-hidden="true"/></a>
+                : <span key={link.label} className="ecosystem-project-link is-disabled" role="link" aria-disabled="true" title={link.unavailable} aria-label={`${project.name} · ${link.unavailable}`}>{link.label}<ExternalLink size={12} aria-hidden="true"/></span>)}
+            </div>
+          </article>;
         })}
       </div>
       <nav className="ecosystem-pagination" aria-label={t('Project pages', '项目分页')}>
@@ -155,7 +177,7 @@ export default function EcosystemPage({ language, projects, ...syncProps }: Prop
       </nav>
     </section> : <div className="ecosystem-empty"><Search size={19}/><b>{projects.length === 0 ? (syncProps.syncError ? t('Could not sync the project directory', '项目目录同步失败') : t('Loading project directory…', '正在加载项目目录…')) : t('No projects match your search.', '没有找到匹配的项目。')}</b><span>{projects.length === 0 ? (syncProps.syncError ? t('Use Refresh to try again.', '请点击刷新项目重试。') : t('Fetching curated data.', '正在读取已整理的项目信息。')) : t('Try a different name or category.', '试试其他项目名称或类别。')}</span></div>}
 
-    <div className="ecosystem-data-note"><span>ⓘ</span><p>{t('Market cap measures token value; TVL measures assets in the protocol. They are shown and sorted separately. The directory syncs on entry, when returning to this page, and every two minutes while visible. Market data uses a separate short cache.', '市值衡量代币价值，TVL 衡量协议锁定资产，两者独立展示和排序。目录在进入工作区、返回页面和可见时每两分钟同步；行情数据采用独立短缓存。')}</p></div>
+    <div className="ecosystem-data-note"><span>ⓘ</span><p>{t('Market cap measures token value. Quick links open the project’s token page, official X account and website in a new tab. The directory syncs on entry, when returning to this page, and every two minutes while visible. Market data uses a separate short cache.', '市值衡量代币价值。快捷按钮在新标签页打开代币交易页、官方 X 账号和官网。目录在进入工作区、返回页面和可见时每两分钟同步；行情数据采用独立短缓存。')}</p></div>
     <footer><span>© 2026 ARC WATCH <i>·</i> {t('COMMUNITY BUILT', '社区共建')}</span><span><a href="https://unavatar.io" target="_blank" rel="noreferrer">{t('Avatars by Unavatar', '头像由 Unavatar 提供')}</a></span></footer>
   </div>;
 }

@@ -18,7 +18,7 @@ export async function listProjectSummaries(): Promise<ProjectSummary[]> {
     SELECT p.slug, p.name, p.symbol, p.handle, p.logo_url AS "logoUrl",
       p.tagline_en AS "tagline", p.tagline_zh AS "taglineZh", p.categories, p.status,
       p.tvl_usd AS "tvl", p.token_address AS "tokenAddress", p.verified_on::text AS "verifiedOn",
-      p.recommended, p.map_slot AS "mapSlot",
+      p.recommended, p.map_slot AS "mapSlot", p.website_url AS website, p.x_url AS x,
       (SELECT jsonb_object_agg(d.key, jsonb_build_object('score',d.value->'score','applicable',d.value->'applicable'))
         FROM jsonb_each(COALESCE(p.scorecard,'{}'::jsonb)) d) AS "scoreValues",
       (SELECT jsonb_build_object('priority',r.priority,'evidenceStatus',r.evidence_status,'reviewedOn',r.reviewed_on::text)
@@ -39,6 +39,7 @@ export async function listProjectSummaries(): Promise<ProjectSummary[]> {
     categories: row.categories as string[], status: row.status as ProjectSummary['status'],
     tvl: row.tvl == null ? null : Number(row.tvl), tokenAddress: row.tokenAddress == null ? null : String(row.tokenAddress),
     verifiedOn: String(row.verifiedOn), recommended: Boolean(row.recommended), tokenMetrics: null,
+    website: String(row.website ?? ''), x: String(row.x ?? ''),
     mapSlot: row.mapSlot == null ? null : Number(row.mapSlot),
     observationScore: getProjectScore(row.scoreValues as ProjectScorecard | null).total,
     riskReview: row.riskReview as ProjectSummary['riskReview'], updates: row.updates as ProjectSummary['updates'],
@@ -50,6 +51,7 @@ export function summarizeProject(project: EcosystemProject): ProjectSummary {
     slug: project.slug, name: project.name, symbol: project.symbol, handle: project.handle, logoUrl: project.logoUrl,
     tagline: project.tagline, taglineZh: project.taglineZh, categories: project.categories, status: project.status,
     tvl: project.tvl, tokenAddress: project.tokenAddress, tokenMetrics: project.tokenMetrics,
+    website: project.website, x: project.x,
     verifiedOn: project.verifiedOn, recommended: project.recommended, updates: project.updates.slice(0,3),
     observationScore: getProjectScore(project.scorecard).total,
     riskReview: project.riskReviews?.[0] ? {priority:project.riskReviews[0].priority,evidenceStatus:project.riskReviews[0].evidenceStatus,reviewedOn:project.riskReviews[0].reviewedOn} : null, mapSlot: null,
