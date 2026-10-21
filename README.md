@@ -26,6 +26,20 @@ vercel env run -- npm run db:migrate:site-visits
 
 The migration creates the project directory and project updates tables and imports the existing Vort and KAIRO entries. It can be re-run safely.
 
+## Public page views
+
+Apply `009_site_page_views.sql` with the existing migration runner and `DATABASE_URL_UNPOOLED` before deploying:
+
+```bash
+vercel env run -- npm run db:migrate -- 009_site_page_views.sql
+```
+
+The sidebar shows **Total page views / 累计浏览** from `page_views_started_at`. A visible public page load, reload, a change to another workspace, or opening a project profile adds one view. Repeated selection of the current workspace, filters, search, directory pagination, language/theme changes and map interactions do not. Back/forward navigation between profiles and restored browser pages count as views. This is page usage, not unique visitors. The former session-based `total_visits` counter remains unchanged and is not added to the new total.
+
+The client coalesces events for 750 ms and sends up to 20 at once. A bounded retry queue survives document navigation within the tab. Requests and unload beacons reuse event UUIDs, so retries and duplicate React effects cannot increment twice. An atomic insert-and-increment query deduplicates across server instances. Event IDs expire after seven days (pruned in indexed batches of up to 200 per recording), while submissions expire after 24 hours. No IP, persistent visitor identity, full URL, search text, referrer or per-workspace analytics are stored. Failed reads show unknown rather than zero.
+
+Local development, Vercel preview deployments, authenticated administrator traffic and recognizable crawler user agents are excluded from recording. Server-side origin and event validation provide basic filtering, not proof of a unique human. The public total is CDN-cached for 60 seconds and may serve a stale snapshot for up to another 120 seconds, while successful recordings return the latest total. Recording is asynchronous and never blocks navigation. No extra analytics service or environment secret is required.
+
 When `DATABASE_URL` is unavailable, the public directory falls back to the bundled KAIRO profile. Vort has been removed from that fallback because it is archived. The admin area still requires the database.
 
 ## Rug archive
