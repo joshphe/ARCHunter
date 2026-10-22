@@ -1,4 +1,4 @@
-import { Coins, Compass, LayoutDashboard, Map as MapIcon, ShieldAlert, Sparkles } from 'lucide-react';
+import { Coins, Compass, LayoutDashboard, Map as MapIcon, Search, ShieldAlert, Sparkles } from 'lucide-react';
 
 export const WORKSPACES = [
   { key: 'Overview', label: '概览', Icon: LayoutDashboard, href: '/' },
@@ -6,6 +6,7 @@ export const WORKSPACES = [
   { key: 'Map', label: '生态地图', Icon: MapIcon, href: '/?view=map' },
   { key: 'Capital', label: '资金与流动性', Icon: Coins, href: '/?view=capital' },
   { key: 'Launchpad', label: '发射台', Icon: Sparkles, href: '/?view=launchpad' },
+  { key: 'Wallet', label: '地址查询', Icon: Search, href: '/?view=wallet' },
   { key: 'Rug', label: 'Rug 档案', Icon: ShieldAlert, href: '/?view=rug' },
 ] as const;
 export type Workspace = typeof WORKSPACES[number]['key'];
