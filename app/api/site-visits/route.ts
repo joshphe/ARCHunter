@@ -16,7 +16,10 @@ export async function GET() {
   try {
     const rows = await getSql().query('SELECT (total_visits + total_page_views) AS "totalPageViews", page_views_started_at AS "startedAt" FROM arc_site_metrics WHERE id = 1');
     return NextResponse.json(payload(rows[0]), {
-      headers: { 'Cache-Control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=120' },
+      headers: {
+        'Cache-Control': 'public, max-age=300',
+        'Vercel-CDN-Cache-Control': 'public, s-maxage=300, stale-while-revalidate=300',
+      },
     });
   } catch (error) {
     console.error('Could not read page views:', error instanceof Error ? error.message : 'unknown database error');
@@ -54,7 +57,7 @@ export async function POST(request: Request) {
 
   try {
     const ids = [...new Set(events.map(event => event.id))];
-    const rows = await getSql().query(`
+    await getSql().query(`
       WITH recorded AS (
         INSERT INTO arc_site_page_view_events (event_id)
         SELECT unnest($1::uuid[]) ON CONFLICT (event_id) DO NOTHING
@@ -67,10 +70,9 @@ export async function POST(request: Request) {
       )
       UPDATE arc_site_metrics
       SET total_page_views = total_page_views + (SELECT count(*) FROM recorded), updated_at = now()
-      WHERE id = 1
-      RETURNING (total_visits + total_page_views) AS "totalPageViews", page_views_started_at AS "startedAt"
+      WHERE id = 1 AND EXISTS (SELECT 1 FROM recorded)
     `, [ids]);
-    return NextResponse.json(payload(rows[0]), { headers: noStore });
+    return new NextResponse(null, { status: 204, headers: noStore });
   } catch (error) {
     console.error('Could not record page views:', error instanceof Error ? error.message : 'unknown database error');
     return NextResponse.json({ error: 'Page views are temporarily unavailable.' }, { status: 503, headers: noStore });

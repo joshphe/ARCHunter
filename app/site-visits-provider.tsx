@@ -10,6 +10,7 @@ const PageViewCountContext = createContext<PageViewCount>({ totalPageViews: null
 const TrackPageViewContext = createContext<(page: string) => void>(() => {});
 const PENDING_KEY = 'arcwatch-page-views:v1';
 const MAX_PENDING = 100;
+const FLUSH_INTERVAL_MS = 30_000;
 const requestTimeout = () => typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(12_000) : undefined;
 
 export function SiteVisitsProvider({ children }: { children: React.ReactNode }) {
@@ -39,6 +40,8 @@ export function SiteVisitsProvider({ children }: { children: React.ReactNode }) 
     let timer: ReturnType<typeof setTimeout> | undefined;
     let inFlight = false;
     let failures = 0;
+    const sendingIds = new Set<string>();
+    const beaconedIds = new Set<string>();
 
     function persist() {
       try { sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending.current)); } catch { /* The in-memory queue still works. */ }
@@ -57,17 +60,18 @@ export function SiteVisitsProvider({ children }: { children: React.ReactNode }) 
         startedAt: typeof result.startedAt === 'string' ? result.startedAt : previous.startedAt,
       }));
     }
-    function schedule(delay = 750) {
+    function schedule(delay = FLUSH_INTERVAL_MS) {
       if (!current || timer || !pending.current.length) return;
       timer = setTimeout(() => { timer = undefined; void flush(); }, delay);
     }
-    async function flush() {
-      if (!current || inFlight) return;
+    async function flush(allowHidden = false) {
+      if (!current || inFlight || (!allowHidden && document.visibilityState !== 'visible')) return;
       pending.current = pending.current.filter(event => isPageViewEvent(event));
       persist();
       const events = pending.current.slice(0, MAX_PAGE_VIEW_BATCH);
       if (!events.length) return;
       inFlight = true;
+      events.forEach(event => sendingIds.add(event.id));
       let retry = false;
       try {
         const response = await fetch('/api/site-visits', {
@@ -78,31 +82,41 @@ export function SiteVisitsProvider({ children }: { children: React.ReactNode }) 
         if (!response.ok) {
           // Retry transient failures with the same IDs, never invalid requests.
           if (response.status >= 500 || response.status === 429) throw new Error('Temporarily unavailable');
-        } else if (response.status !== 204) {
-          updateCount(await response.json() as PageViewCount);
         }
         const accepted = new Set(events.map(event => event.id));
         pending.current = pending.current.filter(event => !accepted.has(event.id));
+        accepted.forEach(id => beaconedIds.delete(id));
         failures = 0;
       } catch {
         failures += 1;
         retry = true;
       } finally {
         inFlight = false;
+        sendingIds.clear();
         persist();
-        if (current && pending.current.length && (!retry || failures <= 3)) schedule(retry ? 2_000 * 2 ** (failures - 1) : 750);
+        if (current && pending.current.length && (!retry || failures <= 3)) {
+          schedule(retry ? 15_000 * 2 ** (failures - 1) : pending.current.length >= MAX_PAGE_VIEW_BATCH ? 0 : FLUSH_INTERVAL_MS);
+        }
       }
     }
-    function queueChanged() { persist(); schedule(); }
+    function queueChanged() {
+      persist();
+      if (!inFlight && failures === 0 && pending.current.length >= MAX_PAGE_VIEW_BATCH) {
+        clearTimeout(timer);
+        timer = undefined;
+        void flush();
+      } else schedule();
+    }
     function flushOnLeave() {
       persist();
-      const events = pending.current.filter(event => isPageViewEvent(event)).slice(0, MAX_PAGE_VIEW_BATCH);
+      const events = pending.current.filter(event => isPageViewEvent(event) && !sendingIds.has(event.id) && !beaconedIds.has(event.id)).slice(0, MAX_PAGE_VIEW_BATCH);
       if (!events.length) return;
       const body = new Blob([JSON.stringify({ events })], { type: 'application/json' });
       // Beacon acknowledgement does not prove delivery. Retain IDs until the server confirms them.
       try {
-        if (!navigator.sendBeacon?.('/api/site-visits', body)) void flush();
-      } catch { void flush(); }
+        if (navigator.sendBeacon?.('/api/site-visits', body)) events.forEach(event => beaconedIds.add(event.id));
+        else void flush(true);
+      } catch { void flush(true); }
     }
     function onVisibility() {
       if (document.visibilityState === 'hidden') flushOnLeave();
@@ -124,11 +138,11 @@ export function SiteVisitsProvider({ children }: { children: React.ReactNode }) 
     persist();
     schedule();
     if (publicPageViewKey(window.location.pathname, window.location.search)) {
-      // The shared total can be served from the CDN; recording stays uncached.
+      // Display one cached snapshot per document. Recording never changes the visible total.
       void fetch('/api/site-visits', { signal: requestTimeout() })
         .then(response => response.ok ? response.json() : null)
         .then(result => { if (result) updateCount(result); })
-        .catch(() => { /* The next successful recording also supplies the total. */ });
+        .catch(() => { /* Keep the count unknown until the next page load. */ });
     }
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('pagehide', flushOnLeave);
