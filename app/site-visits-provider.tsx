@@ -1,177 +1,74 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { isPageViewEvent, MAX_PAGE_VIEW_BATCH, publicPageViewKey } from '@/lib/page-views';
-import type { PageViewEvent } from '@/lib/page-views';
 
-type PageViewCount = { totalPageViews: number | null; startedAt: string | null };
-const PageViewCountContext = createContext<PageViewCount>({ totalPageViews: null, startedAt: null });
-const TrackPageViewContext = createContext<(page: string) => void>(() => {});
-const PENDING_KEY = 'arcwatch-page-views:v1';
-const MAX_PENDING = 100;
-const FLUSH_INTERVAL_MS = 30_000;
-const requestTimeout = () => typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(12_000) : undefined;
+const SiteVisitsContext = createContext<number | null>(null);
+const COUNTED_KEY = 'arcwatch-visit-counted';
+const TOTAL_KEY = 'arcwatch-visit-total';
 
 export function SiteVisitsProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [count, setCount] = useState<PageViewCount>({ totalPageViews: null, startedAt: null });
-  const pending = useRef<PageViewEvent[]>([]);
-  const lastPage = useRef<string | null>(null);
-  const onQueued = useRef<(() => void) | null>(null);
-
-  const trackPageView = useCallback((page: string) => {
-    if (process.env.NODE_ENV !== 'production'
-      || ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname)
-      || document.visibilityState !== 'visible' || lastPage.current === page) return;
-    try {
-      const event = { id: crypto.randomUUID(), page, occurredAt: Date.now() };
-      if (!isPageViewEvent(event)) return;
-      lastPage.current = page;
-      pending.current = [...pending.current, event].slice(-MAX_PENDING);
-      onQueued.current?.();
-    } catch {
-      // Analytics must never prevent browsing in older or restricted browsers.
-    }
-  }, []);
+  const [totalVisits, setTotalVisits] = useState<number | null>(null);
+  const request = useRef<Promise<number | null> | null>(null);
 
   useEffect(() => {
+    if (!pathname || pathname.startsWith('/admin')) return;
     let current = true;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let inFlight = false;
-    let failures = 0;
-    const sendingIds = new Set<string>();
-    const beaconedIds = new Set<string>();
 
-    function persist() {
-      try { sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending.current)); } catch { /* The in-memory queue still works. */ }
-    }
-    try {
-      const saved: unknown = JSON.parse(sessionStorage.getItem(PENDING_KEY) ?? '[]');
-      const events = Array.isArray(saved) ? saved.filter(event => isPageViewEvent(event)) : [];
-      pending.current = [...new Map([...events, ...pending.current].map(event => [event.id, event])).values()].slice(-MAX_PENDING);
-    } catch { /* Storage is optional and never controls whether a view counts. */ }
+    async function loadVisits(): Promise<number | null> {
+      let shouldCount = false;
+      let previousTotal = 0;
+      try {
+        // Retire the former page-view queue without submitting its pending events.
+        sessionStorage.removeItem('arcwatch-page-views:v1');
+        sessionStorage.removeItem('arcwatch-visit-pending');
+        const savedTotal = Number(sessionStorage.getItem(TOTAL_KEY));
+        if (Number.isSafeInteger(savedTotal) && savedTotal >= 0) previousTotal = savedTotal;
+        shouldCount = sessionStorage.getItem(COUNTED_KEY) !== '1'
+          && process.env.NODE_ENV === 'production'
+          && !['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+      } catch {
+        // Read the total without incrementing when per-tab storage is unavailable.
+      }
 
-    function updateCount(result: Partial<PageViewCount>) {
-      const total = result.totalPageViews;
-      if (!current || typeof total !== 'number' || !Number.isSafeInteger(total) || total < 0) return;
-      setCount(previous => ({
-        totalPageViews: Math.max(previous.totalPageViews ?? 0, total),
-        startedAt: typeof result.startedAt === 'string' ? result.startedAt : previous.startedAt,
-      }));
-    }
-    function schedule(delay = FLUSH_INTERVAL_MS) {
-      if (!current || timer || !pending.current.length) return;
-      timer = setTimeout(() => { timer = undefined; void flush(); }, delay);
-    }
-    async function flush(allowHidden = false) {
-      if (!current || inFlight || (!allowHidden && document.visibilityState !== 'visible')) return;
-      pending.current = pending.current.filter(event => isPageViewEvent(event));
-      persist();
-      const events = pending.current.slice(0, MAX_PAGE_VIEW_BATCH);
-      if (!events.length) return;
-      inFlight = true;
-      events.forEach(event => sendingIds.add(event.id));
-      let retry = false;
       try {
         const response = await fetch('/api/site-visits', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ events }), keepalive: true,
-          signal: requestTimeout(),
+          method: shouldCount ? 'POST' : 'GET',
+          keepalive: shouldCount,
+          signal: typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(12_000) : undefined,
         });
-        if (!response.ok) {
-          // Retry transient failures with the same IDs, never invalid requests.
-          if (response.status >= 500 || response.status === 429) throw new Error('Temporarily unavailable');
+        if (!response.ok) throw new Error('Unavailable');
+        if (shouldCount) {
+          try { sessionStorage.setItem(COUNTED_KEY, '1'); } catch { /* Storage may have been disabled. */ }
         }
-        const accepted = new Set(events.map(event => event.id));
-        pending.current = pending.current.filter(event => !accepted.has(event.id));
-        accepted.forEach(id => beaconedIds.delete(id));
-        failures = 0;
+        if (response.status === 204) {
+          const snapshot = await fetch('/api/site-visits');
+          if (!snapshot.ok) return previousTotal || null;
+          return readTotal(await snapshot.json(), previousTotal);
+        }
+        return readTotal(await response.json(), previousTotal);
       } catch {
-        failures += 1;
-        retry = true;
-      } finally {
-        inFlight = false;
-        sendingIds.clear();
-        persist();
-        if (current && pending.current.length && (!retry || failures <= 3)) {
-          schedule(retry ? 15_000 * 2 ** (failures - 1) : pending.current.length >= MAX_PAGE_VIEW_BATCH ? 0 : FLUSH_INTERVAL_MS);
-        }
+        return previousTotal || null;
       }
     }
-    function queueChanged() {
-      persist();
-      if (!inFlight && failures === 0 && pending.current.length >= MAX_PAGE_VIEW_BATCH) {
-        clearTimeout(timer);
-        timer = undefined;
-        void flush();
-      } else schedule();
-    }
-    function flushOnLeave() {
-      persist();
-      const events = pending.current.filter(event => isPageViewEvent(event) && !sendingIds.has(event.id) && !beaconedIds.has(event.id)).slice(0, MAX_PAGE_VIEW_BATCH);
-      if (!events.length) return;
-      const body = new Blob([JSON.stringify({ events })], { type: 'application/json' });
-      // Beacon acknowledgement does not prove delivery. Retain IDs until the server confirms them.
-      try {
-        if (navigator.sendBeacon?.('/api/site-visits', body)) events.forEach(event => beaconedIds.add(event.id));
-        else void flush(true);
-      } catch { void flush(true); }
-    }
-    function onVisibility() {
-      if (document.visibilityState === 'hidden') flushOnLeave();
-      else {
-        const page = publicPageViewKey(window.location.pathname, window.location.search);
-        if (page) trackPageView(page);
-        failures = 0;
-        schedule();
-      }
-    }
-    function onOnline() { failures = 0; schedule(); }
-    function onPageShow(event: PageTransitionEvent) {
-      if (!event.persisted) return;
-      lastPage.current = null;
-      onVisibility();
+
+    function readTotal(value: unknown, previousTotal: number): number | null {
+      if (!value || typeof value !== 'object' || !('totalVisits' in value)) return previousTotal || null;
+      const total = value.totalVisits;
+      if (typeof total !== 'number' || !Number.isSafeInteger(total) || total < 0) return previousTotal || null;
+      const result = Math.max(previousTotal, total);
+      try { sessionStorage.setItem(TOTAL_KEY, String(result)); } catch { /* Display still works. */ }
+      return result;
     }
 
-    onQueued.current = queueChanged;
-    persist();
-    schedule();
-    if (publicPageViewKey(window.location.pathname, window.location.search)) {
-      // Display one cached snapshot per document. Recording never changes the visible total.
-      void fetch('/api/site-visits', { signal: requestTimeout() })
-        .then(response => response.ok ? response.json() : null)
-        .then(result => { if (result) updateCount(result); })
-        .catch(() => { /* Keep the count unknown until the next page load. */ });
-    }
-    document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('pagehide', flushOnLeave);
-    window.addEventListener('pageshow', onPageShow);
-    window.addEventListener('online', onOnline);
-    return () => {
-      current = false;
-      onQueued.current = null;
-      clearTimeout(timer);
-      document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('pagehide', flushOnLeave);
-      window.removeEventListener('pageshow', onPageShow);
-      window.removeEventListener('online', onOnline);
-    };
-  }, [trackPageView]);
+    // Reuse the request across routes and React effect replays in this document.
+    request.current ??= loadVisits();
+    void request.current.then(total => { if (current) setTotalVisits(total); });
+    return () => { current = false; };
+  }, [pathname]);
 
-  useEffect(() => {
-    const page = publicPageViewKey(pathname ?? window.location.pathname, window.location.search);
-    if (page) trackPageView(page);
-    else lastPage.current = null;
-  }, [pathname, trackPageView]);
-
-  return <TrackPageViewContext.Provider value={trackPageView}><PageViewCountContext.Provider value={count}>{children}</PageViewCountContext.Provider></TrackPageViewContext.Provider>;
+  return <SiteVisitsContext.Provider value={totalVisits}>{children}</SiteVisitsContext.Provider>;
 }
 
-export function useSitePageViews() { return useContext(PageViewCountContext); }
-
-// Workspace changes update React state without changing pathname. Track that state explicitly.
-export function useTrackPageView(page: string | null) {
-  const track = useContext(TrackPageViewContext);
-  useEffect(() => { if (page) track(page); }, [page, track]);
-}
+export function useSiteVisits() { return useContext(SiteVisitsContext); }
