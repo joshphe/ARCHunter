@@ -14,7 +14,7 @@ function payload(row: Record<string, unknown> | undefined) {
 
 export async function GET() {
   try {
-    const rows = await getSql().query('SELECT total_page_views AS "totalPageViews", page_views_started_at AS "startedAt" FROM arc_site_metrics WHERE id = 1');
+    const rows = await getSql().query('SELECT (total_visits + total_page_views) AS "totalPageViews", page_views_started_at AS "startedAt" FROM arc_site_metrics WHERE id = 1');
     return NextResponse.json(payload(rows[0]), {
       headers: { 'Cache-Control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=120' },
     });
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       UPDATE arc_site_metrics
       SET total_page_views = total_page_views + (SELECT count(*) FROM recorded), updated_at = now()
       WHERE id = 1
-      RETURNING total_page_views AS "totalPageViews", page_views_started_at AS "startedAt"
+      RETURNING (total_visits + total_page_views) AS "totalPageViews", page_views_started_at AS "startedAt"
     `, [ids]);
     return NextResponse.json(payload(rows[0]), { headers: noStore });
   } catch (error) {

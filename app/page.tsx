@@ -38,7 +38,7 @@ export default function Home(){
  const handleWorkspaceDragStart=(event:DragEvent<HTMLDivElement>,key:Workspace)=>{event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',key);setDraggedWorkspace(key)};
  const handleWorkspaceDrop=(event:DragEvent<HTMLDivElement>,target:Workspace)=>{event.preventDefault();const source=draggedWorkspace??event.dataTransfer.getData('text/plain') as Workspace;if(source)reorderWorkspace(source,target);setDraggedWorkspace(null);setDropTarget(null)};
  const navigateWorkspace=(key:Workspace)=>{setActive(key);window.history.replaceState(window.history.state,'',`/?view=${key.toLowerCase()}`);setMobileOpen(false)};
- const pageViewTitle=startedAt?tr(`Page views since ${new Date(startedAt).toLocaleDateString('en-US')}. Page loads, workspace changes and refreshes count.`,`自 ${new Date(startedAt).toLocaleDateString('zh-CN')} 起统计页面浏览量，打开页面、切换工作区及刷新均计入。`):tr('Total page views','累计页面浏览量');
+ const pageViewTitle=startedAt?tr(`Includes historical visits. Since ${new Date(startedAt).toLocaleDateString('en-US')}, page loads, workspace changes and refreshes add to the total.`,`包含历史访问数；自 ${new Date(startedAt).toLocaleDateString('zh-CN')} 起，打开页面、切换工作区及刷新按浏览量继续累加。`):tr('Total page views including historical visits','累计浏览量，包含历史访问数');
  return <main className={`shell${active==='Map'?' is-map-workspace':''}`}>
   <aside className={`sidebar ${mobileOpen?'mobile-open':''}`}>
    <div className="brand"><div className="brand-mark"><span/></div><span>arc<span className="brand-light">watch</span></span><button className="mobile-close" onClick={()=>setMobileOpen(false)}><X size={18}/></button></div>
