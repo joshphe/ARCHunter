@@ -17,7 +17,7 @@ export function useEcosystemProjects(view: string | null) {
   const refreshRef = useRef<((force?: boolean) => Promise<void>) | null>(null);
 
   useEffect(() => {
-    if (!view || !['Overview', 'Ecosystem', 'Map', 'Launchpad'].includes(view)) return;
+    if (!view || !['Overview', 'Ecosystem', 'Map', 'Launchpad', 'Wallet'].includes(view)) return;
     const includeMetrics = view === 'Ecosystem' || view === 'Map';
     let disposed = false;
     let inFlight = false;

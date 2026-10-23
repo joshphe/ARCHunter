@@ -3,9 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowDownLeft, ArrowUpRight, ExternalLink, Fuel, RefreshCw, Search, X } from 'lucide-react';
 import type { WalletLookup, WalletRange } from '@/lib/wallet-lookup';
+import type { ProjectSummary } from '@/lib/project-schema';
+import WalletPortfolioPanel from './wallet-portfolio-panel';
+import './wallet-portfolio.css';
 
 const EXPLORER = 'https://explorer.arc.io';
-type Props = { language: 'en' | 'zh' };
+type Props = { language: 'en' | 'zh'; projects: ProjectSummary[] };
 type Range = WalletRange;
 const isValidAddress = (value: string) => /^0x[0-9a-fA-F]{40}$/.test(value.trim());
 
@@ -31,11 +34,12 @@ function fmtDate(iso: string, zh: boolean): string {
   }).format(new Date(iso));
 }
 
-export default function WalletPage({ language }: Props) {
+export default function WalletPage({ language, projects }: Props) {
   const zh = language === 'zh';
   const t = (en: string, cn: string) => zh ? cn : en;
   const [input, setInput] = useState('');
   const [address, setAddress] = useState('');
+  const [portfolioRevision, setPortfolioRevision] = useState(0);
   const [range, setRange] = useState<Range>('30d');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +50,7 @@ export default function WalletPage({ language }: Props) {
   const requestRef = useRef<AbortController | null>(null);
   useEffect(() => () => { requestRef.current?.abort(); requestRef.current = null; }, []);
 
-  const lookup = useCallback(async (addr: string, r: Range) => {
+  const lookup = useCallback(async (addr: string, r: Range, refreshPortfolio = true) => {
     if (!isValidAddress(addr)) {
       setError(zh ? '请输入有效的 0x 地址。' : 'Please enter a valid 0x address.');
       return;
@@ -58,6 +62,7 @@ export default function WalletPage({ language }: Props) {
     let timedOut = false;
     const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 27_000);
     setAddress(a);
+    if (refreshPortfolio) setPortfolioRevision(value => value + 1);
     setLoading(true);
     setError(null);
     setResult(null);
@@ -90,7 +95,7 @@ export default function WalletPage({ language }: Props) {
   }, [zh]);
 
   function handleSubmit(e: React.FormEvent) { e.preventDefault(); void lookup(input.trim(), range); }
-  function handleRangeChange(r: Range) { setRange(r); if (address) void lookup(address, r); }
+  function handleRangeChange(r: Range) { setRange(r); if (address) void lookup(address, r, false); }
 
   const txs = result?.transactions.items ?? [];
   const transfers = result?.transfers.items ?? [];
@@ -141,7 +146,7 @@ export default function WalletPage({ language }: Props) {
         <div>
           <div className="eyebrow"><span className="eyebrow-line"/>{t('ARC CHAIN EXPLORER', 'ARC 链上探索')}<span className="eyebrow-line"/></div>
           <h1>{t('Wallet', '地址')} <span>{t('Lookup', '查询')}</span></h1>
-          <p className="subtitle">{t('Query USDC balance, transfers and Gas spend for any Arc address.', '查询任意 Arc 地址的 USDC 余额、转账记录与 Gas 支出。')}</p>
+          <p className="subtitle">{t('Explore token holdings, trade performance and Gas spend for any Arc address.', '查询任意 Arc 地址的代币持仓、交易盈亏与 Gas 支出。')}</p>
         </div>
       </div>
 
@@ -179,20 +184,8 @@ export default function WalletPage({ language }: Props) {
         </button>
       </form>
 
-      {error && <div className="wallet-error" role="alert">{error}</div>}
+      {address && <>
 
-      {loading && (
-        <div className="wallet-loading" role="status">
-          <RefreshCw size={16} className="spin"/>
-          <span>{t('Fetching onchain data…', '正在获取链上数据…')}</span>
-        </div>
-      )}
-
-      {hasData && !loading && (
-        <>
-          {(!gasAvailable || !transfersAvailable) && <div className="wallet-notice" role="status">{t('Some transfer or Gas history is temporarily unavailable. Available balance and history are shown independently; unavailable values are not zero.', '部分转账或 Gas 历史暂不可用。已获取的余额和记录仍可查看，未获取的数据以 — 显示。')}</div>}
-          {(gasPartial || transfersPartial) && <div className="wallet-notice" role="status">{t('The selected period is only partially covered. Totals below describe the records loaded, not the complete history.', '当前时间范围未完整覆盖，下方合计仅代表已读取记录，不代表完整历史。')}</div>}
-          {/* Address header */}
           <div className="wallet-addr-header">
             <div className="wallet-addr-left">
               <span className="wallet-addr-eyebrow">{t('ARC ADDRESS', 'ARC 地址')}</span>
@@ -209,6 +202,22 @@ export default function WalletPage({ language }: Props) {
             </div>
           </div>
 
+        <WalletPortfolioPanel key={address} address={address} language={language} projects={projects} range={range} revision={portfolioRevision}/>
+      </>}
+
+      {error && <div className="wallet-error" role="alert">{error}</div>}
+
+      {loading && (
+        <div className="wallet-loading" role="status">
+          <RefreshCw size={16} className="spin"/>
+          <span>{t('Loading transfer and Gas history…', '正在加载转账与 Gas 历史…')}</span>
+        </div>
+      )}
+
+      {hasData && !loading && (
+        <>
+          {(!gasAvailable || !transfersAvailable) && <div className="wallet-notice" role="status">{t('Some transfer or Gas history is temporarily unavailable. Available balance and history are shown independently; unavailable values are not zero.', '部分转账或 Gas 历史暂不可用。已获取的余额和记录仍可查看，未获取的数据以 — 显示。')}</div>}
+          {(gasPartial || transfersPartial) && <div className="wallet-notice" role="status">{t('The selected period is only partially covered. Totals below describe the records loaded, not the complete history.', '当前时间范围未完整覆盖，下方合计仅代表已读取记录，不代表完整历史。')}</div>}
           {/* Stats grid */}
           <div className="wallet-stats-grid">
             <article className="wallet-stat-card wallet-stat-primary">
@@ -358,7 +367,7 @@ export default function WalletPage({ language }: Props) {
         <div className="wallet-placeholder">
           <Search size={32}/>
           <b>{t('Enter an ARC address to get started', '输入 ARC 地址开始查询')}</b>
-          <span>{t('Lookup USDC balance, transfer history and Gas spend on Arc Mainnet.', '查询 Arc 主网上的 USDC 余额、转账历史与 Gas 支出。')}</span>
+          <span>{t('Explore token holdings, trade P&L, transfers and Gas spend on Arc Mainnet.', '查看 Arc 主网代币持仓、交易盈亏、转账历史与 Gas 支出。')}</span>
         </div>
       )}
 

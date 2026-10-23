@@ -50,7 +50,7 @@ const sum = (values: Array<number | null>) => {
   return available.length ? available.reduce((total, value) => total + value, 0) : null;
 };
 
-async function getDexScreenerMetrics(addresses: string[]): Promise<Map<string, TokenMetrics>> {
+export async function getDexScreenerMetrics(addresses: string[]): Promise<Map<string, TokenMetrics>> {
   const output = new Map<string, TokenMetrics>();
   if (!addresses.length) return output;
   const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addresses.join(',')}`, {
