@@ -68,6 +68,14 @@ Directory filters, contract search, sort and page are stored in the URL and rest
 
 Validation: `node --test tests/project-risk.test.cjs`.
 
+## Wallet lookup
+
+`/?view=wallet` calls the same-origin `/api/wallet?address=0x…&range=7d|30d|90d|all` route. The browser never calls the authenticated Blockscout gateway or receives an API key. Set `BLOCKSCOUT_API_KEY` as a server-only Vercel environment variable for each environment that needs history. Blockscout's free Pro API key is supported with Bearer authentication. A Production-only Secret is not automatically available during local development.
+
+The current USDC balance uses the official Arc mainnet RPC and the six-decimal ERC-20 `balanceOf` interface at `0x3600000000000000000000000000000000000000`. It represents the same funds as native USDC, never an additional balance. Blockscout's native balance is a fallback if RPC fails. Missing balances remain unknown. Outgoing mined transactions and ERC-20 USDC transfers are scanned independently and stop when pagination reaches the requested time boundary. Scans are bounded to ten transaction pages, eight transfer pages and 18 seconds of history time. Missing/failed history remains unknown, and partial scans are explicitly labeled as observed records. ERC-20 transfer totals do not represent every native-USDC balance change.
+
+Identical concurrent requests share one task in each server instance. Completed lookups are cached in memory for 60 seconds, incomplete ones for 15 seconds, with at most 100 cache entries and four concurrent lookups per instance. Blockscout requests are paced at least 350 ms apart per instance. There are no database reads or writes, automatic polling, payment requests or extra infrastructure. The client cancels obsolete queries so late responses cannot overwrite the current address or range.
+
 ## Project on-chain activity
 
 Project details include a manually triggered 7/30-day activity query. Business contracts are explicitly registered in `lib/project-activity-contracts.ts` with official attribution sources; currently Arclight's Arc vault and Foci's launch factory/router are covered. The other projects remain unconfigured for business usage. Token-contract calls are a separate opt-in scope, never a replacement for product usage.

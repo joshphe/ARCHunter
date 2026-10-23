@@ -2,210 +2,103 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowDownLeft, ArrowUpRight, ExternalLink, Fuel, RefreshCw, Search, X } from 'lucide-react';
+import type { WalletLookup, WalletRange } from '@/lib/wallet-lookup';
 
-// ARC Mainnet Blockscout PRO API base (chain ID 5042)
-const API_BASE = 'https://api.blockscout.com/5042/api/v2';
-// ARC USDC ERC-20 address (same on all Arc networks)
-const USDC_ADDRESS = '0x3600000000000000000000000000000000000000';
 const EXPLORER = 'https://explorer.arc.io';
-
 type Props = { language: 'en' | 'zh' };
+type Range = WalletRange;
+const isValidAddress = (value: string) => /^0x[0-9a-fA-F]{40}$/.test(value.trim());
 
-// ── Blockscout response shapes ──────────────────────────────────────────────
-type BSAddress = {
-  hash: string;
-  coin_balance: string | null;          // native (18-dec) = USDC
-  token_balances_count: number | null;
-  transactions_count: number | null;
-};
-type BSTokenBalance = {
-  token: { address_hash: string; symbol: string; decimals: string | null; name: string };
-  value: string;
-};
-type BSTx = {
-  hash: string;
-  timestamp: string;
-  from: { hash: string };
-  to: { hash: string } | null;
-  fee: { value: string } | null;         // USDC wei (18-dec) on Arc
-  value: string;                         // native USDC wei
-  method: string | null;
-  status: 'ok' | 'error' | string;
-  block: number | null;
-  decoded_input?: { method_call: string } | null;
-};
-type BSTokenTransfer = {
-  transaction_hash: string;
-  timestamp: string;
-  from: { hash: string };
-  to: { hash: string };
-  total: { value: string; decimals: string | null };
-  token: { symbol: string; address_hash: string };
-  method: string | null;
-};
-type PagedResult<T> = { items: T[]; next_page_params: Record<string, unknown> | null };
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-const USDC6 = 1_000_000;
-const WEI18 = 1e18;
-
-// Arc native/fee amounts are in 18-dec wei (same asset as USDC ERC-20 6-dec)
-function weiToUsdc(wei: string | null | undefined): number {
-  if (!wei) return 0;
-  return Number(BigInt(wei)) / WEI18;
+function weiToUsdc(value: string | null | undefined): number {
+  return value && /^\d+$/.test(value) ? Number(BigInt(value)) / 1e18 : 0;
 }
-// ERC-20 transfer values already carry their own decimals field
 function tokenUnits(value: string, decimals: string | null): number {
-  const dec = decimals ? parseInt(decimals, 10) : 6;
-  return Number(BigInt(value)) / Math.pow(10, dec);
+  return Number(BigInt(value)) / Math.pow(10, decimals ? Number.parseInt(decimals, 10) : 6);
 }
-function fmtUsdc(n: number): string {
+function fmtUsdc(value: number): string {
+  const n = Math.abs(value);
+  const sign = value < 0 ? '−' : '';
   if (n === 0) return '$0.00';
-  if (n < 0.000001) return '< $0.000001';
-  if (n < 0.01) return `$${n.toFixed(6)}`;
-  if (n < 1000) return `$${n.toFixed(4)}`;
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n);
+  if (n < 0.000001) return sign + '< $0.000001';
+  if (n < 0.01) return sign + '$' + n.toFixed(6);
+  if (n < 1000) return sign + '$' + n.toFixed(4);
+  return sign + new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n);
 }
-function shortAddr(addr: string): string {
-  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
-}
+function shortAddr(value: string): string { return value.slice(0, 6) + '…' + value.slice(-4); }
 function fmtDate(iso: string, zh: boolean): string {
   return new Intl.DateTimeFormat(zh ? 'zh-CN' : 'en-US', {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
   }).format(new Date(iso));
 }
-function daysBetween(from: Date, to: Date): number {
-  return Math.max(1, Math.round((to.getTime() - from.getTime()) / 86400000));
-}
 
-// ── Fetch helpers ────────────────────────────────────────────────────────────
-async function bsFetch<T>(path: string, apiKey?: string): Promise<T> {
-  const url = `${API_BASE}${path}`;
-  const headers: Record<string, string> = { accept: 'application/json' };
-  if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
-  const res = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
-  if (!res.ok) throw new Error(`Blockscout ${res.status}`);
-  return res.json() as Promise<T>;
-}
-
-// Paginate up to maxPages pages, collecting items
-async function fetchPaged<T>(
-  path: string,
-  maxPages: number,
-  apiKey?: string,
-): Promise<T[]> {
-  const items: T[] = [];
-  let url = path;
-  for (let page = 0; page < maxPages; page++) {
-    const data = await bsFetch<PagedResult<T>>(url, apiKey);
-    items.push(...data.items);
-    if (!data.next_page_params) break;
-    const params = new URLSearchParams(
-      Object.entries(data.next_page_params).map(([k, v]) => [k, String(v)]),
-    );
-    url = `${path}${path.includes('?') ? '&' : '?'}${params.toString()}`;
-  }
-  return items;
-}
-
-// ── Date range preset ────────────────────────────────────────────────────────
-type Range = '7d' | '30d' | '90d' | 'all';
-
-function rangeStart(range: Range): Date | null {
-  if (range === 'all') return null;
-  const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
-  return new Date(Date.now() - days * 86400000);
-}
-
-// ── Main component ───────────────────────────────────────────────────────────
 export default function WalletPage({ language }: Props) {
   const zh = language === 'zh';
   const t = (en: string, cn: string) => zh ? cn : en;
-
   const [input, setInput] = useState('');
   const [address, setAddress] = useState('');
   const [range, setRange] = useState<Range>('30d');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [addrInfo, setAddrInfo] = useState<BSAddress | null>(null);
-  const [usdcBalance, setUsdcBalance] = useState<number | null>(null);
-  const [txs, setTxs] = useState<BSTx[]>([]);
-  const [transfers, setTransfers] = useState<BSTokenTransfer[]>([]);
-  const [txPage, setTxPage] = useState(0);       // transfer list pagination
+  const [result, setResult] = useState<WalletLookup | null>(null);
+  const [txPage, setTxPage] = useState(0);
   const TX_PAGE_SIZE = 15;
-
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const isValidAddress = (v: string) => /^0x[0-9a-fA-F]{40}$/.test(v.trim());
+  const requestRef = useRef<AbortController | null>(null);
+  useEffect(() => () => { requestRef.current?.abort(); requestRef.current = null; }, []);
 
   const lookup = useCallback(async (addr: string, r: Range) => {
     if (!isValidAddress(addr)) {
-      setError(t('Please enter a valid 0x address.', '请输入有效的 0x 地址。'));
+      setError(zh ? '请输入有效的 0x 地址。' : 'Please enter a valid 0x address.');
       return;
     }
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     const a = addr.trim().toLowerCase();
+    let timedOut = false;
+    const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 27_000);
+    setAddress(a);
     setLoading(true);
     setError(null);
-    setAddrInfo(null);
-    setUsdcBalance(null);
-    setTxs([]);
-    setTransfers([]);
+    setResult(null);
     setTxPage(0);
-
     try {
-      // 1. Address overview + token balances in parallel
-      const [info, tokenBals] = await Promise.all([
-        bsFetch<BSAddress>(`/addresses/${a}`),
-        bsFetch<BSTokenBalance[]>(`/addresses/${a}/token-balances`),
-      ]);
-      setAddrInfo(info);
-
-      // Find USDC ERC-20 balance
-      const usdcBal = tokenBals.find(
-        b => b.token.address_hash.toLowerCase() === USDC_ADDRESS.toLowerCase(),
-      );
-      setUsdcBalance(usdcBal ? tokenUnits(usdcBal.value, usdcBal.token.decimals) : 0);
-
-      // 2. Transactions (for gas calc) — up to 10 pages = 500 txs
-      const allTxs = await fetchPaged<BSTx>(`/addresses/${a}/transactions`, 10);
-      const start = rangeStart(r);
-      const filtered = start
-        ? allTxs.filter(tx => tx.timestamp && new Date(tx.timestamp) >= start)
-        : allTxs;
-      setTxs(filtered);
-
-      // 3. USDC ERC-20 token transfers — up to 8 pages = 400
-      const allTransfers = await fetchPaged<BSTokenTransfer>(
-        `/addresses/${a}/token-transfers?token=${USDC_ADDRESS}`,
-        8,
-      );
-      const filteredTransfers = start
-        ? allTransfers.filter(tf => tf.timestamp && new Date(tf.timestamp) >= start)
-        : allTransfers;
-      setTransfers(filteredTransfers);
-
+      const params = new URLSearchParams({ address: a, range: r });
+      const response = await fetch('/api/wallet?' + params, { signal: controller.signal, cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error(response.status === 429 ? 'busy' : response.status === 400 ? 'invalid' : 'unavailable');
+      }
+      const data = await response.json() as WalletLookup;
+      if (data.address !== a || data.range !== r) throw new Error('unavailable');
+      if (requestRef.current !== controller) return;
+      setResult(data);
+      if (data.balanceUnits === null && data.transactions.status === 'unavailable' && data.transfers.status === 'unavailable') {
+        setError(zh ? '链上数据服务暂不可用，请稍后重试；这不代表地址有误。' : 'Onchain data services are temporarily unavailable. This does not mean the address is invalid.');
+      }
     } catch (e) {
-      setError(t(
-        'Could not fetch data from Blockscout. Check the address or try again.',
-        '无法从 Blockscout 获取数据，请检查地址后重试。',
-      ));
-      console.error(e);
+      if (requestRef.current !== controller || (controller.signal.aborted && !timedOut)) return;
+      const code = e instanceof Error ? e.message : 'unavailable';
+      setError(timedOut
+        ? (zh ? '查询超时，请稍后重试。' : 'The query timed out. Please try again.')
+        : code === 'busy'
+          ? (zh ? '查询请求较多，请稍后重试。' : 'Too many queries. Please try again shortly.')
+          : (zh ? '链上数据服务暂不可用，请稍后重试。' : 'Onchain data services are temporarily unavailable. Please try again.'));
     } finally {
-      setLoading(false);
+      window.clearTimeout(timeout);
+      if (requestRef.current === controller) setLoading(false);
     }
-  }, [zh]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [zh]);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setAddress(input.trim());
-    void lookup(input.trim(), range);
-  }
+  function handleSubmit(e: React.FormEvent) { e.preventDefault(); void lookup(input.trim(), range); }
+  function handleRangeChange(r: Range) { setRange(r); if (address) void lookup(address, r); }
 
-  function handleRangeChange(r: Range) {
-    setRange(r);
-    if (address) void lookup(address, r);
-  }
+  const txs = result?.transactions.items ?? [];
+  const transfers = result?.transfers.items ?? [];
+  const gasAvailable = result !== null && result.transactions.status !== 'unavailable';
+  const transfersAvailable = result !== null && result.transfers.status !== 'unavailable';
+  const gasPartial = result?.transactions.status === 'partial';
+  const transfersPartial = result?.transfers.status === 'partial';
+  const usdcBalance = result?.balanceUnits == null ? null : tokenUnits(result.balanceUnits, '6');
 
   // ── Derived stats ──────────────────────────────────────────────────────────
   const sentTxs = txs.filter(tx => tx.from.hash.toLowerCase() === address.toLowerCase());
@@ -240,7 +133,7 @@ export default function WalletPage({ language }: Props) {
   }
   const gasRows = Object.entries(gasByDay).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 7);
 
-  const hasData = addrInfo !== null;
+  const hasData = result !== null;
 
   return (
     <div className="content wallet-content">
@@ -297,6 +190,8 @@ export default function WalletPage({ language }: Props) {
 
       {hasData && !loading && (
         <>
+          {(!gasAvailable || !transfersAvailable) && <div className="wallet-notice" role="status">{t('Some transfer or Gas history is temporarily unavailable. Available balance and history are shown independently; unavailable values are not zero.', '部分转账或 Gas 历史暂不可用。已获取的余额和记录仍可查看，未获取的数据以 — 显示。')}</div>}
+          {(gasPartial || transfersPartial) && <div className="wallet-notice" role="status">{t('The selected period is only partially covered. Totals below describe the records loaded, not the complete history.', '当前时间范围未完整覆盖，下方合计仅代表已读取记录，不代表完整历史。')}</div>}
           {/* Address header */}
           <div className="wallet-addr-header">
             <div className="wallet-addr-left">
@@ -323,18 +218,18 @@ export default function WalletPage({ language }: Props) {
             </article>
             <article className="wallet-stat-card">
               <span className="wallet-stat-label">{t('USDC IN · ' + rangeLabel.toUpperCase(), 'USDC 流入 · ' + rangeLabel)}</span>
-              <strong className="positive">{fmtUsdc(usdcIn)}</strong>
-              <small>{transfers.filter(tf => tf.to.hash.toLowerCase() === address.toLowerCase()).length} {t('transfers', '笔转入')}</small>
+              <strong className="positive">{transfersAvailable ? `${transfersPartial ? '≥ ' : ''}${fmtUsdc(usdcIn)}` : '—'}</strong>
+              <small>{transfersAvailable ? transfers.filter(tf => tf.to.hash.toLowerCase() === address.toLowerCase()).length : '—'} {t('transfers', '笔转入')}</small>
             </article>
             <article className="wallet-stat-card">
               <span className="wallet-stat-label">{t('USDC OUT · ' + rangeLabel.toUpperCase(), 'USDC 流出 · ' + rangeLabel)}</span>
-              <strong className="negative">{fmtUsdc(usdcOut)}</strong>
-              <small>{transfers.filter(tf => tf.from.hash.toLowerCase() === address.toLowerCase()).length} {t('transfers', '笔转出')}</small>
+              <strong className="negative">{transfersAvailable ? `${transfersPartial ? '≥ ' : ''}${fmtUsdc(usdcOut)}` : '—'}</strong>
+              <small>{transfersAvailable ? transfers.filter(tf => tf.from.hash.toLowerCase() === address.toLowerCase()).length : '—'} {t('transfers', '笔转出')}</small>
             </article>
             <article className="wallet-stat-card">
-              <span className="wallet-stat-label">{t('NET USDC · ' + rangeLabel.toUpperCase(), 'USDC 净值 · ' + rangeLabel)}</span>
-              <strong className={netUsdc >= 0 ? 'positive' : 'negative'}>{netUsdc >= 0 ? '+' : ''}{fmtUsdc(netUsdc)}</strong>
-              <small>{t('In minus out', '流入减流出')}</small>
+              <span className="wallet-stat-label">{transfersPartial ? t('OBSERVED NET USDC', '已读取记录净流量') : t('NET USDC FLOW · ' + rangeLabel.toUpperCase(), 'USDC 净流入 · ' + rangeLabel)}</span>
+              <strong className={netUsdc >= 0 ? 'positive' : 'negative'}>{transfersAvailable ? `${netUsdc >= 0 ? '+' : ''}${fmtUsdc(netUsdc)}` : '—'}</strong>
+              <small>{t('In minus out for the records loaded', '已读取转账的流入减流出')}</small>
             </article>
           </div>
 
@@ -349,13 +244,13 @@ export default function WalletPage({ language }: Props) {
             </div>
             <div className="wallet-gas-summary">
               <div className="wallet-gas-total">
-                <span>{t('TOTAL GAS · ' + rangeLabel.toUpperCase(), 'Gas 总支出 · ' + rangeLabel)}</span>
-                <strong>{fmtUsdc(totalGasUsdc)}</strong>
+                <span>{gasPartial ? t('OBSERVED GAS SPEND', '已读取交易 Gas 支出') : t('TOTAL GAS · ' + rangeLabel.toUpperCase(), 'Gas 总支出 · ' + rangeLabel)}</span>
+                <strong>{gasAvailable ? fmtUsdc(totalGasUsdc) : '—'}</strong>
               </div>
               <div className="wallet-gas-meta">
-                <div><span>{t('Sent txs', '发起交易')}</span><b>{sentTxs.length}</b></div>
-                <div><span>{t('Success', '成功')}</span><b className="positive">{successTxs}</b></div>
-                <div><span>{t('Reverted', '回滚')}</span><b className={failedTxs > 0 ? 'negative' : ''}>{failedTxs}</b></div>
+                <div><span>{t('Sent txs', '发起交易')}</span><b>{gasAvailable ? sentTxs.length : '—'}</b></div>
+                <div><span>{t('Success', '成功')}</span><b className="positive">{gasAvailable ? successTxs : '—'}</b></div>
+                <div><span>{t('Reverted', '回滚')}</span><b className={failedTxs > 0 ? 'negative' : ''}>{gasAvailable ? failedTxs : '—'}</b></div>
                 <div><span>{t('Avg / tx', '均值/笔')}</span><b>{sentTxs.length ? fmtUsdc(totalGasUsdc / sentTxs.length) : '—'}</b></div>
               </div>
             </div>
@@ -376,7 +271,8 @@ export default function WalletPage({ language }: Props) {
                 )}
               </div>
             )}
-            {sentTxs.length === 0 && (
+            {!gasAvailable && <div className="wallet-empty-inline">{t('Gas history is temporarily unavailable. Please retry later or open the explorer.', 'Gas 历史暂不可用，请稍后重试或前往区块浏览器查看。')}</div>}
+            {gasAvailable && sentTxs.length === 0 && (
               <div className="wallet-empty-inline">{t('No outgoing transactions found in this range.', '该时间范围内未找到发起交易。')}</div>
             )}
             <div className="wallet-footnote">
@@ -391,7 +287,7 @@ export default function WalletPage({ language }: Props) {
                 <div className="section-kicker">{t('USDC TRANSFERS', 'USDC 转账记录')}</div>
                 <h3>{t(`Recent transfers · ${rangeLabel}`, `近期转账 · ${rangeLabel}`)}</h3>
               </div>
-              <span className="wallet-count">{transfers.length} {t('records', '条')}</span>
+              <span className="wallet-count">{transfersAvailable ? transfers.length : '—'} {t('records', '条')}</span>
             </div>
             {pagedTransfers.length > 0 ? (
               <>
@@ -407,7 +303,7 @@ export default function WalletPage({ language }: Props) {
                     const isIn = tf.to.hash.toLowerCase() === address.toLowerCase();
                     const counterparty = isIn ? tf.from.hash : tf.to.hash;
                     return (
-                      <div className="wallet-transfer-row" key={`${tf.transaction_hash}-${tf.to.hash}`}>
+                      <div className="wallet-transfer-row" key={`${tf.transaction_hash}-${tf.log_index}`}>
                         <span className="wallet-tf-time">{fmtDate(tf.timestamp, zh)}</span>
                         <span className={`wallet-tf-dir ${isIn ? 'in' : 'out'}`}>
                           {isIn ? <ArrowDownLeft size={11}/> : <ArrowUpRight size={11}/>}
@@ -437,7 +333,7 @@ export default function WalletPage({ language }: Props) {
                 )}
               </>
             ) : (
-              <div className="wallet-empty-inline">{t('No USDC transfers found in this range.', '该时间范围内未找到 USDC 转账记录。')}</div>
+              <div className="wallet-empty-inline">{transfersAvailable ? t('No USDC transfers found in this range.', '该时间范围内未找到 USDC 转账记录。') : t('Transfer history is temporarily unavailable. Please retry later or open the explorer.', '转账历史暂不可用，请稍后重试或前往区块浏览器查看。')}</div>
             )}
             <div className="wallet-footnote">
               {t('Shows ERC-20 USDC transfers only. Source: Arc Mainnet Blockscout.', '仅显示 ERC-20 USDC 转账。数据来源：Arc 主网 Blockscout。')}
@@ -449,9 +345,10 @@ export default function WalletPage({ language }: Props) {
             <span>ⓘ</span>
             <p>
               {t(
-                'Data is fetched live from the Arc Mainnet Blockscout API. Transfers are limited to the most recent 400 records per range. For complete history, use the Blockscout explorer.',
-                '数据实时来自 Arc 主网 Blockscout API。每次查询最多返回最近 400 条转账记录。如需完整历史，请前往 Blockscout 浏览器。',
+                'Balance uses the Arc mainnet RPC, with Blockscout as fallback. History comes from Blockscout, capped at 10 transaction pages and 8 transfer pages. Partial coverage is marked. ERC-20 transfers exclude native-value transfers and do not capture every USDC movement. Results have a short cache.',
+                '余额通过 Arc 主网 RPC 查询，Blockscout 作为备用；历史记录来自 Blockscout，最多读取 10 页交易和 8 页转账，未完整覆盖时会标注。ERC-20 转账不包含原生转账等全部 USDC 变动，结果采用短缓存。',
               )}
+              {result && <span> {t('Checked at (UTC): ', '获取时间（UTC）：')}{new Date(result.checkedAt).toLocaleString(zh ? 'zh-CN' : 'en-US', { timeZone: 'UTC', hour12: false })}</span>}
             </p>
           </div>
         </>
